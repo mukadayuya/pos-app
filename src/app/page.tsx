@@ -1,229 +1,210 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { MenuItem, OrderItem, OrderOptions, SalesRecord, Category } from "@/types/pos";
-import { menuItems as defaultMenuItems, riceSizeAdjustments } from "@/data/menu";
-import { isSupabaseConfigured } from "@/lib/supabase";
-import { saveSaleRecord, fetchMenuItems, saveMenuItem } from "@/lib/db";
-import CategoryBar from "@/components/CategoryBar";
-import MenuPanel from "@/components/MenuPanel";
-import OrderPanel from "@/components/OrderPanel";
-import SalesHistory from "@/components/SalesHistory";
-import AddMenuPanel from "@/components/AddMenuPanel";
-import OptionModal from "@/components/OptionModal";
-import CheckoutModal from "@/components/CheckoutModal";
+import { useEffect, useState } from "react";
+import SubsidyWizardModal from "@/components/SubsidyWizardModal";
 
-type SidePanel = "salesHistory" | "addMenu" | null;
+const LS_BANNER_DISMISSED = "subsidy_banner_dismissed_at";
+const LS_BOT_VISITED = "subsidy_bot_visited";
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-export default function POSPage() {
-  const [activeCategory, setActiveCategory] = useState<Category>("lunch");
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(defaultMenuItems);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
-  const [sidePanel, setSidePanel] = useState<SidePanel>(null);
-  const [checkoutRecord, setCheckoutRecord] = useState<SalesRecord | null>(null);
-  const [pendingItem, setPendingItem] = useState<MenuItem | null>(null);
+const tiles = [
+  {
+    label: "レジ",
+    icon: "🧾",
+    href: "/register",
+    bg: "bg-indigo-600 hover:bg-indigo-500",
+    available: true,
+  },
+  {
+    label: "点検 / 精算",
+    icon: "🖨️",
+    href: "/settings",
+    bg: "bg-slate-700 hover:bg-slate-600",
+    available: true,
+  },
+  {
+    label: "売上データ",
+    icon: "📊",
+    href: "/sales-data",
+    bg: "bg-violet-700 hover:bg-violet-600",
+    available: true,
+  },
+  {
+    label: "入出金管理",
+    icon: "💵",
+    href: "#",
+    bg: "bg-slate-700 hover:bg-slate-600",
+    available: false,
+  },
+  {
+    label: "商品管理",
+    icon: "🍽️",
+    href: "/product-management",
+    bg: "bg-teal-700 hover:bg-teal-600",
+    available: true,
+  },
+  {
+    label: "クーポン・\n割引設定",
+    icon: "🏷️",
+    href: "#",
+    bg: "bg-slate-700 hover:bg-slate-600",
+    available: false,
+  },
+];
 
-  // Supabaseが設定済みならDBからメニューを読み込む
+function checkBannerVisible(): boolean {
+  if (typeof window === "undefined") return false;
+  if (localStorage.getItem(LS_BOT_VISITED) === "true") return false;
+  const hour = new Date().getHours();
+  if (hour < 15 || hour >= 16) return false;
+  const dismissedAt = localStorage.getItem(LS_BANNER_DISMISSED);
+  if (dismissedAt && Date.now() - parseInt(dismissedAt, 10) < THREE_DAYS_MS) return false;
+  return true;
+}
+
+export default function HomePage() {
+  const [now, setNow] = useState(new Date());
+  const [showWizard, setShowWizard] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    fetchMenuItems()
-      .then((items) => {
-        if (items.length > 0) setMenuItems(items);
-      })
-      .catch(console.error);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const handleMenuItemTap = useCallback((item: MenuItem) => {
-    setPendingItem(item);
+  useEffect(() => {
+    const check = () => setShowBanner(checkBannerVisible());
+    check();
+    const timer = setInterval(check, 60_000);
+    return () => clearInterval(timer);
   }, []);
 
-  const handleOptionConfirm = useCallback(
-    (options: OrderOptions) => {
-      if (!pendingItem) return;
-      const item = pendingItem;
-      const unitPrice = item.price + riceSizeAdjustments[options.riceSize];
-      const itemKey = `${item.id}_${options.riceType}_${options.riceSize}`;
-
-      setOrderItems((prev) => {
-        const existing = prev.find((o) => o.itemKey === itemKey);
-        if (existing) {
-          return prev.map((o) =>
-            o.itemKey === itemKey ? { ...o, quantity: o.quantity + 1 } : o
-          );
-        }
-        return [...prev, { itemKey, menuItem: item, quantity: 1, options, unitPrice }];
-      });
-      setPendingItem(null);
-    },
-    [pendingItem]
-  );
-
-  const handleIncrement = useCallback((itemKey: string) => {
-    setOrderItems((prev) =>
-      prev.map((o) => (o.itemKey === itemKey ? { ...o, quantity: o.quantity + 1 } : o))
-    );
-  }, []);
-
-  const handleDecrement = useCallback((itemKey: string) => {
-    setOrderItems((prev) => {
-      const item = prev.find((o) => o.itemKey === itemKey);
-      if (!item) return prev;
-      if (item.quantity <= 1) return prev.filter((o) => o.itemKey !== itemKey);
-      return prev.map((o) =>
-        o.itemKey === itemKey ? { ...o, quantity: o.quantity - 1 } : o
-      );
-    });
-  }, []);
-
-  const handleRemove = useCallback((itemKey: string) => {
-    setOrderItems((prev) => prev.filter((o) => o.itemKey !== itemKey));
-  }, []);
-
-  const handleCheckout = useCallback((record: SalesRecord) => {
-    setSalesHistory((prev) => [...prev, record]);
-    setCheckoutRecord(record);
-    // DB保存（非同期・非ブロッキング）
-    if (isSupabaseConfigured) {
-      saveSaleRecord(record).catch(console.error);
-    }
-  }, []);
-
-  const handleCheckoutDone = useCallback(() => {
-    setOrderItems([]);
-    setCheckoutRecord(null);
-  }, []);
-
-  const handleAddMenuItem = useCallback((item: MenuItem) => {
-    setMenuItems((prev) => [...prev, item]);
-    // DB保存（非同期・非ブロッキング）
-    if (isSupabaseConfigured) {
-      saveMenuItem(item).catch(console.error);
-    }
-  }, []);
-
-  const togglePanel = (panel: SidePanel) => {
-    setSidePanel((prev) => (prev === panel ? null : panel));
+  const handleBannerClose = () => {
+    localStorage.setItem(LS_BANNER_DISMISSED, String(Date.now()));
+    setShowBanner(false);
   };
 
+  const handleBotVisited = () => {
+    localStorage.setItem(LS_BOT_VISITED, "true");
+    setShowBanner(false);
+  };
+
+  const dateStr = now.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+  const timeStr = now.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
   return (
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
+    <div className="min-h-screen bg-slate-950 flex flex-col">
+      <SubsidyWizardModal
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        onComplete={handleBotVisited}
+      />
+
       {/* ヘッダー */}
-      <header className="flex items-center justify-between px-6 py-3 bg-indigo-700 text-white shadow-lg flex-shrink-0">
+      <header className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🍽️</span>
-          <h1 className="text-xl font-bold tracking-wide">レジ</h1>
+          <span className="text-3xl">🍽️</span>
+          <div>
+            <h1 className="text-white text-xl font-bold tracking-wide leading-tight">
+              Kitchen Kazu
+            </h1>
+            <p className="text-slate-500 text-xs">POS レジシステム</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => togglePanel("addMenu")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              sidePanel === "addMenu"
-                ? "bg-white text-indigo-700"
-                : "bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500"
-            }`}
-          >
-            <span className="text-base font-bold">＋</span>
-            <span>メニュー追加</span>
-          </button>
-          <button
-            onClick={() => togglePanel("salesHistory")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              sidePanel === "salesHistory"
-                ? "bg-white text-indigo-700"
-                : "bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500"
-            }`}
-          >
-            <span>📊</span>
-            <span>売上集計</span>
-            {salesHistory.length > 0 && (
-              <span className="bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full px-2 py-0.5">
-                {salesHistory.length}
-              </span>
-            )}
-          </button>
-          <Link
-            href="/admin/sales"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 border border-white/20 transition-all"
-          >
-            <span>⚙️</span>
-            <span>管理画面</span>
-          </Link>
+        <div className="text-right">
+          <p className="text-slate-400 text-sm">{dateStr}</p>
+          <p className="text-white text-2xl font-mono font-bold tracking-widest">
+            {timeStr}
+          </p>
         </div>
       </header>
 
-      {/* メインコンテンツ */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* 左カラム：カテゴリ */}
-        <CategoryBar
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
+      {/* 損失回避 通知バナー（15:00〜16:00、Bot遷移後は非表示、閉じたら3日後に再表示） */}
+      {showBanner && (
+        <SubsidyNotificationBanner
+          onOpen={() => setShowWizard(true)}
+          onClose={handleBannerClose}
         />
+      )}
 
-        {/* 中央カラム：商品グリッド */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <MenuPanel
-            activeCategory={activeCategory}
-            menuItems={menuItems}
-            onAddItem={handleMenuItemTap}
-          />
+      {/* タイルグリッド */}
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="grid grid-cols-3 gap-5 w-full max-w-2xl">
+          {tiles.map((tile) => {
+            const inner = (
+              <div
+                className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl aspect-square w-full transition-all active:scale-95 ${tile.bg} ${
+                  tile.available ? "shadow-lg cursor-pointer" : "opacity-40 cursor-not-allowed"
+                }`}
+              >
+                <span className="text-5xl leading-none">{tile.icon}</span>
+                <span className="text-white text-base font-bold text-center leading-snug whitespace-pre-line px-2">
+                  {tile.label}
+                </span>
+                {!tile.available && (
+                  <span className="absolute top-2.5 right-2.5 bg-slate-600 text-slate-300 text-xs px-1.5 py-0.5 rounded-md font-medium">
+                    準備中
+                  </span>
+                )}
+              </div>
+            );
+
+            return tile.available && tile.href !== "#" ? (
+              <Link key={tile.label} href={tile.href}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={tile.label}>{inner}</div>
+            );
+          })}
         </div>
+      </main>
 
-        {/* 右カラム：注文リスト */}
-        <div className="w-80 flex-shrink-0 overflow-hidden">
-          <OrderPanel
-            items={orderItems}
-            onIncrement={handleIncrement}
-            onDecrement={handleDecrement}
-            onRemove={handleRemove}
-            onCheckout={handleCheckout}
-            onClear={() => setOrderItems([])}
-          />
-        </div>
+      <footer className="text-center py-4 text-slate-700 text-xs">
+        Kitchen Kazu POS v2.0
+      </footer>
+    </div>
+  );
+}
 
-        {/* スライドインパネル */}
-        <div
-          className={`absolute inset-0 z-40 transition-opacity duration-200 ${
-            sidePanel ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-          onClick={() => setSidePanel(null)}
+function SubsidyNotificationBanner({
+  onOpen,
+  onClose,
+}: {
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mx-6 mt-4 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-600 rounded-2xl px-5 py-4">
+      <div className="flex items-start gap-3">
+        <span className="text-amber-400 text-xl mt-0.5 flex-shrink-0">⚠️</span>
+        <p className="flex-1 text-amber-100 text-sm font-bold leading-snug">
+          【4/22更新】厨房助成金の申請期限が近づいています。未受給の金額（想定）を確認してください。
+        </p>
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 text-amber-600 hover:text-amber-400 text-lg leading-none mt-0.5"
+          aria-label="閉じる"
         >
-          <div
-            className={`absolute right-0 top-0 h-full w-96 bg-white shadow-2xl transform transition-transform duration-300 ${
-              sidePanel ? "translate-x-0" : "translate-x-full"
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {sidePanel === "salesHistory" && (
-              <SalesHistory
-                records={salesHistory}
-                onClose={() => setSidePanel(null)}
-              />
-            )}
-            {sidePanel === "addMenu" && (
-              <AddMenuPanel
-                onAdd={handleAddMenuItem}
-                onClose={() => setSidePanel(null)}
-              />
-            )}
-          </div>
-        </div>
+          ✕
+        </button>
       </div>
-
-      {/* オプション選択モーダル */}
-      {pendingItem && (
-        <OptionModal
-          item={pendingItem}
-          onConfirm={handleOptionConfirm}
-          onClose={() => setPendingItem(null)}
-        />
-      )}
-
-      {/* 会計完了モーダル */}
-      {checkoutRecord && (
-        <CheckoutModal record={checkoutRecord} onDone={handleCheckoutDone} />
-      )}
+      <button
+        onClick={onOpen}
+        className="mt-3 w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-xl transition-all active:scale-95"
+      >
+        未受給の金額を確認する →
+      </button>
     </div>
   );
 }

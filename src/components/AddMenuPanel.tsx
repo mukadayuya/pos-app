@@ -36,11 +36,12 @@ export default function AddMenuPanel({ onAdd, onClose }: AddMenuPanelProps) {
       return;
     }
     onAdd({
-      id: `custom_${Date.now()}`,
+      id: crypto.randomUUID(),
       name: name.trim(),
       price: p,
       category,
       emoji,
+      taxRate: 0.10,
     });
     setName("");
     setPrice("");
