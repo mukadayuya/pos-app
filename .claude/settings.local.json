@@ -13,7 +13,13 @@
       "Bash(python3 -c ' *)",
       "Bash(lsof -ti:3000)",
       "Bash(echo \"exit: $?\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
+      "Bash(supabase --version)",
+      "Bash(npx next *)"
     ]
   }
 }
