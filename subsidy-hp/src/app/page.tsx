@@ -4,14 +4,6 @@ export default function Home() {
   const GOLD = "#C9A84C";
   const GOLD_LIGHT = "#E8C96A";
 
-  const LINE_URL = "https://line.me/ti/p/@infotainment";
-
-  const LineIcon = ({ size = 26 }: { size?: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.05 2 11.06c0 2.77 1.39 5.24 3.56 6.9L4.5 22l4.27-2.24A10.8 10.8 0 0012 20.12c5.52 0 10-4.05 10-9.06S17.52 2 12 2zm1.06 12.17l-2.7-2.88-5.26 2.88 5.79-6.15 2.77 2.88 5.19-2.88-5.79 6.15z" />
-    </svg>
-  );
-
   return (
     <main className="font-sans overflow-x-hidden">
 
@@ -50,19 +42,7 @@ export default function Home() {
             オーナーが本業だけに集中できる仕組みをつくります。
           </p>
 
-          <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 px-10 py-5 rounded-full text-lg font-black transition-all duration-300 hover:scale-105 active:scale-95"
-            style={{ background: "#06C755", color: "white", boxShadow: "0 0 40px rgba(6,199,85,0.45)" }}
-          >
-            <LineIcon size={26} />
-            LINEで無料相談する →
-          </a>
-          <p className="text-gray-500 text-sm mt-4">完全無料・秘密厳守・原則24時間以内にご返信</p>
-
-          <div className="flex flex-wrap justify-center gap-6 mt-16">
+          <div className="flex flex-wrap justify-center gap-6 mt-4">
             {[
               ["支援実績", "累計30件以上"],
               ["補助金獲得", "最大3,000万円"],
@@ -258,7 +238,7 @@ export default function Home() {
             </h3>
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-0">
               {[
-                { step: "STEP 1", label: "LINE相談", desc: "現状ヒアリング" },
+                { step: "STEP 1", label: "お問い合わせ", desc: "現状ヒアリング" },
                 { step: "STEP 2", label: "無料診断", desc: "最適プランを提案" },
                 { step: "STEP 3", label: "書類作成", desc: "AIで爆速サポート" },
                 { step: "STEP 4", label: "採択・導入", desc: "最大3,000万円" },
@@ -286,7 +266,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ━━━ 問い合わせ（LINE誘導） ━━━ */}
+      {/* ━━━ 問い合わせ ━━━ */}
       <section
         style={{ background: `linear-gradient(135deg, ${NAVY_DARK} 0%, ${NAVY} 100%)` }}
         className="py-24 px-4 text-white text-center relative overflow-hidden"
@@ -305,18 +285,7 @@ export default function Home() {
             どんな小さな疑問でもOK。秘密厳守でお答えします。
           </p>
 
-          <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 px-12 py-6 rounded-full text-xl font-black transition-all duration-300 hover:scale-105 active:scale-95 hover:brightness-110"
-            style={{ background: "#06C755", color: "white", boxShadow: "0 8px 40px rgba(6,199,85,0.5)" }}
-          >
-            <LineIcon size={28} />
-            公式LINEで無料相談する
-          </a>
-
-          <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-gray-500">
+          <div className="flex flex-wrap justify-center gap-6 mt-0 text-sm text-gray-500">
             {["✅ 完全無料", "✅ 秘密厳守", "✅ 原則24時間以内にご返信", "✅ 強引な営業なし"].map((t) => (
               <span key={t}>{t}</span>
             ))}
