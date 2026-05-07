@@ -54,15 +54,14 @@ export default function Home() {
             オーナーが本業だけに集中できる仕組みをつくります。
           </p>
 
-          <div className="flex flex-wrap justify-center gap-6 mt-4">
+          <div className="flex justify-center gap-6 mt-4">
             {[
               ["支援実績", "累計30件以上"],
-              ["補助金獲得", "最大3,000万円"],
               ["返信速度", "原則24時間以内"],
             ].map(([label, val]) => (
               <div
                 key={label}
-                className="text-center px-6 py-3 rounded-xl border"
+                className="text-center px-8 py-3 rounded-xl border"
                 style={{ borderColor: "rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.06)" }}
               >
                 <p className="text-xs text-gray-400 tracking-wider">{label}</p>
@@ -323,27 +322,30 @@ export default function Home() {
             ))}
           </div>
 
-          {/* プロフィール — 名前はここの末尾にのみ表示 */}
+          {/* ABOUTセクション */}
           <div
-            className="mt-16 p-8 rounded-2xl text-left flex flex-col sm:flex-row items-center gap-6 border"
+            className="mt-16 p-8 md:p-10 rounded-2xl text-left border"
             style={{ borderColor: "rgba(201,168,76,0.2)", background: "rgba(255,255,255,0.04)" }}
           >
-            <div
-              className="w-20 h-20 rounded-full flex-shrink-0 flex items-center justify-center font-black border-2 text-2xl"
-              style={{ borderColor: GOLD, background: "rgba(201,168,76,0.1)", color: GOLD }}
-            >
-              IT
-            </div>
-            <div>
-              <p className="text-xs tracking-widest uppercase mb-1" style={{ color: GOLD }}>About</p>
-              <p className="font-black text-lg">Infotainment</p>
-              <p className="text-gray-400 text-sm mt-2 leading-relaxed">
-                AIと補助金と現場DXを掛け合わせた独自の視点で、飲食店・小売店の
-                業務効率化・デジタル化・資金調達を一気通貫でサポート。
-                テクノロジーと現場の間に立ち、オーナーの未来を設計します。
-              </p>
-              <p className="text-xs mt-4 opacity-40" style={{ color: GOLD }}>代表 向田 侑矢</p>
-            </div>
+            <p className="text-xs font-bold tracking-[0.2em] uppercase mb-2" style={{ color: GOLD }}>About</p>
+            <h3 className="text-2xl font-black mb-6 pb-4 border-b" style={{ borderColor: "rgba(201,168,76,0.2)" }}>
+              代表挨拶
+            </h3>
+
+            <p className="text-xs tracking-widest uppercase opacity-50 mb-1">Brand</p>
+            <p className="font-black text-lg mb-3">Infotainment</p>
+
+            <p className="text-xs tracking-widest uppercase opacity-50 mb-1">Representative</p>
+            <p className="font-black text-2xl md:text-3xl mb-1">代表　向田 侑矢</p>
+            <p className="text-xs tracking-widest mb-6 opacity-50">MUKADA YUYA</p>
+
+            <p className="text-gray-400 text-sm leading-[2] border-t pt-6" style={{ borderColor: "rgba(201,168,76,0.15)" }}>
+              Infotainmentは、飲食店・小売店の皆様が、煩雑な補助金申請やデジタル化の悩みから解放され、
+              本業である「お客様へのサービス」に集中できるようサポートいたします。<br /><br />
+              これまで培ったITと補助金の専門知識を活かし、オーナー様の想いに寄り添いながら、
+              持続可能な店舗経営を共に実現していくことが、私たちの使命です。<br /><br />
+              どんな小さなことでも、お気軽にご相談ください。誠心誠意、対応させていただきます。
+            </p>
           </div>
         </div>
       </section>
