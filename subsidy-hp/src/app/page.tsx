@@ -1,3 +1,15 @@
+import {
+  FileText,
+  Clock,
+  Banknote,
+  HelpCircle,
+  Cpu,
+  Store,
+  PiggyBank,
+  Settings,
+  Check,
+} from "lucide-react";
+
 export default function Home() {
   const NAVY = "#0D1B3E";
   const NAVY_DARK = "#070E21";
@@ -78,17 +90,29 @@ export default function Home() {
 
           <div className="grid gap-5 md:grid-cols-2">
             {[
-              { icon: "📋", text: "補助金の申請書類が複雑で、何から手をつければいいか分からない" },
-              { icon: "⏰", text: "事務作業に追われて、料理や接客など本業に集中できていない" },
-              { icon: "💸", text: "厨房設備を新しくしたいが、まとまった資金が用意できない" },
-              { icon: "😰", text: "デジタル化したいが、何をどう導入すれば効果が出るか分からない" },
-            ].map(({ icon, text }) => (
+              {
+                Icon: FileText,
+                text: "補助金の申請書類が複雑で、何から手をつければいいか分からない",
+              },
+              {
+                Icon: Clock,
+                text: "事務作業に追われて、料理や接客など本業に集中できていない",
+              },
+              {
+                Icon: Banknote,
+                text: "厨房設備を新しくしたいが、まとまった資金が用意できない",
+              },
+              {
+                Icon: HelpCircle,
+                text: "デジタル化したいが、何をどう導入すれば効果が出るか分からない",
+              },
+            ].map(({ Icon, text }) => (
               <div
                 key={text}
                 className="flex items-start gap-4 p-6 rounded-2xl border-l-4"
                 style={{ borderColor: GOLD, background: "#FAFAF7" }}
               >
-                <span className="text-3xl leading-none mt-0.5">{icon}</span>
+                <Icon size={22} className="flex-shrink-0 mt-0.5" style={{ color: GOLD }} />
                 <p className="text-gray-700 font-medium leading-relaxed">{text}</p>
               </div>
             ))}
@@ -121,33 +145,33 @@ export default function Home() {
             {[
               {
                 num: "01",
-                icon: "🤖",
+                Icon: Cpu,
                 en: "AI Workload Automation",
                 title: "AI業務自動化",
                 body: "最新AIツールを活用し、発注・在庫・帳票・シフトなど、オーナーを縛る事務作業を自動化。時間を本業に取り戻します。",
               },
               {
                 num: "02",
-                icon: "🏪",
+                Icon: Store,
                 en: "Next-gen Store Management DX",
                 title: "次世代店舗DX",
                 body: "POSや予約・顧客管理のデジタル化で、現場の混乱をなくし売上データを経営判断に活かせる店づくりをサポートします。",
               },
               {
                 num: "03",
-                icon: "💰",
+                Icon: PiggyBank,
                 en: "Strategic Subsidy Solutions",
                 title: "補助金戦略支援",
                 body: "ものづくり補助金・IT導入補助金など、設備投資やDX導入のコストを補助金で最大限に圧縮。資金面の障壁を取り除きます。",
               },
-            ].map(({ num, icon, en, title, body }) => (
+            ].map(({ num, Icon, en, title, body }) => (
               <div
                 key={num}
                 className="relative p-8 rounded-2xl border group hover:scale-105 transition-all duration-300"
                 style={{ borderColor: "rgba(201,168,76,0.25)", background: "rgba(255,255,255,0.04)" }}
               >
-                <p className="text-5xl font-black mb-4 opacity-20" style={{ color: GOLD }}>{num}</p>
-                <span className="text-4xl block mb-3">{icon}</span>
+                <p className="text-5xl font-black mb-5 opacity-20" style={{ color: GOLD }}>{num}</p>
+                <Icon size={28} className="mb-4" style={{ color: GOLD }} />
                 <p className="text-xs tracking-widest uppercase mb-1 opacity-60" style={{ color: GOLD }}>{en}</p>
                 <h3 className="text-xl font-black mb-3" style={{ color: GOLD }}>{title}</h3>
                 <p className="text-gray-400 leading-relaxed text-sm">{body}</p>
@@ -175,9 +199,9 @@ export default function Home() {
           <div className="grid gap-6 md:grid-cols-3">
             {[
               {
-                icon: "⚙️",
+                Icon: Settings,
                 title: "AI業務効率化サポート",
-                badge: "Strategic Subsidy Solutions",
+                badge: "AI Workload Automation",
                 price: "月額制プラン",
                 items: [
                   "発注・在庫管理のAI自動化",
@@ -187,7 +211,7 @@ export default function Home() {
                 ],
               },
               {
-                icon: "🏪",
+                Icon: Store,
                 title: "次世代店舗DX支援",
                 badge: "Next-gen Store Management DX",
                 price: "初回相談無料",
@@ -199,7 +223,7 @@ export default function Home() {
                 ],
               },
               {
-                icon: "📝",
+                Icon: FileText,
                 title: "補助金診断・申請サポート",
                 badge: "Strategic Subsidy Solutions",
                 price: "完全成功報酬制",
@@ -210,10 +234,10 @@ export default function Home() {
                   "ものづくり・IT導入補助金等",
                 ],
               },
-            ].map(({ icon, title, badge, price, items }) => (
+            ].map(({ Icon, title, badge, price, items }) => (
               <div key={title} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
                 <div className="px-8 py-6 text-white" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1a2f5e 100%)` }}>
-                  <span className="text-4xl block mb-3">{icon}</span>
+                  <Icon size={28} className="mb-4 opacity-90" />
                   <p className="text-[10px] tracking-widest uppercase opacity-50 mb-1">{badge}</p>
                   <h3 className="text-lg font-black leading-tight">{title}</h3>
                   <span className="inline-block mt-2 text-xs font-bold px-3 py-1 rounded-full" style={{ background: GOLD, color: NAVY }}>
@@ -223,7 +247,7 @@ export default function Home() {
                 <ul className="px-8 py-6 space-y-3">
                   {items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span style={{ color: GOLD }} className="mt-0.5 font-bold flex-shrink-0">✓</span>
+                      <Check size={14} className="flex-shrink-0 mt-0.5" style={{ color: GOLD }} />
                       {item}
                     </li>
                   ))}
@@ -240,7 +264,7 @@ export default function Home() {
               {[
                 { step: "STEP 1", label: "お問い合わせ", desc: "現状ヒアリング" },
                 { step: "STEP 2", label: "無料診断", desc: "最適プランを提案" },
-                { step: "STEP 3", label: "書類作成", desc: "AIで爆速サポート" },
+                { step: "STEP 3", label: "書類作成", desc: "迅速にサポート" },
                 { step: "STEP 4", label: "採択・導入", desc: "最大3,000万円" },
               ].map(({ step, label, desc }, i) => (
                 <div key={step} className="flex sm:flex-col items-center flex-1 w-full sm:w-auto">
@@ -282,12 +306,20 @@ export default function Home() {
           </h2>
           <p className="text-gray-400 mb-10 leading-relaxed">
             「補助金が使えるか分からない」「何をDX化すればいい？」<br />
-            どんな小さな疑問でもOK。秘密厳守でお答えします。
+            どんな小さな疑問でもお気軽にご連絡ください。秘密厳守でお答えします。
           </p>
 
-          <div className="flex flex-wrap justify-center gap-6 mt-0 text-sm text-gray-500">
-            {["✅ 完全無料", "✅ 秘密厳守", "✅ 原則24時間以内にご返信", "✅ 強引な営業なし"].map((t) => (
-              <span key={t}>{t}</span>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-0 text-sm text-gray-400">
+            {[
+              "完全無料",
+              "秘密厳守",
+              "原則24時間以内にご返信",
+              "強引な営業なし",
+            ].map((t) => (
+              <span key={t} className="flex items-center gap-1.5">
+                <Check size={13} style={{ color: GOLD }} />
+                {t}
+              </span>
             ))}
           </div>
 
