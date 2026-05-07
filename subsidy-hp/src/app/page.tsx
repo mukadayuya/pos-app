@@ -85,7 +85,7 @@ export default function Home() {
           <h2 className="text-3xl md:text-4xl font-black text-center mb-4" style={{ color: NAVY }}>
             こんなお悩み、ありませんか？
           </h2>
-          <p className="text-center text-gray-500 mb-14">多くの飲食店オーナーが、同じ壁にぶつかっています。</p>
+          <p className="text-center text-gray-500 mb-14">多くの飲食店オーナー様が、同じ課題を抱えていらっしゃいます。</p>
 
           <div className="grid gap-5 md:grid-cols-2">
             {[
@@ -121,7 +121,7 @@ export default function Home() {
             className="mt-12 p-8 rounded-2xl text-center text-white font-bold text-xl md:text-2xl leading-relaxed"
             style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1a2f5e 100%)` }}
           >
-            その悩み、<span style={{ color: GOLD_LIGHT }}>全部まとめて</span>解決できます。
+            そのお悩み、<span style={{ color: GOLD_LIGHT }}>ひとつひとつ</span>丁寧にお応えします。
           </div>
         </div>
       </section>
@@ -138,7 +138,7 @@ export default function Home() {
           <h2 className="text-3xl md:text-4xl font-black text-center mb-4">
             選ばれる<span style={{ color: GOLD }}>3つ</span>の柱
           </h2>
-          <p className="text-center text-gray-400 mb-16">AIと補助金と現場DXを掛け合わせた、唯一無二のアプローチ。</p>
+          <p className="text-center text-gray-400 mb-16">AIと補助金と現場DXを組み合わせた、Infotainment独自のアプローチです。</p>
 
           <div className="grid gap-8 md:grid-cols-3">
             {[
@@ -147,7 +147,7 @@ export default function Home() {
                 Icon: Cpu,
                 en: "AI Workload Automation",
                 title: "AI業務自動化",
-                body: "最新AIツールを活用し、発注・在庫・帳票・シフトなど、オーナーを縛る事務作業を自動化。時間を本業に取り戻します。",
+                body: "最新AIツールを活用し、発注・在庫・帳票・シフトなど、日常的な事務作業を自動化。オーナー様が本業に集中できる環境を整えます。",
               },
               {
                 num: "02",
@@ -225,7 +225,7 @@ export default function Home() {
                 Icon: FileText,
                 title: "補助金診断・申請サポート",
                 badge: "Strategic Subsidy Solutions",
-                price: "完全成功報酬制",
+                price: "無料診断実施中",
                 items: [
                   "利用可能な補助金の無料診断",
                   "申請書類のAI補助作成",
@@ -264,7 +264,7 @@ export default function Home() {
                 { step: "STEP 1", label: "お問い合わせ", desc: "現状ヒアリング" },
                 { step: "STEP 2", label: "無料診断", desc: "最適プランを提案" },
                 { step: "STEP 3", label: "書類作成", desc: "迅速にサポート" },
-                { step: "STEP 4", label: "採択・導入", desc: "最大3,000万円" },
+                { step: "STEP 4", label: "採択・導入", desc: "採択まで伴走" },
               ].map(({ step, label, desc }, i) => (
                 <div key={step} className="flex sm:flex-col items-center flex-1 w-full sm:w-auto">
                   <div
@@ -336,7 +336,7 @@ export default function Home() {
             <p className="font-black text-lg mb-3">Infotainment</p>
 
             <p className="text-xs tracking-widest uppercase opacity-50 mb-1">Representative</p>
-            <p className="font-black text-2xl md:text-3xl mb-1">代表　向田 侑矢</p>
+            <p className="font-black text-lg mb-1">代表　向田 侑矢</p>
             <p className="text-xs tracking-widest mb-6 opacity-50">MUKADA YUYA</p>
 
             <p className="text-gray-400 text-sm leading-[2] border-t pt-6" style={{ borderColor: "rgba(201,168,76,0.15)" }}>
