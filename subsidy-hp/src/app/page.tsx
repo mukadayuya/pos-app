@@ -50,22 +50,23 @@ export default function Home() {
           </h1>
 
           <p className="text-gray-300 text-lg md:text-xl leading-relaxed mb-12 max-w-2xl mx-auto">
-            業務をAIで自動化し、補助金で投資コストをゼロに近づける。<br />
-            オーナーが本業だけに集中できる仕組みをつくります。
+            業務をAIで効率化し、補助金を活用して次なる投資の一歩を支える。<br />
+            オーナーが本業に専念できる環境づくりをお手伝いします。
           </p>
 
-          <div className="flex justify-center gap-6 mt-4">
+          <div className="flex flex-wrap justify-center gap-4 mt-4">
             {[
               ["支援実績", "累計30件以上"],
-              ["返信速度", "原則24時間以内"],
+              ["ご相談", "初回診断無料"],
+              ["対応地域", "全国オンライン対応"],
             ].map(([label, val]) => (
               <div
                 key={label}
-                className="text-center px-8 py-3 rounded-xl border"
+                className="text-center px-6 py-3 rounded-xl border"
                 style={{ borderColor: "rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.06)" }}
               >
                 <p className="text-xs text-gray-400 tracking-wider">{label}</p>
-                <p className="font-black text-lg" style={{ color: GOLD }}>{val}</p>
+                <p className="font-black text-base" style={{ color: GOLD }}>{val}</p>
               </div>
             ))}
           </div>
