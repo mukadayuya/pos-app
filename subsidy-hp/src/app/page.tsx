@@ -309,15 +309,15 @@ export default function Home() {
             どんな小さな疑問でもお気軽にご連絡ください。秘密厳守でお答えします。
           </p>
 
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-0 text-sm text-gray-400">
+          <div className="grid grid-cols-2 gap-x-12 gap-y-4 mt-2 text-sm text-gray-300 max-w-sm mx-auto">
             {[
-              "完全無料",
-              "秘密厳守",
-              "原則24時間以内にご返信",
+              "初回相談無料",
+              "飲食店に特化",
+              "迅速なレスポンス",
               "強引な営業なし",
             ].map((t) => (
-              <span key={t} className="flex items-center gap-1.5">
-                <Check size={13} style={{ color: GOLD }} />
+              <span key={t} className="flex items-center gap-2">
+                <Check size={13} strokeWidth={2.5} style={{ color: "rgba(201,168,76,0.7)" }} className="flex-shrink-0" />
                 {t}
               </span>
             ))}
