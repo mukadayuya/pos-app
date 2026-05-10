@@ -7,6 +7,7 @@ import { fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
 import { menuItems as staticMenuItems } from "@/data/menu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { type Lang, t } from "@/lib/i18n";
+import type { UpsellSuggestion } from "@/app/api/upsell/route";
 
 // ─── 型定義 ────────────────────────────────────────────────────
 
@@ -113,6 +114,12 @@ function CustomerOrderInner() {
   const [orderSentModal, setOrderSentModal] = useState(false);
   const [checkoutCalled, setCheckoutCalled] = useState(false);
 
+  // ── アップセルバナー ────────────────────────────
+  const [upsellBanner, setUpsellBanner] = useState<UpsellSuggestion | null>(null);
+  const [upsellLoading, setUpsellLoading] = useState(false);
+  const upsellDebounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const upsellDismissRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // AI チャット
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -202,21 +209,66 @@ function CustomerOrderInner() {
     servingTime: ServingTime,
     selectedOptions: OptionSelection[],
   ) {
-    setCart((prev) => [
-      ...prev,
-      {
-        id: `${item.id}-${Date.now()}`,
-        menuItem: item,
-        quantity,
-        servingTime,
-        selectedOptions,
-      },
-    ]);
+    setCart((prev) => {
+      const next = [
+        ...prev,
+        {
+          id: `${item.id}-${Date.now()}`,
+          menuItem: item,
+          quantity,
+          servingTime,
+          selectedOptions,
+        },
+      ];
+      triggerUpsell(next);
+      return next;
+    });
+    setUpsellBanner(null); // 前の提案をリセット
   }
 
   function removeFromCart(cartId: string) {
     setCart((prev) => prev.filter((c) => c.id !== cartId));
   }
+
+  // ── アップセル分析トリガー（カート変更から1.5秒後に発火）──
+  const triggerUpsell = useCallback((currentCart: CartItem[]) => {
+    if (currentCart.length === 0 || currentCart.length > 6) return;
+    if (upsellDebounceRef.current) clearTimeout(upsellDebounceRef.current);
+    upsellDebounceRef.current = setTimeout(async () => {
+      setUpsellLoading(true);
+      try {
+        const res = await fetch("/api/upsell", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cartItems: currentCart.map(c => ({
+              name: c.menuItem.name,
+              emoji: c.menuItem.emoji,
+              category: c.menuItem.category,
+              price: c.menuItem.price,
+            })),
+            lang,
+            allMenuItems: menuItems.slice(0, 30).map(m => ({
+              name: m.name,
+              emoji: m.emoji,
+              category: m.category,
+              price: m.price,
+            })),
+          }),
+        });
+        const data = await res.json() as { ok: boolean; suggestion?: UpsellSuggestion };
+        if (data.ok && data.suggestion) {
+          setUpsellBanner(data.suggestion);
+          if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
+          upsellDismissRef.current = setTimeout(() => setUpsellBanner(null), 18000);
+        }
+      } catch {
+        // サイレント失敗 — バナーなし
+      } finally {
+        setUpsellLoading(false);
+      }
+    }, 1500);
+  }, [lang, menuItems]);
 
   const cartTotal = cart.reduce((s, c) => s + calcItemTotal(c), 0);
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
@@ -374,6 +426,19 @@ function CustomerOrderInner() {
           />
         )}
       </main>
+
+      {/* ── アップセルバナー（タブバー直上に浮遊）── */}
+      {(upsellBanner || upsellLoading) && (
+        <UpsellBanner
+          suggestion={upsellBanner}
+          loading={upsellLoading}
+          lang={lang}
+          onDismiss={() => {
+            setUpsellBanner(null);
+            if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
+          }}
+        />
+      )}
 
       {/* ── ボトムタブバー ── */}
       <nav className="h-16 flex-shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgb(0,0,0,0.07)] flex z-20">
@@ -1130,5 +1195,94 @@ function SendIcon() {
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 translate-x-0.5">
       <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
     </svg>
+  );
+}
+
+// ─── アップセルバナー ───────────────────────────────────────────
+
+function UpsellBanner({
+  suggestion,
+  loading,
+  lang,
+  onDismiss,
+}: {
+  suggestion: UpsellSuggestion | null;
+  loading: boolean;
+  lang: Lang;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className={[
+        "mx-3 mb-2 rounded-2xl shadow-[0_4px_24px_rgba(124,58,237,0.25)]",
+        "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600",
+        "border border-violet-400/30 overflow-hidden",
+        "animate-[slideUp_0.35s_cubic-bezier(0.34,1.56,0.64,1)]",
+      ].join(" ")}
+    >
+      {loading ? (
+        /* ── 分析中スピナー ── */
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin flex-shrink-0" />
+          <p className="text-white/90 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
+        </div>
+      ) : suggestion ? (
+        /* ── 提案バナー ── */
+        <div className="relative">
+          {/* ヘッダー行 */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base">✨</span>
+              <span className="text-white/80 text-[11px] font-bold tracking-widest uppercase">
+                {t(lang, "upsellTitle")}
+              </span>
+              {/* 希少性バッジ */}
+              <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                {suggestion.scarcityText}
+              </span>
+            </div>
+            <button
+              onClick={onDismiss}
+              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white/80 text-xs transition-colors"
+              aria-label="dismiss"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* メインコンテンツ */}
+          <div className="px-4 pb-3 flex items-end gap-3">
+            <div className="flex-1 min-w-0">
+              {/* アイテム名 + ペアリング */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-2xl">{suggestion.targetItemEmoji}</span>
+                <span className="text-white font-black text-base truncate">
+                  {suggestion.targetItemName}
+                </span>
+              </div>
+              <p className="text-violet-100 text-xs leading-relaxed truncate">
+                {suggestion.pairingText}
+              </p>
+              {/* 補助金ストーリー（小さく） */}
+              <p className="text-violet-200/70 text-[10px] mt-0.5 line-clamp-1">
+                🏅 {suggestion.subsidyHint}
+              </p>
+            </div>
+
+            {/* CTAボタン */}
+            <button
+              className={[
+                "flex-shrink-0 px-4 py-2.5 rounded-xl",
+                "bg-white text-violet-700 font-black text-sm",
+                "shadow-lg shadow-violet-900/30",
+                "hover:bg-violet-50 active:scale-95 transition-all",
+              ].join(" ")}
+            >
+              {suggestion.ctaText} →
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
