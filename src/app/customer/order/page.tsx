@@ -664,10 +664,10 @@ function MenuTab({
       </aside>
 
       {/* 商品グリッド */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-2.5">
         <div className={[
-          "grid gap-3",
-          isTable ? "grid-cols-3" : "grid-cols-2",
+          "grid",
+          isTable ? "grid-cols-3 gap-3" : "grid-cols-2 gap-2.5",
         ].join(" ")}>
           {items.map((item) => (
             <ProductCard
@@ -711,52 +711,75 @@ function ProductCard({
   onAiConsult: () => void;
 }) {
   return (
-    <div
-      className="bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200/60 flex flex-col active:scale-[0.98] transition-transform"
-    >
-      {/* 画像エリア */}
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200/60 flex flex-col transition-transform active:scale-[0.97] relative">
+
+      {/* ── 絵文字ビジュアルエリア ── */}
       <button
         onClick={onClick}
         className={[
-          "w-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br",
+          "w-full flex-shrink-0 flex items-center justify-center relative bg-gradient-to-br",
           color,
-          isTable ? "h-28" : "h-20",
+          isTable ? "h-36" : "h-28",
         ].join(" ")}
       >
-        <span className="text-5xl drop-shadow-sm">{item.emoji ?? "🍽️"}</span>
+        <span className={["drop-shadow-md select-none", isTable ? "text-7xl" : "text-6xl"].join(" ")}>
+          {item.emoji ?? "🍽️"}
+        </span>
+
+        {/* カート内数量バッジ */}
         {cartQty > 0 && (
-          <span className="absolute top-2 right-2 min-w-[22px] h-[22px] bg-violet-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 shadow">
-            ×{cartQty}
+          <span className="absolute top-2 right-2 min-w-[26px] h-[26px] bg-violet-700 text-white text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
+            {cartQty}
           </span>
         )}
       </button>
 
-      {/* テキストエリア */}
-      <div className="p-2.5 flex flex-col gap-1.5 flex-1 relative">
-        <button onClick={onClick} className="text-left">
-          <p className={["font-bold text-slate-800 leading-tight line-clamp-2", isTable ? "text-sm" : "text-xs"].join(" ")}>
+      {/* ── テキスト・アクションエリア ── */}
+      <div className="px-3 pt-3 pb-3 flex flex-col gap-2 flex-1">
+
+        {/* 商品名・価格（タップで詳細モーダル） */}
+        <button onClick={onClick} className="text-left space-y-0.5">
+          <p className="font-bold text-slate-800 leading-snug line-clamp-2 text-sm">
             {item.name}
           </p>
-          <p className="text-violet-600 font-black text-sm mt-0.5">{formatPrice(item.price)}</p>
+          <p className="text-violet-600 font-black text-base">
+            {formatPrice(item.price)}
+          </p>
         </button>
 
-        <div className="flex items-center justify-between mt-auto">
+        {/* ── アクションボタン行 ── */}
+        <div className="flex items-center gap-2 mt-auto pt-1">
+
+          {/* メイン：追加ボタン（グラデーション・シャドウ付き） */}
           <button
             onClick={onClick}
-            className="flex items-center gap-1 bg-violet-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:bg-violet-700 active:scale-95 transition-all shadow-sm"
+            className={[
+              "flex-1 flex items-center justify-center gap-1.5",
+              "bg-gradient-to-r from-violet-600 to-purple-600 text-white",
+              "text-xs font-bold py-2.5 rounded-xl",
+              "shadow-sm shadow-violet-300/60",
+              "hover:shadow-md hover:shadow-violet-400/50 hover:from-violet-500 hover:to-purple-500",
+              "active:scale-95 transition-all duration-150",
+            ].join(" ")}
           >
-            <span>＋</span>
-            <span>追加</span>
+            <span className="text-[15px] leading-none font-black">＋</span>
+            <span className="tracking-wide">追加</span>
           </button>
 
+          {/* サブ：AIに相談ボタン（ピル型・控えめ） */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAiConsult();
-            }}
-            className="text-[10px] text-violet-500 hover:text-violet-700 font-medium transition-colors"
+            onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
+            className={[
+              "flex-shrink-0 flex items-center gap-1",
+              "bg-violet-50 text-violet-600",
+              "text-[11px] font-semibold px-2.5 py-2.5 rounded-xl",
+              "border border-violet-200",
+              "hover:bg-violet-100 hover:border-violet-300",
+              "active:scale-95 transition-all duration-150",
+            ].join(" ")}
+            title="AIコンシェルジュに相談"
           >
-            🤖 AIに相談
+            <span className="text-sm">🤖</span>
           </button>
         </div>
       </div>
