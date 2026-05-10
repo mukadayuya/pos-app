@@ -56,28 +56,38 @@ function isEndpointGone(status: number, body: string): boolean {
 
 async function callWithCascade(prompt: string): Promise<string> {
   for (const model of MODEL_CASCADE) {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer":  "https://pos-app.vercel.app",
-        "X-Title":       "FLOWS POS",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 400,
-      }),
-    });
-    const text = await res.text().catch(() => "");
-    if (!res.ok) {
-      if (isEndpointGone(res.status, text)) continue;
-      throw new Error(`OpenRouter ${res.status}: ${text}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000); // 7秒でタイムアウト
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer":  "https://pos-app.vercel.app",
+          "X-Title":       "FLOWS POS",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 300,
+        }),
+      });
+      const text = await res.text().catch(() => "");
+      if (!res.ok) {
+        if (isEndpointGone(res.status, text)) continue;
+        throw new Error(`OpenRouter ${res.status}: ${text}`);
+      }
+      const data = JSON.parse(text) as { choices: Array<{ message: { content: string } }> };
+      const content = data.choices[0]?.message?.content;
+      if (content) return content;
+    } catch (e) {
+      if ((e as Error).name === "AbortError") continue; // タイムアウト→次のモデルへ
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    const data = JSON.parse(text) as { choices: Array<{ message: { content: string } }> };
-    const content = data.choices[0]?.message?.content;
-    if (content) return content;
   }
   throw new Error("All OpenRouter models unavailable");
 }

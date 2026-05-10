@@ -254,73 +254,79 @@ function CustomerOrderInner() {
     [categories],
   );
 
-  // ── カート操作 ──────────────────────────────────
+  // ── カート操作（純粋な state 更新のみ。副作用なし）──────────
   function addToCart(
     item: MenuItem,
     quantity: number,
     servingTime: ServingTime,
     selectedOptions: OptionSelection[],
   ) {
-    setCart((prev) => {
-      const next = [
-        ...prev,
-        {
-          id: `${item.id}-${Date.now()}`,
-          menuItem: item,
-          quantity,
-          servingTime,
-          selectedOptions,
-        },
-      ];
-      triggerUpsell(next);
-      return next;
-    });
-    setUpsellBanner(null); // 前の提案をリセット
+    setCart(prev => [
+      ...prev,
+      { id: `${item.id}-${Date.now()}`, menuItem: item, quantity, servingTime, selectedOptions },
+    ]);
   }
 
   function removeFromCart(cartId: string) {
-    setCart((prev) => prev.filter((c) => c.id !== cartId));
+    setCart(prev => prev.filter(c => c.id !== cartId));
   }
 
-  // ── アップセル分析トリガー（カート変更から1.5秒後に発火）──
-  const triggerUpsell = useCallback((currentCart: CartItem[]) => {
-    if (currentCart.length === 0 || currentCart.length > 6) return;
+  // ── カート増加を useEffect で監視 → アップセル発火 ──────────
+  const prevCartLengthRef = useRef(0);
+  useEffect(() => {
+    const added = cart.length > prevCartLengthRef.current;
+    prevCartLengthRef.current = cart.length;
+    if (!added) return;
+    // 追加直後: 前バナーをリセットしてから新規分析
+    setUpsellBanner(null);
+    if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
+    if (cart.length > 6) return; // カートが多すぎる場合はスキップ
+
     if (upsellDebounceRef.current) clearTimeout(upsellDebounceRef.current);
-    upsellDebounceRef.current = setTimeout(async () => {
+    upsellDebounceRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       setUpsellLoading(true);
-      try {
-        const res = await fetch("/api/upsell", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cartItems: currentCart.map(c => ({
-              name: c.menuItem.name,
-              emoji: c.menuItem.emoji,
-              category: c.menuItem.category,
-              price: c.menuItem.price,
-            })),
-            lang,
-            allMenuItems: menuItems.slice(0, 30).map(m => ({
-              name: m.name,
-              emoji: m.emoji,
-              category: m.category,
-              price: m.price,
-            })),
-          }),
+      fetch("/api/upsell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          cartItems: cart.map(c => ({
+            name: c.menuItem.name,
+            emoji: c.menuItem.emoji,
+            category: c.menuItem.category,
+            price: c.menuItem.price,
+          })),
+          lang,
+          allMenuItems: menuItems.slice(0, 30).map(m => ({
+            name: m.name, emoji: m.emoji, category: m.category, price: m.price,
+          })),
+        }),
+      })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+        .then((data: { ok: boolean; suggestion?: UpsellSuggestion }) => {
+          if (data.ok && data.suggestion) {
+            setUpsellBanner(data.suggestion);
+            upsellDismissRef.current = setTimeout(() => setUpsellBanner(null), 18000);
+          }
+        })
+        .catch(() => { /* サイレント失敗 */ })
+        .finally(() => {
+          clearTimeout(timeoutId);
+          setUpsellLoading(false);
         });
-        const data = await res.json() as { ok: boolean; suggestion?: UpsellSuggestion };
-        if (data.ok && data.suggestion) {
-          setUpsellBanner(data.suggestion);
-          if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
-          upsellDismissRef.current = setTimeout(() => setUpsellBanner(null), 18000);
-        }
-      } catch {
-        // サイレント失敗 — バナーなし
-      } finally {
-        setUpsellLoading(false);
-      }
     }, 1500);
-  }, [lang, menuItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart]);
+
+  // ── アンマウント時にタイマーを全クリア ──────────────────────
+  useEffect(() => {
+    return () => {
+      if (upsellDebounceRef.current) clearTimeout(upsellDebounceRef.current);
+      if (upsellDismissRef.current)  clearTimeout(upsellDismissRef.current);
+    };
+  }, []);
 
   const cartTotal = cart.reduce((s, c) => s + calcItemTotal(c), 0);
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
