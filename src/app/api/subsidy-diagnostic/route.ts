@@ -154,7 +154,52 @@ function matchSubsidies(
   return results;
 }
 
-// ─── Gemini API 呼び出し ─────────────────────────────────────────────
+// ─── AI API 呼び出し ─────────────────────────────────────────────────
+
+// --- OpenRouter ---
+
+interface OpenRouterMessage {
+  role: string;
+  content: string;
+}
+
+interface OpenRouterChoice {
+  message: OpenRouterMessage;
+}
+
+interface OpenRouterResponse {
+  choices: OpenRouterChoice[];
+}
+
+async function callOpenRouter(prompt: string): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY_NOT_SET");
+  }
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.0-flash-exp:free",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`OpenRouter API error ${res.status}: ${text}`);
+  }
+
+  const data = (await res.json()) as OpenRouterResponse;
+  return data.choices[0]?.message?.content ?? "";
+}
+
+// --- Gemini (fallback) ---
 
 interface GeminiPart {
   text: string;
@@ -232,11 +277,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const totalEstimated = subsidies.reduce((sum, s) => sum + s.estimatedAmount, 0);
 
-  // ── Gemini による要約生成 ────────────────────────────────────────
+  // ── AI による要約生成（OpenRouter → Gemini → 静的フォールバック）──
   let summary = "";
-  let geminiUsed = false;
+  let aiUsed = false;
 
-  if (process.env.GEMINI_API_KEY) {
+  const hasOpenRouter = Boolean(process.env.OPENROUTER_API_KEY);
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+
+  if (hasOpenRouter || hasGemini) {
     const avgSales =
       monthlySales.length > 0
         ? Math.round(monthlySales.reduce((a, b) => a + b, 0) / monthlySales.length)
@@ -267,25 +315,40 @@ ${subsidyList}
 
 要約（150字以内、日本語）:`;
 
-    try {
-      const text = await callGemini(prompt);
-      summary = text.trim();
-      geminiUsed = true;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes("GEMINI_API_KEY_NOT_SET")) {
-        console.error("[subsidy-diagnostic] Gemini error:", msg);
+    // 1. OpenRouter を優先試行
+    if (hasOpenRouter) {
+      try {
+        const text = await callOpenRouter(prompt);
+        summary = text.trim();
+        aiUsed = true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[subsidy-diagnostic] OpenRouter error:", msg);
+      }
+    }
+
+    // 2. OpenRouter が失敗した場合は Gemini にフォールバック
+    if (!aiUsed && hasGemini) {
+      try {
+        const text = await callGemini(prompt);
+        summary = text.trim();
+        aiUsed = true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!msg.includes("GEMINI_API_KEY_NOT_SET")) {
+          console.error("[subsidy-diagnostic] Gemini error:", msg);
+        }
       }
     }
   }
 
-  // Gemini が使えなかった場合のフォールバック要約
-  if (!geminiUsed) {
+  // 3. どの AI も使えなかった場合の静的フォールバック要約
+  if (!aiUsed) {
     if (subsidies.length === 0) {
       summary =
-        "現在の情報では該当する補助金が見つかりませんでした。機材キーワードを追加するか、専門家にご相談ください。（※AIによる詳細分析はGEMINI_API_KEYを設定すると利用できます）";
+        "現在の情報では該当する補助金が見つかりませんでした。機材キーワードを追加するか、専門家にご相談ください。（※AIによる詳細分析はOPENROUTER_API_KEYまたはGEMINI_API_KEYを設定すると利用できます）";
     } else {
-      summary = `${subsidies.length}件の補助金が見つかりました。推定総受給額は約${(totalEstimated / 10000).toFixed(0)}万円です。各補助金の申請期限をご確認の上、早めに手続きを進めましょう。（※AIによる詳細分析はGEMINI_API_KEYを設定すると利用できます）`;
+      summary = `${subsidies.length}件の補助金が見つかりました。推定総受給額は約${(totalEstimated / 10000).toFixed(0)}万円です。各補助金の申請期限をご確認の上、早めに手続きを進めましょう。（※AIによる詳細分析はOPENROUTER_API_KEYまたはGEMINI_API_KEYを設定すると利用できます）`;
     }
   }
 

@@ -1,14 +1,17 @@
-// ─── Gemini API プロキシ ──────────────────────────────────────
-// 目的: APIキーをブラウザに露出させずに Gemini を呼び出す。
-//
-// 環境変数（.env.local に設定）:
-//   GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxx
+// ─── AI APIプロキシ (OpenRouter優先、Gemini直結フォールバック) ──────────────
+// 環境変数:
+//   OPENROUTER_API_KEY=sk-or-v1-...  ← 優先
+//   GEMINI_API_KEY=AIza...           ← フォールバック
+// モデル候補 (OpenRouter):
+//   google/gemini-2.0-flash-exp:free  (無料)
+//   anthropic/claude-3.7-sonnet       (高品質)
+//   google/gemini-2.5-pro-exp-03-25:free
 
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
-const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
+const GEMINI_API_KEY     = process.env.GEMINI_API_KEY ?? "";
+const DEFAULT_MODEL      = "google/gemini-2.0-flash-exp:free";
 
 // ── 型定義 ────────────────────────────────────────────────────
 
@@ -17,147 +20,169 @@ type ConversationTurn = {
   content: string;
 };
 
-type GeminiRequestBody =
+type RequestBody =
   | {
       action: "translate";
       text: string;
       targetLang: "en" | "zh" | "ko" | "ja";
+      model?: string;
     }
   | {
       action: "chat";
       message: string;
       menuContext?: string;
+      itemContext?: string;
       conversationHistory?: ConversationTurn[];
+      model?: string;
     };
 
-type GeminiSuccessResponse = { ok: true; result: string };
-type GeminiErrorResponse   = { ok: false; error: string };
-type GeminiResponse        = GeminiSuccessResponse | GeminiErrorResponse;
+type SuccessResponse = { ok: true; result: string };
+type ErrorResponse   = { ok: false; error: string };
+type ApiResponse     = SuccessResponse | ErrorResponse;
 
-// Gemini REST API のレスポンス型（必要最小限）
-type GeminiApiContent = {
-  parts: Array<{ text: string }>;
-  role: string;
-};
-type GeminiApiResponse = {
-  candidates: Array<{
-    content: GeminiApiContent;
-  }>;
-};
+// ── OpenRouter (OpenAI互換) 呼び出し ─────────────────────────
 
-// ── ヘルパー: Gemini REST API を呼び出す ─────────────────────
+async function callOpenRouter(
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  model: string,
+): Promise<string> {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "HTTP-Referer":  "https://pos-app.vercel.app",
+      "X-Title":       "FLOWS POS",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 1024,
+    }),
+  });
 
-async function callGemini(contents: GeminiApiContent[]): Promise<string> {
-  const url = `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`;
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`OpenRouter エラー ${res.status}: ${text}`);
+  }
 
+  const data = (await res.json()) as {
+    choices: Array<{ message: { content: string } }>;
+  };
+  const content = data.choices[0]?.message?.content;
+  if (!content) throw new Error("OpenRouter レスポンスにテキストがありません");
+  return content;
+}
+
+// ── Gemini直結フォールバック ──────────────────────────────────
+
+type GeminiContent = { parts: Array<{ text: string }>; role: string };
+type GeminiApiResponse = { candidates: Array<{ content: GeminiContent }> };
+
+async function callGeminiFallback(contents: GeminiContent[]): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contents }),
   });
-
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Gemini API エラー ${res.status}: ${text}`);
   }
-
   const data = (await res.json()) as GeminiApiResponse;
   const text = data.candidates[0]?.content?.parts[0]?.text;
-  if (text === undefined) throw new Error("Gemini レスポンスにテキストがありません");
+  if (!text) throw new Error("Gemini レスポンスにテキストがありません");
   return text;
 }
 
 // ── POST ハンドラ ─────────────────────────────────────────────
 
-export async function POST(req: NextRequest): Promise<NextResponse<GeminiResponse>> {
-  // ── 設定チェック ──────────────────────────────────────────
-  if (!GEMINI_API_KEY) {
+export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>> {
+  const useOpenRouter = Boolean(OPENROUTER_API_KEY);
+  const useGemini     = Boolean(GEMINI_API_KEY);
+
+  if (!useOpenRouter && !useGemini) {
     return NextResponse.json(
-      { ok: false, error: "GEMINI_API_KEY が未設定です。.env.local を確認してください。" } satisfies GeminiErrorResponse,
+      { ok: false, error: "OPENROUTER_API_KEY または GEMINI_API_KEY を設定してください。" } satisfies ErrorResponse,
       { status: 503 },
     );
   }
 
-  // ── リクエスト解析 ────────────────────────────────────────
-  let body: GeminiRequestBody;
+  let body: RequestBody;
   try {
-    body = (await req.json()) as GeminiRequestBody;
+    body = (await req.json()) as RequestBody;
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON" } satisfies GeminiErrorResponse,
+      { ok: false, error: "Invalid JSON" } satisfies ErrorResponse,
       { status: 400 },
     );
   }
+
+  const model = body.model ?? DEFAULT_MODEL;
 
   try {
     // ── translate ────────────────────────────────────────────
     if (body.action === "translate") {
       const langNames: Record<string, string> = {
-        en: "English",
-        zh: "Chinese (Simplified)",
-        ko: "Korean",
-        ja: "Japanese",
+        en: "English", zh: "Chinese (Simplified)", ko: "Korean", ja: "Japanese",
       };
       const targetName = langNames[body.targetLang] ?? body.targetLang;
+      const prompt = `Translate the following text to ${targetName}. Output only the translated text, nothing else.\n\nText: ${body.text}`;
 
-      const contents: GeminiApiContent[] = [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `Translate the following text to ${targetName}. Output only the translated text, nothing else.\n\nText: ${body.text}`,
-            },
-          ],
-        },
-      ];
-
-      const result = await callGemini(contents);
-      return NextResponse.json({ ok: true, result } satisfies GeminiSuccessResponse);
+      let result: string;
+      if (useOpenRouter) {
+        result = await callOpenRouter([{ role: "user", content: prompt }], model);
+      } else {
+        result = await callGeminiFallback([{ role: "user", parts: [{ text: prompt }] }]);
+      }
+      return NextResponse.json({ ok: true, result } satisfies SuccessResponse);
     }
 
     // ── chat ─────────────────────────────────────────────────
     if (body.action === "chat") {
-      const systemInstruction = `You are a friendly restaurant assistant for FLOWS, a Japanese restaurant by Infotainment.
-Your role is to help customers in their own language, answer questions about the menu, ingredients, allergens, and dining experience.
-Be warm, concise, and helpful. If asked about prices or menu items, refer to the menu context provided.
-Always respond in the same language the customer uses.
-${body.menuContext ? `\nCurrent menu context:\n${body.menuContext}` : ""}`;
+      const systemPrompt = [
+        "You are a friendly restaurant concierge for FLOWS, a Japanese restaurant by Infotainment.",
+        "Help customers in their own language. Answer questions about menu items, ingredients, allergens, and dining experience.",
+        "Be warm, concise (under 150 words), and helpful.",
+        body.menuContext ? `\nMenu context:\n${body.menuContext}` : "",
+        body.itemContext ? `\nFocused item:\n${body.itemContext}` : "",
+      ].filter(Boolean).join("\n");
 
-      // 会話履歴を Gemini の contents 形式に変換
-      const history: GeminiApiContent[] = (body.conversationHistory ?? []).map((turn) => ({
-        role: turn.role,
-        parts: [{ text: turn.content }],
-      }));
+      let result: string;
 
-      // システムプロンプトを最初のユーザーターンに埋め込む（Gemini REST は systemInstruction をサポート）
-      const contents: GeminiApiContent[] = [
-        // システム指示を model の先頭ターンとして注入
-        {
-          role: "user",
-          parts: [{ text: `[System instruction - follow these throughout the conversation]: ${systemInstruction}` }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Understood. I'm ready to assist customers at FLOWS restaurant." }],
-        },
-        ...history,
-        {
-          role: "user",
-          parts: [{ text: body.message }],
-        },
-      ];
-
-      const result = await callGemini(contents);
-      return NextResponse.json({ ok: true, result } satisfies GeminiSuccessResponse);
+      if (useOpenRouter) {
+        const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+          ...(body.conversationHistory ?? []).map(t => ({
+            role: (t.role === "model" ? "assistant" : "user") as "user" | "assistant",
+            content: t.content,
+          })),
+          { role: "user", content: body.message },
+        ];
+        result = await callOpenRouter(messages, model);
+      } else {
+        const contents: GeminiContent[] = [
+          { role: "user",  parts: [{ text: `[System]: ${systemPrompt}` }] },
+          { role: "model", parts: [{ text: "Understood." }] },
+          ...(body.conversationHistory ?? []).map(t => ({
+            role: t.role,
+            parts: [{ text: t.content }],
+          })),
+          { role: "user", parts: [{ text: body.message }] },
+        ];
+        result = await callGeminiFallback(contents);
+      }
+      return NextResponse.json({ ok: true, result } satisfies SuccessResponse);
     }
 
     return NextResponse.json(
-      { ok: false, error: "不明な action です" } satisfies GeminiErrorResponse,
+      { ok: false, error: "不明な action です" } satisfies ErrorResponse,
       { status: 400 },
     );
   } catch (e) {
     return NextResponse.json(
-      { ok: false, error: (e as Error).message } satisfies GeminiErrorResponse,
+      { ok: false, error: (e as Error).message } satisfies ErrorResponse,
       { status: 502 },
     );
   }
