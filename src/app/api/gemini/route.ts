@@ -1,17 +1,32 @@
 // ─── AI APIプロキシ (OpenRouter優先、Gemini直結フォールバック) ──────────────
 // 環境変数:
 //   OPENROUTER_API_KEY=sk-or-v1-...  ← 優先
-//   GEMINI_API_KEY=AIza...           ← フォールバック
-// モデル候補 (OpenRouter):
-//   google/gemini-2.0-flash-exp:free  (無料)
-//   anthropic/claude-3.7-sonnet       (高品質)
-//   google/gemini-2.5-pro-exp-03-25:free
+//   GEMINI_API_KEY=AIza...           ← 最終フォールバック
 
 import { NextRequest, NextResponse } from "next/server";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const GEMINI_API_KEY     = process.env.GEMINI_API_KEY ?? "";
-const DEFAULT_MODEL      = "google/gemini-2.0-flash-exp:free";
+
+// モデルカスケード: 上から順に試み、エンドポイント不在/廃止なら次へ
+const MODEL_CASCADE = [
+  "google/gemini-2.0-flash-001",   // 安定版・低コスト
+  "anthropic/claude-3.5-haiku",    // 高速・低コスト
+  "google/gemini-flash-1.5",       // 旧安定版フォールバック
+  "openai/gpt-4o-mini",            // 最終OpenRouterフォールバック
+] as const;
+
+// 「エンドポイント不在」系エラーかどうかを判定
+function isEndpointError(status: number, body: string): boolean {
+  if (status === 404) return true;
+  const lower = body.toLowerCase();
+  return (
+    lower.includes("no endpoints found") ||
+    lower.includes("model not found") ||
+    lower.includes("provider returned error") ||
+    lower.includes("does not exist")
+  );
+}
 
 // ── 型定義 ────────────────────────────────────────────────────
 
@@ -40,9 +55,9 @@ type SuccessResponse = { ok: true; result: string };
 type ErrorResponse   = { ok: false; error: string };
 type ApiResponse     = SuccessResponse | ErrorResponse;
 
-// ── OpenRouter (OpenAI互換) 呼び出し ─────────────────────────
+// ── OpenRouter (OpenAI互換) — 単一モデル呼び出し ─────────────
 
-async function callOpenRouter(
+async function callOpenRouterModel(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   model: string,
 ): Promise<string> {
@@ -54,24 +69,47 @@ async function callOpenRouter(
       "HTTP-Referer":  "https://pos-app.vercel.app",
       "X-Title":       "FLOWS POS",
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 1024,
-    }),
+    body: JSON.stringify({ model, messages, max_tokens: 1024 }),
   });
 
+  const text = await res.text().catch(() => "");
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    if (isEndpointError(res.status, text)) {
+      throw new EndpointError(`model unavailable: ${model} (${res.status})`);
+    }
     throw new Error(`OpenRouter エラー ${res.status}: ${text}`);
   }
 
-  const data = (await res.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
+  const data = JSON.parse(text) as { choices: Array<{ message: { content: string } }> };
   const content = data.choices[0]?.message?.content;
   if (!content) throw new Error("OpenRouter レスポンスにテキストがありません");
   return content;
+}
+
+// エンドポイント廃止を示す専用エラークラス
+class EndpointError extends Error {}
+
+// ── OpenRouter — カスケードフォールバック ────────────────────
+
+async function callOpenRouter(
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  preferredModel?: string,
+): Promise<string> {
+  const queue = preferredModel
+    ? [preferredModel, ...MODEL_CASCADE.filter(m => m !== preferredModel)]
+    : [...MODEL_CASCADE];
+
+  let lastErr: Error = new Error("No models available");
+  for (const model of queue) {
+    try {
+      return await callOpenRouterModel(messages, model);
+    } catch (e) {
+      lastErr = e as Error;
+      if (e instanceof EndpointError) continue; // 次のモデルへ
+      throw e;                                   // 認証エラー等は即座に上位へ
+    }
+  }
+  throw lastErr;
 }
 
 // ── Gemini直結フォールバック ──────────────────────────────────
@@ -119,7 +157,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     );
   }
 
-  const model = body.model ?? DEFAULT_MODEL;
+  const preferredModel = body.model; // undefined なら CASCADE の先頭から
 
   try {
     // ── translate ────────────────────────────────────────────
@@ -132,7 +170,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
       let result: string;
       if (useOpenRouter) {
-        result = await callOpenRouter([{ role: "user", content: prompt }], model);
+        result = await callOpenRouter([{ role: "user", content: prompt }], preferredModel);
       } else {
         result = await callGeminiFallback([{ role: "user", parts: [{ text: prompt }] }]);
       }
@@ -160,7 +198,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
           })),
           { role: "user", content: body.message },
         ];
-        result = await callOpenRouter(messages, model);
+        result = await callOpenRouter(messages, preferredModel);
       } else {
         const contents: GeminiContent[] = [
           { role: "user",  parts: [{ text: `[System]: ${systemPrompt}` }] },

@@ -171,32 +171,48 @@ interface OpenRouterResponse {
   choices: OpenRouterChoice[];
 }
 
+const SUBSIDY_MODEL_CASCADE = [
+  "google/gemini-2.0-flash-001",
+  "anthropic/claude-3.5-haiku",
+  "google/gemini-flash-1.5",
+] as const;
+
 async function callOpenRouter(prompt: string): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY_NOT_SET");
-  }
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY_NOT_SET");
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-exp:free",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 300,
-    }),
-  });
+  for (const model of SUBSIDY_MODEL_CASCADE) {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://pos-app.vercel.app",
+        "X-Title": "FLOWS POS",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 300,
+      }),
+    });
 
-  if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`OpenRouter API error ${res.status}: ${text}`);
-  }
+    if (!res.ok) {
+      const lower = text.toLowerCase();
+      const isEndpointGone =
+        res.status === 404 ||
+        lower.includes("no endpoints found") ||
+        lower.includes("model not found");
+      if (isEndpointGone) continue;
+      throw new Error(`OpenRouter API error ${res.status}: ${text}`);
+    }
 
-  const data = (await res.json()) as OpenRouterResponse;
-  return data.choices[0]?.message?.content ?? "";
+    const data = JSON.parse(text) as OpenRouterResponse;
+    const content = data.choices[0]?.message?.content;
+    if (content) return content;
+  }
+  return "";
 }
 
 // --- Gemini (fallback) ---
