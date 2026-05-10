@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, FormEvent, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, FormEvent, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { useSearchParams } from "next/navigation";
 import { MenuItem, OptionSelection } from "@/types/pos";
 import { fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
@@ -75,20 +75,58 @@ function formatPrice(n: number): string {
   return `¥${n.toLocaleString("ja-JP")}`;
 }
 
-// ─── メインページ (Suspense ラッパー) ──────────────────────────────
+// ─── Error Boundary ─────────────────────────────────────────────
+
+class OrderErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorMsg: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: "" };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error.message };
+  }
+  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl shadow-lg p-8 max-w-sm w-full text-center space-y-4">
+            <span className="text-5xl">⚠️</span>
+            <h2 className="text-lg font-black text-slate-800">読み込みエラー</h2>
+            <p className="text-slate-500 text-sm">メニューの取得に失敗しました。</p>
+            <button
+              onClick={() => { this.setState({ hasError: false, errorMsg: "" }); window.location.reload(); }}
+              className="w-full bg-violet-600 text-white font-bold py-3 rounded-2xl hover:bg-violet-700 transition-colors"
+            >
+              再試行
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── メインページ (ErrorBoundary + Suspense ラッパー) ─────────────
 
 export default function CustomerOrderPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">読み込み中...</p>
+    <OrderErrorBoundary>
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-500 text-sm">読み込み中...</p>
+          </div>
         </div>
-      </div>
-    }>
-      <CustomerOrderInner />
-    </Suspense>
+      }>
+        <CustomerOrderInner />
+      </Suspense>
+    </OrderErrorBoundary>
   );
 }
 
@@ -103,6 +141,7 @@ function CustomerOrderInner() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadSlow, setLoadSlow] = useState(false); // 3秒超過 → スキップボタン表示
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("menu");
   const [lang, setLang] = useState<Lang>("ja");
@@ -129,12 +168,22 @@ function CustomerOrderInner() {
 
   // ── データ取得 ─────────────────────────────────
   useEffect(() => {
+    // 3秒後にスキップボタンを表示
+    const slowTimer = setTimeout(() => setLoadSlow(true), 3000);
+
     async function load() {
       try {
         let items: MenuItem[];
         let cats: CategoryRecord[];
         if (isSupabaseConfigured) {
-          [items, cats] = await Promise.all([fetchMenuItems(), fetchCategories()]);
+          // 5秒でタイムアウト → staticMenuItemsへフォールバック
+          const timeout = new Promise<never>((_, r) =>
+            setTimeout(() => r(new Error("fetch timeout")), 5000)
+          );
+          [items, cats] = await Promise.race([
+            Promise.all([fetchMenuItems(), fetchCategories()]),
+            timeout,
+          ]);
           if (items.length === 0) items = staticMenuItems;
         } else {
           items = staticMenuItems;
@@ -146,10 +195,13 @@ function CustomerOrderInner() {
         setMenuItems(staticMenuItems);
         setCategories([]);
       } finally {
+        clearTimeout(slowTimer);
         setLoading(false);
+        setLoadSlow(false);
       }
     }
     load();
+    return () => clearTimeout(slowTimer);
   }, []);
 
   // ── 言語変更時の挨拶リセット ──────────────────────
@@ -336,9 +388,24 @@ function CustomerOrderInner() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">メニューを読み込んでいます...</p>
+          {loadSlow && (
+            <div className="flex flex-col items-center gap-2 mt-2 animate-fade-in">
+              <p className="text-slate-400 text-xs">接続に時間がかかっています</p>
+              <button
+                onClick={() => {
+                  setMenuItems(staticMenuItems);
+                  setCategories([]);
+                  setLoading(false);
+                }}
+                className="px-5 py-2.5 bg-violet-600 text-white text-sm font-bold rounded-xl shadow hover:bg-violet-700 transition-colors"
+              >
+                オフラインモードで起動
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
