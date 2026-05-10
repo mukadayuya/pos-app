@@ -31,7 +31,7 @@ export interface UpsellSuggestion {
   targetItemName: string;   // 提案アイテム名
   targetItemEmoji: string;  // 絵文字
   pairingText: string;      // ペアリング説明
-  subsidyHint: string;      // 補助金ストーリー
+  sizzleText: string;       // シズル感テキスト（味・香り・こだわり）
   scarcityText: string;     // 希少性テキスト
   ctaText: string;          // CTAボタン
 }
@@ -128,7 +128,7 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
   "targetItemName": "<item name to suggest, max 10 chars>",
   "targetItemEmoji": "<1 emoji for the item>",
   "pairingText": "<why this item pairs perfectly, max 40 chars, in ${langName}>",
-  "subsidyHint": "<1 sentence: this restaurant used equipment grant to achieve unmatched quality, max 50 chars, in ${langName}>",
+  "sizzleText": "<1 evocative sentence about the taste, aroma, or chef's craft — make it mouth-watering, max 40 chars, in ${langName}>",
   "scarcityText": "<urgency hook like 'Tonight only' or 'Chef's special', max 15 chars, in ${langName}>",
   "ctaText": "<call to action button text, max 8 chars, in ${langName}>"
 }`;
@@ -142,7 +142,7 @@ function fallbackSuggestion(lang: string): UpsellSuggestion {
       targetItemName: "本日の特選ドリンク",
       targetItemEmoji: "🍷",
       pairingText: "料理との相性抜群の一杯",
-      subsidyHint: "補助金で導入した最新機材で仕上げた逸品",
+      sizzleText: "芳醇な香りが口いっぱいに広がる至福の一杯",
       scarcityText: "本日限定",
       ctaText: "追加する",
     },
@@ -150,7 +150,7 @@ function fallbackSuggestion(lang: string): UpsellSuggestion {
       targetItemName: "Chef's Special Drink",
       targetItemEmoji: "🍷",
       pairingText: "Perfect pairing for your meal",
-      subsidyHint: "Crafted with our grant-funded premium equipment",
+      sizzleText: "Rich aroma and velvety finish — pure bliss",
       scarcityText: "Tonight only",
       ctaText: "Add",
     },
@@ -158,7 +158,7 @@ function fallbackSuggestion(lang: string): UpsellSuggestion {
       targetItemName: "今日特选饮品",
       targetItemEmoji: "🍷",
       pairingText: "与您的餐点完美搭配",
-      subsidyHint: "采用补贴设备精心制作",
+      sizzleText: "香气馥郁，每一口都是享受",
       scarcityText: "今日限定",
       ctaText: "添加",
     },
@@ -166,7 +166,7 @@ function fallbackSuggestion(lang: string): UpsellSuggestion {
       targetItemName: "오늘의 특선 음료",
       targetItemEmoji: "🍷",
       pairingText: "요리와 완벽한 페어링",
-      subsidyHint: "보조금으로 도입한 최신 장비로 완성",
+      sizzleText: "풍부한 향과 부드러운 여운, 완벽한 한 잔",
       scarcityText: "오늘만 특별",
       ctaText: "추가",
     },

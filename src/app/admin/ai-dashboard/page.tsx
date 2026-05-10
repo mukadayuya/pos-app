@@ -1,8 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getAiStats, AiStats } from "@/lib/aiStats";
+
+// ─── Count-up hook ────────────────────────────────────────────────────────────
+
+function useCountUp(target: number, duration = 1400): number {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    setValue(0);
+    if (target === 0) return;
+    const start = performance.now();
+    function step(now: number) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setValue(Math.round(target * eased));
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    }
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, duration]);
+  return value;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,42 +81,38 @@ function KpiCard({
   icon,
   iconBg,
   accent,
-  value,
+  targetValue,
+  format,
   label,
   sub,
+  dramatic,
 }: {
   icon: string;
   iconBg: string;
   accent: string;
-  value: string;
+  targetValue: number;
+  format: (n: number) => string;
   label: string;
   sub: string;
+  dramatic?: boolean; // larger, glowing display for the money card
 }) {
+  const displayed = useCountUp(targetValue, dramatic ? 1800 : 1200);
+
+  const glowColor =
+    accent === "violet"  ? "rgba(139,92,246,0.20)"  :
+    accent === "emerald" ? "rgba(16,185,129,0.20)"   :
+                           "rgba(245,158,11,0.20)";
+  const borderActive =
+    accent === "violet"  ? "rgba(139,92,246,0.55)"  :
+    accent === "emerald" ? "rgba(16,185,129,0.55)"   :
+                           "rgba(245,158,11,0.55)";
+
   return (
     <div
-      className={`
-        flex-1 min-w-0 bg-slate-800/80 border border-slate-700/50 rounded-2xl p-5
-        flex flex-col gap-3 transition-all duration-200
-        hover:border-${accent}-500/50
-      `}
-      style={{
-        // Tailwind v4 JIT does not generate arbitrary hover shadows via template literals,
-        // so we use inline style for the glow effect.
-        ["--glow" as string]: accent === "violet"
-          ? "rgba(139,92,246,0.15)"
-          : accent === "emerald"
-          ? "rgba(16,185,129,0.15)"
-          : "rgba(245,158,11,0.15)",
-      }}
+      className="flex-1 min-w-0 bg-slate-800/80 border border-slate-700/50 rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200"
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow =
-          `0 0 20px var(--glow)`;
-        (e.currentTarget as HTMLDivElement).style.borderColor =
-          accent === "violet"
-            ? "rgba(139,92,246,0.5)"
-            : accent === "emerald"
-            ? "rgba(16,185,129,0.5)"
-            : "rgba(245,158,11,0.5)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 24px ${glowColor}`;
+        (e.currentTarget as HTMLDivElement).style.borderColor = borderActive;
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.boxShadow = "";
@@ -103,15 +120,24 @@ function KpiCard({
       }}
     >
       {/* Icon */}
-      <div
-        className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${iconBg}`}
-      >
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${iconBg}`}>
         {icon}
       </div>
 
-      {/* Value */}
+      {/* Value — count-up */}
       <div>
-        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+        {dramatic ? (
+          <p
+            className="text-3xl font-extrabold text-transparent bg-clip-text tracking-tight tabular-nums"
+            style={{ backgroundImage: "linear-gradient(135deg, #34d399 0%, #a78bfa 100%)" }}
+          >
+            {format(displayed)}
+          </p>
+        ) : (
+          <p className="text-2xl font-bold text-white tracking-tight tabular-nums">
+            {format(displayed)}
+          </p>
+        )}
         <p className="text-sm text-slate-400 mt-0.5">{label}</p>
       </div>
 
@@ -265,11 +291,6 @@ export default function AiDashboardPage() {
 
   const cumulativeChats = chatCount * 3;  // rough cumulative multiplier
 
-  const annualRoiDisplay =
-    upsellTotal > 0
-      ? `¥${(upsellTotal * 365).toLocaleString("ja-JP")}`
-      : "¥1,182,600";  // demo (¥3,240 × 365)
-
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col">
 
@@ -308,19 +329,22 @@ export default function AiDashboardPage() {
             icon="💬"
             iconBg="bg-gradient-to-br from-violet-600 to-violet-800"
             accent="violet"
-            value={`${chatCount}`}
+            targetValue={chatCount}
+            format={(n) => `${n}`}
             label="本日のAI接客"
             sub={`累計 ${cumulativeChats} 件`}
           />
 
-          {/* Card 2: アップセル成功額 */}
+          {/* Card 2: アップセル成功額（ドラマチック演出） */}
           <KpiCard
             icon="💰"
             iconBg="bg-gradient-to-br from-emerald-600 to-emerald-800"
             accent="emerald"
-            value={`¥${upsellTotal.toLocaleString("ja-JP")}`}
-            label="AI提案による追加売上"
-            sub={`成功率 ${successRate}`}
+            targetValue={upsellTotal}
+            format={(n) => `¥${n.toLocaleString("ja-JP")}`}
+            label="AIが稼いだ追加売上"
+            sub={`アップセル成功率 ${successRate}`}
+            dramatic
           />
 
           {/* Card 3: 予測ROI（年間） */}
@@ -328,7 +352,8 @@ export default function AiDashboardPage() {
             icon="📈"
             iconBg="bg-gradient-to-br from-amber-500 to-amber-700"
             accent="amber"
-            value={annualRoiDisplay}
+            targetValue={upsellTotal > 0 ? upsellTotal * 365 : 1182600}
+            format={(n) => n >= 10000 ? `¥${(n / 10000).toFixed(1)}万` : `¥${n.toLocaleString("ja-JP")}`}
             label="AI活用による年間増収予測"
             sub="前月比 +12%"
           />

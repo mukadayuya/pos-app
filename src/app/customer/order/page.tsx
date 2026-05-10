@@ -526,6 +526,7 @@ function CustomerOrderInner() {
         <ProductDetailModal
           item={detailItem}
           categoryColor={categoryColorMap(detailItem.category)}
+          lang={lang}
           onClose={() => setDetailItem(null)}
           onAddToCart={(qty, servingTime, opts) => {
             addToCart(detailItem, qty, servingTime, opts);
@@ -787,16 +788,51 @@ function ProductCard({
   );
 }
 
+// ─── 深層アップセル：コンボトーストメッセージ ──────────────────
+
+const COMBO_TOASTS: Record<Lang, { spice: string; size: string; default: string[] }> = {
+  ja: {
+    spice:   "🌶️ その辛さ、冷えたビールと最高の組み合わせ！",
+    size:    "💪 ボリューム満点！お供のドリンクはいかが？",
+    default: ["✨ その組み合わせ、シェフのお墨付き！", "👨‍🍳 最高のカスタマイズです！", "🎯 絶妙な選択！"],
+  },
+  en: {
+    spice:   "🌶️ Bold! A cold draft beer pairs perfectly!",
+    size:    "💪 Great size! Add a drink to complete the meal?",
+    default: ["✨ Chef-approved combo!", "👨‍🍳 Excellent customization!", "🎯 Great choice!"],
+  },
+  zh: {
+    spice:   "🌶️ 辣味绝了！来杯冰饮搭配最完美！",
+    size:    "💪 分量十足！加杯饮料更完美！",
+    default: ["✨ 主厨认可的搭配！", "👨‍🍳 绝妙组合！", "🎯 好选择！"],
+  },
+  ko: {
+    spice:   "🌶️ 매운맛! 차가운 맥주와 환상의 조합!",
+    size:    "💪 든든한 양! 음료 한 잔 추가하시겠어요?",
+    default: ["✨ 셰프 인정 조합!", "👨‍🍳 완벽한 커스터마이징!", "🎯 훌륭한 선택!"],
+  },
+};
+
+function getComboToast(lang: Lang, groupName: string, itemName: string): string {
+  const msgs = COMBO_TOASTS[lang] ?? COMBO_TOASTS.ja;
+  const lower = `${groupName} ${itemName}`.toLowerCase();
+  if (lower.includes("辛") || lower.includes("spic") || lower.includes("매운")) return msgs.spice;
+  if (lower.includes("量") || lower.includes("大盛") || lower.includes("size") || lower.includes("분량")) return msgs.size;
+  return msgs.default[Math.floor(Math.random() * msgs.default.length)];
+}
+
 // ─── 商品詳細モーダル ──────────────────────────────────────────
 
 function ProductDetailModal({
   item,
   categoryColor,
+  lang,
   onClose,
   onAddToCart,
 }: {
   item: MenuItem;
   categoryColor: string;
+  lang: Lang;
   onClose: () => void;
   onAddToCart: (qty: number, servingTime: ServingTime, opts: OptionSelection[]) => void;
 }) {
@@ -813,10 +849,18 @@ function ProductDetailModal({
     }));
   });
 
+  // 深層アップセル：コンボ褒めトースト
+  const [comboToast, setComboToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+
   function handleOptionChange(groupId: string, groupName: string, itemId: string, itemName: string, price: number) {
     setSelectedOptions((prev) =>
       prev.map((o) => o.groupId === groupId ? { groupId, groupName, itemId, itemName, price } : o)
     );
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setComboToast(getComboToast(lang, groupName, itemName));
+    toastTimerRef.current = setTimeout(() => setComboToast(null), 2500);
   }
 
   const optionDelta = selectedOptions.reduce((s, o) => s + o.price, 0);
@@ -943,6 +987,13 @@ function ProductDetailModal({
               <span className="ml-auto text-xl font-black text-violet-600">{formatPrice(total)}</span>
             </div>
           </div>
+
+          {/* 深層アップセル：コンボ褒めトースト */}
+          {comboToast && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 rounded-xl text-violet-700 text-sm font-semibold animate-[slideUp_0.3s_ease-out]">
+              {comboToast}
+            </div>
+          )}
 
           {/* カートに追加 */}
           <button
@@ -1359,9 +1410,9 @@ function UpsellBanner({
               <p className="text-violet-100 text-xs leading-relaxed truncate">
                 {suggestion.pairingText}
               </p>
-              {/* 補助金ストーリー（小さく） */}
-              <p className="text-violet-200/70 text-[10px] mt-0.5 line-clamp-1">
-                🏅 {suggestion.subsidyHint}
+              {/* シズル感テキスト */}
+              <p className="text-violet-100/80 text-[10px] mt-0.5 line-clamp-1 italic">
+                ✨ {suggestion.sizzleText}
               </p>
             </div>
 
