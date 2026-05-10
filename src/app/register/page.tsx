@@ -848,6 +848,12 @@ function RegisterPageInner() {
             <span>受給チャンス</span>
           </Link>
 
+          <Link href="/admin/ai-dashboard"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-violet-700 text-white hover:from-violet-500 hover:to-violet-600 transition-all duration-200 shadow-[0_2px_8px_rgba(139,92,246,0.35)]">
+            <span>📈</span>
+            <span>AI成果</span>
+          </Link>
+
           <Link href="/sales-data"
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-white ring-1 ring-black/[0.07] text-slate-600 hover:bg-slate-50 transition-all duration-200 shadow-sm">
             <span>📊</span>
