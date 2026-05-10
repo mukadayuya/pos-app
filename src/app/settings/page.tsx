@@ -1,32 +1,116 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { fetchDefaultStoreId } from "@/lib/adminDb";
+import { fetchPeriodSummary, fetchTodayHourlySales, HourlySales } from "@/lib/db";
 
+type SettingsTab    = "store" | "settlement" | "hardware";
+type SettlementSub  = "inspect" | "cashcount" | "close";
+
+const BILLS = [
+  { label: "10,000円", value: 10000 },
+  { label: " 5,000円", value: 5000  },
+  { label: " 1,000円", value: 1000  },
+  { label: "   500円", value: 500   },
+  { label: "   100円", value: 100   },
+  { label: "    50円", value: 50    },
+  { label: "    10円", value: 10    },
+  { label: "     5円", value: 5     },
+  { label: "     1円", value: 1     },
+];
+
+function fmtYen(n: number) { return `¥${n.toLocaleString()}`; }
+
+// ─── Mini hourly chart (reuse violet style) ───────────────────
+function HourlyBar({ data }: { data: HourlySales[] }) {
+  if (data.length === 0)
+    return <p className="text-xs text-slate-400 text-center py-4">本日の売上データがありません</p>;
+  const max = Math.max(...data.map(d => d.total), 1);
+  return (
+    <div className="flex items-end gap-1 h-20 px-1 pb-1">
+      {data.map(d => (
+        <div key={d.hour} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+          <div className="w-full flex flex-col justify-end" style={{ height: "64px" }}>
+            <div
+              className="w-full bg-violet-500 rounded-t"
+              style={{ height: `${Math.max(2, Math.round((d.total / max) * 64))}px` }}
+              title={`${d.hour}時 ${fmtYen(d.total)}`}
+            />
+          </div>
+          <span className="text-slate-400 font-mono" style={{ fontSize: "8px" }}>{d.hour}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const [storeName, setStoreName]           = useState("Kitchen Kazu");
-  const [storeAddress, setStoreAddress]     = useState("");
-  const [storeTel, setStoreTel]             = useState("");
-  const [invoiceNumber, setInvoiceNumber]   = useState("");
-  const [logoDataUrl, setLogoDataUrl]       = useState<string | null>(null);
-  const [btStatus, setBtStatus]             = useState<"disconnected" | "connecting" | "connected">("disconnected");
-  const [btDevice, setBtDevice]             = useState("mPOP-xxxxxxx");
-  const [saved, setSaved]                   = useState(false);
+  const [activeTab, setActiveTab]       = useState<SettingsTab>("store");
+  const [settleSub, setSettleSub]       = useState<SettlementSub>("inspect");
+
+  // Store settings
+  const [storeName, setStoreName]       = useState("Kitchen Kazu");
+  const [storeAddress, setStoreAddress] = useState("");
+  const [storeTel, setStoreTel]         = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [logoDataUrl, setLogoDataUrl]   = useState<string | null>(null);
+  const [saved, setSaved]               = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Hardware
+  const [btStatus, setBtStatus]         = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [btDevice, setBtDevice]         = useState("mPOP-xxxxxxx");
+
+  // Cash counter
+  const [counts, setCounts]             = useState<Record<number, number>>(
+    Object.fromEntries(BILLS.map(b => [b.value, 0]))
+  );
+  const cashTotal = BILLS.reduce((s, b) => s + b.value * (counts[b.value] ?? 0), 0);
+
+  // Inspection data
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [todaySales, setTodaySales]         = useState<{ total: number; count: number; avgSpend: number } | null>(null);
+  const [hourlyData, setHourlyData]         = useState<HourlySales[]>([]);
+
   useEffect(() => {
-    setStoreName(localStorage.getItem("store_name")        || "Kitchen Kazu");
-    setStoreAddress(localStorage.getItem("store_address")  || "");
-    setStoreTel(localStorage.getItem("store_tel")          || "");
+    setStoreName(localStorage.getItem("store_name")       || "Kitchen Kazu");
+    setStoreAddress(localStorage.getItem("store_address") || "");
+    setStoreTel(localStorage.getItem("store_tel")         || "");
     setInvoiceNumber(localStorage.getItem("invoice_number") || "");
-    setLogoDataUrl(localStorage.getItem("receipt_logo")    || null);
+    setLogoDataUrl(localStorage.getItem("receipt_logo")   || null);
   }, []);
+
+  const loadInspectData = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setInspectLoading(true);
+    try {
+      const sid = await fetchDefaultStoreId();
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const [summary, hourly] = await Promise.all([
+        fetchPeriodSummary(todayStart, todayEnd),
+        fetchTodayHourlySales(),
+      ]);
+      setTodaySales(summary);
+      setHourlyData(hourly);
+    } catch { /* ignore */ }
+    finally { setInspectLoading(false); }
+  }, []);
+
+  // Load inspection data when that tab is first opened
+  useEffect(() => {
+    if (activeTab === "settlement" && settleSub === "inspect") loadInspectData();
+  }, [activeTab, settleSub, loadInspectData]);
 
   const handleSave = () => {
     localStorage.setItem("store_name",      storeName);
-    localStorage.setItem("store_address",  storeAddress);
-    localStorage.setItem("store_tel",      storeTel);
-    localStorage.setItem("invoice_number", invoiceNumber);
+    localStorage.setItem("store_address",   storeAddress);
+    localStorage.setItem("store_tel",       storeTel);
+    localStorage.setItem("invoice_number",  invoiceNumber);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -44,224 +128,369 @@ export default function SettingsPage() {
   };
 
   const handleBluetooth = () => {
-    if (btStatus === "connected") {
-      setBtStatus("disconnected");
-      return;
-    }
+    if (btStatus === "connected") { setBtStatus("disconnected"); return; }
     setBtStatus("connecting");
-    setTimeout(() => {
-      setBtStatus("connected");
-      setBtDevice("mPOP-KK8823");
-    }, 2000);
+    setTimeout(() => { setBtStatus("connected"); setBtDevice("mPOP-KK8823"); }, 2000);
   };
 
+  const setCount = (val: number, delta: number) =>
+    setCounts(prev => ({ ...prev, [val]: Math.max(0, (prev[val] ?? 0) + delta) }));
+
+  const TABS: { key: SettingsTab; label: string; icon: string }[] = [
+    { key: "store",      label: "店舗設定",  icon: "🏪" },
+    { key: "settlement", label: "点検・精算", icon: "🖨️" },
+    { key: "hardware",   label: "ハードウェア", icon: "🔵" },
+  ];
+
+  const SETTLE_SUBS: { key: SettlementSub; label: string }[] = [
+    { key: "inspect",   label: "点検（売上確認）" },
+    { key: "cashcount", label: "レジ金入力" },
+    { key: "close",     label: "精算実行" },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* ヘッダー */}
-      <header className="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-700">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-slate-400 hover:text-white text-sm transition-colors">← HOME</Link>
-          <span className="text-slate-600">|</span>
-          <span className="text-xl">⚙️</span>
-          <h1 className="text-lg font-bold">設定 / 点検・精算</h1>
+    <div className="min-h-screen bg-slate-50">
+
+      {/* ── Header ─────────────────────────────────────── */}
+      <header className="bg-violet-800 text-white shadow-lg">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-violet-300 hover:text-white text-sm font-medium transition-colors">← HOME</Link>
+            <div className="w-8 h-8 bg-white/20 rounded-[10px] flex items-center justify-center">
+              <span className="text-[10px] font-black tracking-tight">FL</span>
+            </div>
+            <div className="leading-none">
+              <p className="text-sm font-bold leading-tight">設定・点検・精算</p>
+              <p className="text-[11px] text-violet-300 mt-0.5">Kitchen Kazu · FLOWS</p>
+            </div>
+          </div>
+          <Link href="/register"
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 border border-white/20 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all">
+            🧾 レジへ
+          </Link>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-3xl mx-auto px-6 py-6">
 
-        {/* 店舗情報 */}
-        <section>
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">店舗情報（レシート表示）</h2>
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">店舗名</label>
-              <input
-                type="text"
-                value={storeName}
-                onChange={e => setStoreName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">住所</label>
-              <input
-                type="text"
-                value={storeAddress}
-                onChange={e => setStoreAddress(e.target.value)}
-                placeholder="例：岐阜県高山市○○町1-2-3"
-                className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">電話番号</label>
-              <input
-                type="text"
-                value={storeTel}
-                onChange={e => setStoreTel(e.target.value)}
-                placeholder="例：0577-00-0000"
-                className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">
-                インボイス登録番号
-                <span className="ml-2 text-xs font-normal text-slate-500">（領収書に印字）</span>
-              </label>
-              <input
-                type="text"
-                value={invoiceNumber}
-                onChange={e => setInvoiceNumber(e.target.value)}
-                placeholder="例：T1234567890123"
-                className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-slate-600 font-mono"
-              />
-            </div>
+        {/* ── Horizontal tab bar ─────────────────────────── */}
+        <div className="flex gap-1 bg-white border border-slate-200 rounded-2xl p-1.5 mb-6 shadow-sm">
+          {TABS.map(t => (
             <button
-              onClick={handleSave}
-              className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                saved ? "bg-emerald-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeTab === t.key
+                  ? "bg-violet-700 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
               }`}
             >
-              {saved ? "✓ 保存しました" : "保存する"}
+              <span>{t.icon}</span><span>{t.label}</span>
             </button>
-          </div>
-        </section>
+          ))}
+        </div>
 
-        {/* ロゴ */}
-        <section>
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">レシートロゴ（社印）</h2>
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-4">
-            {logoDataUrl ? (
-              <div className="flex flex-col items-center gap-3">
-                <img src={logoDataUrl} alt="ロゴ" className="max-h-24 max-w-xs object-contain rounded-lg bg-white p-2" />
-                <button
-                  onClick={() => { setLogoDataUrl(null); localStorage.removeItem("receipt_logo"); }}
-                  className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+        {/* ════ 店舗設定 ════════════════════════════════════ */}
+        {activeTab === "store" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">店舗情報（レシート表示）</h2>
+              {[
+                { label: "店舗名",       value: storeName,      set: setStoreName,      placeholder: "Kitchen Kazu" },
+                { label: "住所",         value: storeAddress,   set: setStoreAddress,   placeholder: "例：岐阜県高山市○○町1-2-3" },
+                { label: "電話番号",     value: storeTel,       set: setStoreTel,       placeholder: "例：0577-00-0000" },
+                { label: "インボイス登録番号", value: invoiceNumber, set: setInvoiceNumber, placeholder: "例：T1234567890123" },
+              ].map(({ label, value, set, placeholder }) => (
+                <div key={label}>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={e => set(e.target.value)}
+                    placeholder={placeholder}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all placeholder-slate-400"
+                  />
+                </div>
+              ))}
+              <button
+                onClick={handleSave}
+                className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                  saved ? "bg-emerald-600 text-white" : "bg-violet-700 hover:bg-violet-600 text-white"
+                }`}
+              >
+                {saved ? "✓ 保存しました" : "保存する"}
+              </button>
+            </div>
+
+            {/* Logo */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">レシートロゴ（社印）</h2>
+              {logoDataUrl ? (
+                <div className="flex flex-col items-center gap-3">
+                  <img src={logoDataUrl} alt="ロゴ" className="max-h-24 max-w-xs object-contain rounded-lg bg-slate-50 p-2 border border-slate-200" />
+                  <button
+                    onClick={() => { setLogoDataUrl(null); localStorage.removeItem("receipt_logo"); }}
+                    className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
+                  >
+                    🗑️ ロゴを削除
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-violet-400 hover:bg-violet-50/50 transition-all"
                 >
-                  🗑️ ロゴを削除
+                  <p className="text-3xl mb-2">🖼️</p>
+                  <p className="text-slate-500 text-sm">クリックして画像を選択</p>
+                  <p className="text-slate-400 text-xs mt-1">PNG, JPG（最大2MB）</p>
+                </div>
+              )}
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+              {!logoDataUrl && (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all"
+                >
+                  📁 ファイルを選択
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ════ 点検・精算 ══════════════════════════════════ */}
+        {activeTab === "settlement" && (
+          <div className="space-y-5">
+            {/* Sub-tab pills */}
+            <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+              {SETTLE_SUBS.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setSettleSub(s.key)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                    settleSub === s.key
+                      ? "bg-violet-700 text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 点検 */}
+            {settleSub === "inspect" && (
+              <div className="space-y-4">
+                {!isSupabaseConfigured ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm">
+                    ⚠️ Supabase が未設定のため売上データを表示できません。
+                  </div>
+                ) : inspectLoading ? (
+                  <div className="flex justify-center py-12 text-slate-400 gap-2">
+                    <span className="animate-spin">⏳</span> 読込中…
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">本日売上</p>
+                        <p className="text-2xl font-black text-violet-700 tabular-nums">{fmtYen(todaySales?.total ?? 0)}</p>
+                      </div>
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">会計件数</p>
+                        <p className="text-2xl font-black text-indigo-700 tabular-nums">{todaySales?.count ?? 0}<span className="text-sm font-normal text-slate-400 ml-1">件</span></p>
+                      </div>
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">客単価</p>
+                        <p className="text-2xl font-black text-emerald-700 tabular-nums">{fmtYen(todaySales?.avgSpend ?? 0)}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">時間別売上</p>
+                      <HourlyBar data={hourlyData} />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={loadInspectData}
+                        className="flex-1 py-3 bg-violet-700 hover:bg-violet-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
+                      >
+                        🔄 データを更新
+                      </button>
+                      <Link href="/sales-data"
+                        className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold text-center transition-all active:scale-95">
+                        📊 詳細を見る →
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* レジ金入力 */}
+            {settleSub === "cashcount" && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
+                    <div className="grid grid-cols-[1fr_100px_100px_120px] gap-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      <span>紙幣・硬貨</span><span className="text-center">− 枚数 ＋</span><span className="text-right">金額</span><span className="text-right">小計</span>
+                    </div>
+                  </div>
+                  {BILLS.map(b => (
+                    <div key={b.value} className="grid grid-cols-[1fr_100px_100px_120px] gap-3 items-center px-5 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <p className="text-sm font-semibold text-slate-700 font-mono">{b.label}</p>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setCount(b.value, -1)}
+                          className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-600 transition-colors"
+                        >−</button>
+                        <span className="w-8 text-center text-sm font-black tabular-nums text-slate-900">{counts[b.value] ?? 0}</span>
+                        <button
+                          onClick={() => setCount(b.value, +1)}
+                          className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold text-slate-600 transition-colors"
+                        >＋</button>
+                      </div>
+                      <p className="text-xs text-right text-slate-400 font-mono">{fmtYen(b.value)}</p>
+                      <p className="text-sm font-bold text-right tabular-nums text-slate-800 font-mono">
+                        {fmtYen(b.value * (counts[b.value] ?? 0))}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="px-5 py-4 bg-violet-50 flex items-center justify-between">
+                    <p className="text-sm font-bold text-violet-800">レジ内現金 合計</p>
+                    <p className="text-2xl font-black text-violet-700 tabular-nums">{fmtYen(cashTotal)}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCounts(Object.fromEntries(BILLS.map(b => [b.value, 0])))}
+                  className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold transition-all"
+                >
+                  リセット
                 </button>
               </div>
-            ) : (
-              <div
-                onClick={() => fileRef.current?.click()}
-                className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-900/50 transition-all"
-              >
-                <p className="text-3xl mb-2">🖼️</p>
-                <p className="text-slate-400 text-sm">クリックして画像を選択</p>
-                <p className="text-slate-600 text-xs mt-1">PNG, JPG（最大2MB）</p>
+            )}
+
+            {/* 精算実行 */}
+            {settleSub === "close" && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                  <h3 className="text-sm font-bold text-slate-600">精算サマリー</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                      <span className="text-sm text-slate-600">本日売上合計</span>
+                      <span className="text-lg font-black text-violet-700 tabular-nums">{fmtYen(todaySales?.total ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                      <span className="text-sm text-slate-600">レジ金合計（現金）</span>
+                      <span className="text-lg font-black text-slate-800 tabular-nums">{fmtYen(cashTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 bg-slate-50 rounded-xl px-3">
+                      <span className="text-sm font-bold text-slate-700">差異</span>
+                      {(() => {
+                        const diff = cashTotal - (todaySales?.total ?? 0);
+                        return (
+                          <span className={`text-lg font-black tabular-nums ${diff === 0 ? "text-emerald-600" : diff > 0 ? "text-blue-600" : "text-red-600"}`}>
+                            {diff >= 0 ? "+" : ""}{fmtYen(diff)}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {todaySales === null && isSupabaseConfigured && (
+                    <p className="text-xs text-slate-400">※ 売上データを取得するには「点検」タブで更新してください。</p>
+                  )}
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-xs space-y-1">
+                  <p className="font-bold">精算前チェックリスト</p>
+                  <p>□ 未会計の伝票がないことを確認</p>
+                  <p>□ キャッシュドロワーの現金を数え「レジ金入力」に入力</p>
+                  <p>□ 過不足があれば原因を確認・記録</p>
+                </div>
+                <button
+                  onClick={() => alert("精算レポートを印刷します（mPOP接続時に有効）")}
+                  className="w-full py-4 bg-violet-700 hover:bg-violet-600 text-white rounded-2xl text-base font-bold transition-all active:scale-95 shadow-sm"
+                >
+                  🖨️ 精算レポートを印刷する
+                </button>
+                <p className="text-center text-slate-400 text-xs">
+                  ※ Star精密 mPOP が Bluetooth 接続済みの場合のみ印刷されます
+                </p>
               </div>
             )}
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-            {!logoDataUrl && (
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-all"
-              >
-                📁 ファイルを選択
-              </button>
-            )}
           </div>
-        </section>
+        )}
 
-        {/* Star mPOP Bluetooth */}
-        <section>
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">ハードウェア連携</h2>
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
-                  btStatus === "connected" ? "bg-emerald-900" : "bg-slate-700"
+        {/* ════ ハードウェア ════════════════════════════════ */}
+        {activeTab === "hardware" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">ハードウェア連携</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${
+                    btStatus === "connected" ? "bg-emerald-100" : "bg-slate-100"
+                  }`}>
+                    🖨️
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">スター精密 mPOP</p>
+                    <p className="text-xs text-slate-400">レシートプリンター / キャッシュドロワー</p>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
+                  btStatus === "connected"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : btStatus === "connecting"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-slate-100 text-slate-500"
                 }`}>
-                  🖨️
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">スター精密 mPOP</p>
-                  <p className="text-xs text-slate-400">レシートプリンター / キャッシュドロワー</p>
+                  <span className={`w-2 h-2 rounded-full ${
+                    btStatus === "connected" ? "bg-emerald-500" : btStatus === "connecting" ? "bg-amber-500 animate-pulse" : "bg-slate-400"
+                  }`} />
+                  {btStatus === "connected" ? "接続済み" : btStatus === "connecting" ? "接続中..." : "未接続"}
                 </div>
               </div>
-              <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
-                btStatus === "connected"
-                  ? "bg-emerald-900 text-emerald-400"
-                  : btStatus === "connecting"
-                  ? "bg-amber-900 text-amber-400"
-                  : "bg-slate-700 text-slate-400"
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${
-                  btStatus === "connected" ? "bg-emerald-400" : btStatus === "connecting" ? "bg-amber-400 animate-pulse" : "bg-slate-500"
-                }`} />
-                {btStatus === "connected" ? "接続済み" : btStatus === "connecting" ? "接続中..." : "未接続"}
-              </div>
-            </div>
 
-            {btStatus === "connected" && (
-              <div className="bg-slate-900 rounded-xl px-4 py-3 text-xs text-slate-400 space-y-1">
-                <div className="flex justify-between">
-                  <span>デバイス名</span>
-                  <span className="text-white font-mono">{btDevice}</span>
+              {btStatus === "connected" && (
+                <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 space-y-2">
+                  <div className="flex justify-between">
+                    <span>デバイス名</span><span className="font-mono text-slate-700 font-semibold">{btDevice}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>通信方式</span><span className="text-slate-700 font-semibold">Bluetooth LE</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ペーパー幅</span><span className="text-slate-700 font-semibold">58mm</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>通信方式</span>
-                  <span className="text-white">Bluetooth LE</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>ペーパー幅</span>
-                  <span className="text-white">58mm</span>
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={handleBluetooth}
-              disabled={btStatus === "connecting"}
-              className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
-                btStatus === "connected"
-                  ? "bg-red-900 hover:bg-red-800 text-red-300"
-                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
-              }`}
-            >
-              {btStatus === "connecting" ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⏳</span> 接続中...
-                </span>
-              ) : btStatus === "connected" ? (
-                "切断する"
-              ) : (
-                "🔵 Bluetoothで接続"
               )}
-            </button>
 
-            <p className="text-xs text-slate-600 text-center">
-              ※ これはモック画面です。実際のBluetooth接続には専用SDK連携が必要です。
-            </p>
-          </div>
-        </section>
+              <button
+                onClick={handleBluetooth}
+                disabled={btStatus === "connecting"}
+                className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
+                  btStatus === "connected"
+                    ? "bg-red-100 hover:bg-red-200 text-red-700"
+                    : "bg-violet-700 hover:bg-violet-600 text-white"
+                }`}
+              >
+                {btStatus === "connecting" ? (
+                  <span className="flex items-center justify-center gap-2"><span className="animate-spin">⏳</span> 接続中...</span>
+                ) : btStatus === "connected" ? "切断する" : "🔵 Bluetoothで接続"}
+              </button>
 
-        {/* 点検・精算 */}
-        <section>
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4">点検 / 精算</h2>
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-3">
-            <p className="text-xs text-slate-400">レジの点検・精算レポートを印刷します。</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.open("/admin/sales", "_blank")}
-                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95"
-              >
-                📋 点検（売上確認）
-              </button>
-              <button
-                onClick={() => alert("精算レポートを印刷します（mPOP接続時に有効）")}
-                className="flex-1 py-3 bg-violet-700 hover:bg-violet-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95"
-              >
-                🖨️ 精算レポート印刷
-              </button>
+              <p className="text-xs text-slate-400 text-center">
+                ※ これはモック画面です。実際のBluetooth接続には専用SDK連携が必要です。
+              </p>
             </div>
           </div>
-        </section>
+        )}
 
-        {/* バージョン情報 */}
-        <div className="text-center text-slate-700 text-xs pb-4">
-          Kitchen Kazu POS v2.0 · Powered by Next.js + Supabase
+        <div className="mt-8 text-center text-slate-300 text-xs">
+          Kitchen Kazu POS v2.0 · Powered by FLOWS
         </div>
-      </main>
+      </div>
     </div>
   );
 }

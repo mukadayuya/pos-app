@@ -19,7 +19,16 @@
       "Bash(git push *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
       "Bash(supabase --version)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('dependencies',{}\\), indent=2\\)\\)\")",
+      "Bash(npx vercel *)",
+      "Bash(npm test *)",
+      "Bash(npx vitest *)",
+      "Bash(vercel --prod)",
+      "Bash(wait)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(pkill -f \"next build\")",
+      "Read(//Users/GS138/Desktop/**)"
     ]
   }
 }

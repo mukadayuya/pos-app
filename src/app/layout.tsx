@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "POSレジ",
+  title: "FLOWS — by Infotainment",
   description: "飲食店向けPOSレジアプリ",
 };
 

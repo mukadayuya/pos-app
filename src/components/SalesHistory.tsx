@@ -1,11 +1,29 @@
 "use client";
 
-import { SalesRecord } from "@/types/pos";
+import { SalesRecord, OrderOptions } from "@/types/pos";
 import { riceTypeLabels, riceSizeLabels } from "@/data/menu";
+import { computeItemDiscountAmount, computeItemDiscountDisplay } from "@/lib/utils";
+
+function optionLabel(opts: OrderOptions): string {
+  if (opts.selections?.length > 0) return opts.selections.map(s => s.itemName).join(" / ");
+  if (opts.riceSize === "none") return "";
+  return `${riceTypeLabels[opts.riceType]} / ${riceSizeLabels[opts.riceSize]}`;
+}
 
 interface SalesHistoryProps {
   records: SalesRecord[];
   onClose: () => void;
+}
+
+function discountRow(record: SalesRecord) {
+  const amt = record.subtotal + record.tax - record.total;
+  if (amt <= 0) return null;
+  const label = record.discount
+    ? record.discount.type === "percent"
+      ? `割引 (${record.discount.value}%)`
+      : "割引"
+    : "割引";
+  return { label, amt };
 }
 
 export default function SalesHistory({ records, onClose }: SalesHistoryProps) {
@@ -57,21 +75,51 @@ export default function SalesHistory({ records, onClose }: SalesHistoryProps) {
                 </span>
               </div>
               <div className="space-y-1.5">
-                {record.items.map((item) => (
-                  <div key={item.itemKey} className="text-sm text-slate-700">
-                    <div className="flex justify-between">
-                      <span className="font-medium">
-                        {item.menuItem.emoji} {item.menuItem.name} × {item.quantity}
-                      </span>
-                      <span>¥{(item.unitPrice * item.quantity).toLocaleString()}</span>
+                {record.items.map((item) => {
+                  const label      = optionLabel(item.options);
+                  const rawTotal      = item.unitPrice * item.quantity;
+                  const discAmt       = item.itemDiscount
+                    ? computeItemDiscountAmount(item.itemDiscount, rawTotal, item.taxRate) : 0;
+                  const displayDiscAmt = item.itemDiscount
+                    ? computeItemDiscountDisplay(item.itemDiscount, rawTotal, item.taxRate) : 0;
+                  const effTotal      = rawTotal - discAmt;
+                  const taxIncl       = effTotal + Math.floor(effTotal * item.taxRate);
+                  return (
+                    <div key={item.itemKey} className="text-sm text-slate-700">
+                      <div className="flex justify-between">
+                        <span className="font-medium">
+                          {item.menuItem.emoji} {item.menuItem.name} × {item.quantity}
+                        </span>
+                        <span className={discAmt > 0 ? "text-orange-600" : ""}>
+                          ¥{taxIncl.toLocaleString()}
+                        </span>
+                      </div>
+                      {label && (
+                        <span className="text-xs text-slate-400 block">{label}</span>
+                      )}
+                      {item.priceAdjustReason && (
+                        <span className="text-xs text-violet-500 block">※{item.priceAdjustReason}</span>
+                      )}
+                      {discAmt > 0 && item.itemDiscount && (
+                        <span className="text-xs text-orange-500 block">
+                          🏷️ {item.itemDiscount.type === "percent"
+                            ? `${item.itemDiscount.value}%引き `
+                            : ""}−¥{displayDiscAmt.toLocaleString()}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs text-slate-400">
-                      [{riceTypeLabels[item.options.riceType]}/
-                      {riceSizeLabels[item.options.riceSize]}]
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              {(() => {
+                const disc = discountRow(record);
+                return disc ? (
+                  <div className="flex justify-between text-sm text-red-500 font-medium">
+                    <span>{disc.label}</span>
+                    <span>-¥{disc.amt.toLocaleString()}</span>
+                  </div>
+                ) : null;
+              })()}
               <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-100">
                 <span>合計（税込）</span>
                 <span className="text-indigo-600">¥{record.total.toLocaleString()}</span>

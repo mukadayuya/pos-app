@@ -2,44 +2,91 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { MenuItem } from "@/types/pos";
-import { categoryLabels } from "@/data/menu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   fetchTodaySummary,
-  fetchDailySummaries,
-  fetchMonthlySummaries,
-  fetchYearlySummaries,
-  fetchItemRankings,
-  fetchMenuItems,
-  fetchAllSalesForExport,
-  deleteMenuItem,
-  TodaySummary,
-  DailySummary,
-  MonthlySummary,
-  YearlySummary,
-  ItemRanking,
+  fetchPeriodSummary,
+  fetchTodayHourlySales,
+  fetchSalesDetail,
+  deleteSale,
+  PeriodSummary,
+  HourlySales,
+  SaleDetailRow,
 } from "@/lib/db";
 
-type ChartTab = "daily" | "monthly" | "yearly";
+// ─── 月オプション生成 ──────────────────────────────────────────
+function getMonthOptions(): { value: string; label: string }[] {
+  const opts = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+    opts.push({ value, label });
+  }
+  return opts;
+}
 
-// ─── バーチャート ──────────────────────────────────────────────
-function BarChart({ data }: { data: { label: string; value: number; sub?: string }[] }) {
-  const maxVal = Math.max(...data.map(d => d.value), 1);
+// ─── 4期間サマリーカード ──────────────────────────────────────
+function PeriodCard({
+  period, data, loading,
+}: {
+  period: string;
+  data: PeriodSummary | null;
+  loading: boolean;
+}) {
   return (
-    <div className="flex items-end gap-1 h-40 px-2 pb-1">
-      {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-          <div className="w-full flex flex-col justify-end" style={{ height: "120px" }}>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{period}</p>
+      {loading ? (
+        <p className="text-slate-300 text-sm">読込中…</p>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-slate-400 mb-0.5">純売上</p>
+            <p className="text-2xl font-black text-slate-900">
+              ¥{(data?.total ?? 0).toLocaleString()}
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <div>
+              <p className="text-xs text-slate-400">客数</p>
+              <p className="text-lg font-bold text-indigo-700">{data?.count ?? 0}<span className="text-sm font-normal text-slate-400 ml-0.5">人</span></p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">客単価</p>
+              <p className="text-lg font-bold text-emerald-700">¥{(data?.avgSpend ?? 0).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 時間別棒グラフ ───────────────────────────────────────────
+function HourlyBarChart({ data }: { data: HourlySales[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-slate-300 text-sm">
+        本日の売上データがありません
+      </div>
+    );
+  }
+  const maxVal = Math.max(...data.map(d => d.total), 1);
+  return (
+    <div className="flex items-end gap-1.5 h-36 px-1 pb-1">
+      {data.map(d => (
+        <div key={d.hour} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <div className="w-full flex flex-col justify-end" style={{ height: "110px" }}>
             <div
-              className="w-full bg-indigo-500 hover:bg-indigo-400 transition-all rounded-t-sm"
-              style={{ height: `${Math.max(3, Math.round((d.value / maxVal) * 120))}px` }}
-              title={`¥${d.value.toLocaleString()}`}
+              className="w-full bg-indigo-500 hover:bg-indigo-400 transition-all rounded-t cursor-default"
+              style={{ height: `${Math.max(4, Math.round((d.total / maxVal) * 110))}px` }}
+              title={`${d.hour}時 ¥${d.total.toLocaleString()} (${d.count}件)`}
             />
           </div>
-          <span className="text-slate-500 text-center leading-none"
-            style={{ fontSize: "9px", writingMode: "vertical-rl", height: "24px", overflow: "hidden" }}>
-            {d.label}
+          <span className="text-slate-500 text-center font-mono" style={{ fontSize: "9px" }}>
+            {d.hour}時
           </span>
         </div>
       ))}
@@ -47,54 +94,120 @@ function BarChart({ data }: { data: { label: string; value: number; sub?: string
   );
 }
 
-// ─── サマリーカード ──────────────────────────────────────────────
-function SummaryCard({ label, value, sub, icon, color }: {
-  label: string; value: string; sub?: string; icon: string; color: string;
+// ─── 注文詳細モーダル ─────────────────────────────────────────
+function OrderDetailModal({
+  row,
+  onClose,
+}: {
+  row: SaleDetailRow;
+  onClose: () => void;
 }) {
+  const dt = new Date(row.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const items = Array.isArray(row.items) ? row.items : [];
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex items-start gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-sm text-slate-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-0.5">{value}</p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-indigo-700 text-white px-6 py-4 flex items-center justify-between">
+          <h3 className="font-bold">注文詳細</h3>
+          <button onClick={onClose} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm">✕</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-xs text-slate-400">{dt}</p>
+          <div className="space-y-2">
+            {items.length === 0 ? (
+              <p className="text-slate-400 text-sm">明細データがありません</p>
+            ) : (
+              items.map((it, i) => (
+                <div key={i} className="flex items-center justify-between text-sm bg-slate-50 rounded-xl px-3 py-2.5">
+                  <span>{it.emoji} {it.name} ×{Number(it.quantity) || 1}</span>
+                  <span className="font-bold text-indigo-700">¥{((Number(it.unit_price) || 0) * (Number(it.quantity) || 1)).toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="border-t border-slate-200 pt-3 flex justify-between font-bold text-base">
+            <span>合計</span>
+            <span className="text-indigo-700">¥{row.total_amount.toLocaleString()}</span>
+          </div>
+          <p className="text-xs text-slate-400 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            内容を変更する場合は一度削除して再入力してください。
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Supabase未設定ガイド ──────────────────────────────────────
-function SetupGuide() {
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 max-w-lg mx-auto mt-4">
-      <h3 className="font-bold text-amber-800 text-base mb-3">⚙️ Supabase のセットアップが必要です</h3>
-      <ol className="space-y-2 text-sm text-amber-700 list-decimal list-inside">
-        <li><code className="bg-amber-100 px-1 rounded">supabase/setup.sql</code> をSQL Editorで実行</li>
-        <li><code className="bg-amber-100 px-1 rounded">.env.local</code> にURL・ANON KEYを設定</li>
-        <li>開発サーバーを再起動（<code className="bg-amber-100 px-1 rounded">npm run dev</code>）</li>
-      </ol>
-    </div>
-  );
-}
+// ─── ダッシュボード ────────────────────────────────────────────
+export default function AdminSalesPage() {
+  const now = new Date();
 
-// ─── メニュー管理 ──────────────────────────────────────────────
-function MenuManagement() {
-  const [menus, setMenus] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 4期間の日付範囲
+  const todayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd     = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const yestStart    = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const thisMonStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonEnd   = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
+  const [today, setToday]           = useState<PeriodSummary | null>(null);
+  const [yesterday, setYesterday]   = useState<PeriodSummary | null>(null);
+  const [thisMonth, setThisMonth]   = useState<PeriodSummary | null>(null);
+  const [lastMonth, setLastMonth]   = useState<PeriodSummary | null>(null);
+  const [hourly, setHourly]         = useState<HourlySales[]>([]);
+  const [orders, setOrders]         = useState<SaleDetailRow[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [detailRow, setDetailRow]   = useState<SaleDetailRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchMenuItems().then(setMenus).catch(console.error).finally(() => setLoading(false));
+  const monthOptions = getMonthOptions();
+
+  const loadSummaries = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setLoading(true); setError(null);
+    try {
+      const [t, y, tm, lm, h] = await Promise.all([
+        fetchPeriodSummary(todayStart, todayEnd),
+        fetchPeriodSummary(yestStart, todayStart),
+        fetchPeriodSummary(thisMonStart, todayEnd),
+        fetchPeriodSummary(lastMonStart, lastMonEnd),
+        fetchTodayHourlySales(),
+      ]);
+      setToday(t); setYesterday(y); setThisMonth(tm); setLastMonth(lm);
+      setHourly(h);
+    } catch {
+      setError("データの取得に失敗しました。");
+    } finally {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadOrders = useCallback(async (yearMonth: string) => {
+    if (!isSupabaseConfigured) return;
+    const [y, m] = yearMonth.split("-").map(Number);
+    const from = new Date(y, m - 1, 1);
+    const to   = new Date(y, m, 1);
+    try {
+      const rows = await fetchSalesDetail(from, to);
+      setOrders(rows);
+    } catch {
+      setOrders([]);
+    }
   }, []);
 
-  const handleDelete = async (item: MenuItem) => {
-    if (!window.confirm(`「${item.name}」を削除しますか？`)) return;
-    setDeletingId(item.id);
+  useEffect(() => { loadSummaries(); }, [loadSummaries]);
+  useEffect(() => { loadOrders(selectedMonth); }, [selectedMonth, loadOrders]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("この注文データを削除しますか？（取消後は元に戻せません）")) return;
+    setDeletingId(id);
     try {
-      await deleteMenuItem(item.id);
-      setMenus(prev => prev.filter(m => m.id !== item.id));
+      await deleteSale(id);
+      setOrders(prev => prev.filter(r => r.id !== id));
     } catch {
       alert("削除に失敗しました。");
     } finally {
@@ -102,176 +215,33 @@ function MenuManagement() {
     }
   };
 
-  const grouped = {
-    lunch:  menus.filter(m => m.category === "lunch"),
-    dinner: menus.filter(m => m.category === "dinner"),
-  } as const;
-
-  return (
-    <section>
-      <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">メニュー管理</h2>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        {loading ? (
-          <p className="text-center text-slate-400 text-sm py-8">読み込み中...</p>
-        ) : menus.length === 0 ? (
-          <p className="text-center text-slate-400 text-sm py-8">メニューがありません</p>
-        ) : (
-          (["lunch", "dinner"] as const).map(cat =>
-            grouped[cat].length > 0 && (
-              <div key={cat}>
-                <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                    {categoryLabels[cat]}
-                  </span>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {grouped[cat].map(item => (
-                    <div key={item.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                      <span className="text-2xl flex-shrink-0">{item.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{item.name}</p>
-                        <p className="text-xs text-slate-400">¥{item.price.toLocaleString()}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(item)}
-                        disabled={deletingId === item.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-400 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
-                      >
-                        {deletingId === item.id ? <span className="animate-spin">⏳</span> : <>🗑️ 削除</>}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          )
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ─── CSV エクスポート ──────────────────────────────────────────
-function exportToCsv(rows: DailySummary[]) {
-  const header = ["日付", "売上合計（税込）", "客数", "客単価"];
-  const body = rows.map(r => [r.date, r.total, r.count, r.count > 0 ? Math.floor(r.total / r.count) : 0]);
-  const bom = "\uFEFF";
-  const csv = bom + [header, ...body]
-    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
-    .join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `sales_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── ダッシュボード ────────────────────────────────────────────
-export default function AdminSalesPage() {
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState<string | null>(null);
-  const [todaySummary, setTodaySummary] = useState<TodaySummary | null>(null);
-  const [daily, setDaily]               = useState<DailySummary[]>([]);
-  const [monthly, setMonthly]           = useState<MonthlySummary[]>([]);
-  const [yearly, setYearly]             = useState<YearlySummary[]>([]);
-  const [itemRankings, setItemRankings] = useState<ItemRanking[]>([]);
-  const [chartTab, setChartTab]         = useState<ChartTab>("daily");
-  const [csvExporting, setCsvExporting] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [today, d, m, y, rankings] = await Promise.all([
-        fetchTodaySummary(),
-        fetchDailySummaries(),
-        fetchMonthlySummaries(),
-        fetchYearlySummaries(),
-        fetchItemRankings(),
-      ]);
-      setTodaySummary(today);
-      setDaily(d);
-      setMonthly(m);
-      setYearly(y);
-      setItemRankings(rankings);
-    } catch {
-      setError("データの取得に失敗しました。接続を確認してください。");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleCsvExport = async () => {
-    setCsvExporting(true);
-    try {
-      const allSales = await fetchAllSalesForExport();
-      const grouped = new Map<string, { total: number; count: number }>();
-      for (const sale of allSales) {
-        const date = new Date(sale.created_at).toLocaleDateString("ja-JP", {
-          timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
-        });
-        const prev = grouped.get(date) ?? { total: 0, count: 0 };
-        grouped.set(date, { total: prev.total + sale.total_amount, count: prev.count + 1 });
-      }
-      const rows: DailySummary[] = Array.from(grouped.entries())
-        .map(([date, { total, count }]) => ({ date, total, count }))
-        .sort((a, b) => b.date.localeCompare(a.date));
-      exportToCsv(rows);
-    } catch {
-      alert("CSVの書き出しに失敗しました。");
-    } finally {
-      setCsvExporting(false);
-    }
-  };
-
-  // チャートデータ変換
-  const chartData = chartTab === "daily"
-    ? daily.slice(-30).map(d => ({ label: d.date.slice(5), value: d.total, sub: `${d.count}件` }))
-    : chartTab === "monthly"
-    ? monthly.map(m => ({ label: m.label, value: m.total, sub: `${m.count}件` }))
-    : yearly.map(y => ({ label: `${y.year}年`, value: y.total, sub: `${y.count}件` }));
-
-  const chartTotal = chartTab === "daily"
-    ? daily.reduce((s, d) => s + d.total, 0)
-    : chartTab === "monthly"
-    ? monthly.reduce((s, m) => s + m.total, 0)
-    : yearly.reduce((s, y) => s + y.total, 0);
-
-  const chartCount = chartTab === "daily"
-    ? daily.reduce((s, d) => s + d.count, 0)
-    : chartTab === "monthly"
-    ? monthly.reduce((s, m) => s + m.count, 0)
-    : yearly.reduce((s, y) => s + y.count, 0);
-
   return (
     <div className="min-h-screen bg-slate-100">
+      {/* ヘッダー */}
       <header className="bg-indigo-700 text-white shadow-lg">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">📊</span>
             <div>
-              <h1 className="text-lg font-bold leading-tight">売上レポート</h1>
+              <h1 className="text-lg font-bold leading-tight">売上管理ダッシュボード</h1>
               <p className="text-xs text-indigo-300">Kitchen Kazu</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchData}
+              onClick={() => { loadSummaries(); loadOrders(selectedMonth); }}
               disabled={loading || !isSupabaseConfigured}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
             >
               <span className={loading ? "animate-spin inline-block" : ""}>🔄</span>
               更新
             </button>
-            <Link href="/register" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+            <Link href="/register"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               ← レジへ
             </Link>
-            <Link href="/" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+            <Link href="/"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
               🏠 HOME
             </Link>
           </div>
@@ -279,165 +249,120 @@ export default function AdminSalesPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-6 space-y-6">
-        {!isSupabaseConfigured && <SetupGuide />}
+        {!isSupabaseConfigured && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-800 text-sm">
+            ⚠️ Supabase が未設定です。<code className="bg-amber-100 px-1 rounded">.env.local</code> を確認してください。
+          </div>
+        )}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-sm font-medium">
             ⚠️ {error}
           </div>
         )}
 
-        {loading && isSupabaseConfigured ? (
-          <div className="flex items-center justify-center py-16 text-slate-400 gap-3">
-            <span className="animate-spin text-2xl">⏳</span>
-            <span className="text-sm">データを読み込み中...</span>
+        {/* ── 4期間サマリーカード ──────────────────────────── */}
+        <section>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">期間別サマリー</h2>
+          <div className="grid grid-cols-4 gap-4">
+            <PeriodCard period="先月" data={lastMonth}  loading={loading} />
+            <PeriodCard period="昨日" data={yesterday}  loading={loading} />
+            <PeriodCard period="今月" data={thisMonth}  loading={loading} />
+            <PeriodCard period="本日" data={today}      loading={loading} />
           </div>
-        ) : isSupabaseConfigured && (
-          <>
-            {/* 本日のサマリー */}
-            <section>
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">本日のサマリー</h2>
-              <div className="grid grid-cols-3 gap-4">
-                <SummaryCard icon="💴" color="bg-indigo-50" label="売上合計（税込）"
-                  value={`¥${(todaySummary?.totalRevenue ?? 0).toLocaleString()}`} sub="本日" />
-                <SummaryCard icon="👥" color="bg-emerald-50" label="客数"
-                  value={`${todaySummary?.count ?? 0}人`} sub="本日" />
-                <SummaryCard icon="🧾" color="bg-amber-50" label="客単価"
-                  value={`¥${(todaySummary?.avgSpend ?? 0).toLocaleString()}`} sub="1人あたり平均" />
-              </div>
-            </section>
+        </section>
 
-            {/* 売上グラフ */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">売上グラフ</h2>
-                <div className="flex gap-1">
-                  {(["daily", "monthly", "yearly"] as ChartTab[]).map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setChartTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        chartTab === tab
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"
-                      }`}
-                    >
-                      {tab === "daily" ? "日別" : tab === "monthly" ? "月別" : "年別"}
-                    </button>
-                  ))}
-                </div>
+        {/* ── 本日 時間別売上グラフ ─────────────────────────── */}
+        <section>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">本日の時間別売上</h2>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="flex items-center gap-6 mb-4">
+              <div>
+                <p className="text-xs text-slate-400">本日の合計</p>
+                <p className="text-2xl font-bold text-indigo-700">¥{(today?.total ?? 0).toLocaleString()}</p>
               </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <div className="flex gap-6 mb-4">
-                  <div>
-                    <p className="text-xs text-slate-400">
-                      {chartTab === "daily" ? "直近30日" : chartTab === "monthly" ? "直近12ヶ月" : "全期間"}合計
-                    </p>
-                    <p className="text-2xl font-bold text-indigo-700">¥{chartTotal.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">件数</p>
-                    <p className="text-2xl font-bold text-slate-700">{chartCount}件</p>
-                  </div>
-                </div>
-                {chartData.length === 0 ? (
-                  <p className="text-center text-slate-400 text-sm py-10">データがありません</p>
-                ) : (
-                  <BarChart data={chartData} />
-                )}
+              <div>
+                <p className="text-xs text-slate-400">件数</p>
+                <p className="text-2xl font-bold text-slate-700">{today?.count ?? 0}件</p>
               </div>
-            </section>
-
-            {/* 日別テーブル + ランキング */}
-            <div className="grid grid-cols-2 gap-6">
-              <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">日別売上（直近30日）</h2>
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                  {daily.length === 0 ? (
-                    <p className="text-center text-slate-400 text-sm py-10">データがありません</p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                          <th className="text-left px-5 py-3 font-semibold text-slate-600">日付</th>
-                          <th className="text-right px-5 py-3 font-semibold text-slate-600">売上</th>
-                          <th className="text-right px-5 py-3 font-semibold text-slate-600">客数</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {[...daily].reverse().map(row => (
-                          <tr key={row.date} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-5 py-3 text-slate-700 font-medium">{row.date}</td>
-                            <td className="px-5 py-3 text-right font-bold text-indigo-700">¥{row.total.toLocaleString()}</td>
-                            <td className="px-5 py-3 text-right text-slate-500">{row.count}人</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">メニュー別売上ランキング</h2>
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                  {itemRankings.length === 0 ? (
-                    <p className="text-center text-slate-400 text-sm py-10">データがありません</p>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {itemRankings.map((item, idx) => (
-                        <div key={item.menuItemName} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                            idx === 0 ? "bg-yellow-400 text-yellow-900"
-                            : idx === 1 ? "bg-slate-300 text-slate-700"
-                            : idx === 2 ? "bg-amber-600 text-white"
-                            : "bg-slate-100 text-slate-500"
-                          }`}>{idx + 1}</span>
-                          <span className="text-xl flex-shrink-0">{item.menuItemEmoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 truncate">{item.menuItemName}</p>
-                            <p className="text-xs text-slate-400">¥{item.totalRevenue.toLocaleString()}</p>
-                          </div>
-                          <span className="text-sm font-bold text-indigo-700 flex-shrink-0">{item.totalQuantity}食</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
             </div>
+            <HourlyBarChart data={hourly} />
+          </div>
+        </section>
 
-            {/* メニュー管理 */}
-            <MenuManagement />
+        {/* ── 注文履歴と訂正 ───────────────────────────────── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide">注文履歴</h2>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-semibold shadow-sm focus:outline-none focus:border-indigo-400"
+            >
+              {monthOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* 会計・事務処理 */}
-            <section className="pb-2">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">会計・事務処理</h2>
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleCsvExport}
-                    disabled={csvExporting}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 shadow-sm"
-                  >
-                    {csvExporting ? <span className="animate-spin">⏳</span> : <span>📥</span>}
-                    確定申告・補助金報告用データの出力
-                  </button>
-                  <a
-                    href={`mailto:?subject=${encodeURIComponent("【売上報告書】Kitchen Kazu")}&body=${encodeURIComponent("税理士の先生\n\nお世話になっております。\nKitchen Kazuの売上報告書をお送りします。\nCSVファイルを別途添付いたします。\n\nよろしくお願いいたします。")}`}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-sm"
-                  >
-                    <span>✉️</span>
-                    税理士へメール送信（CSV添付）
-                  </a>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {orders.length === 0 ? (
+              <p className="text-center text-slate-400 text-sm py-10">
+                {isSupabaseConfigured ? "この月のデータはありません" : "Supabase 未設定"}
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {/* ヘッダー行 */}
+                <div className="grid grid-cols-[1fr_120px_80px_140px] gap-2 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <span>日時</span>
+                  <span className="text-right">金額</span>
+                  <span className="text-right">件数</span>
+                  <span className="text-center">操作</span>
                 </div>
-                <p className="mt-3 text-xs text-slate-400 leading-relaxed">
-                  ※税理士への提出や、補助金の事後報告用データとしてそのままお使いいただけます
-                </p>
+                {orders.map(row => {
+                  const dt = new Date(row.created_at).toLocaleString("ja-JP", {
+                    timeZone: "Asia/Tokyo",
+                    month: "2-digit", day: "2-digit",
+                    hour: "2-digit", minute: "2-digit",
+                  });
+                  const rawItems = Array.isArray(row.items) ? row.items : [];
+                  const itemCount = rawItems.reduce((s: number, it) => {
+                    const q = Number(it.quantity);
+                    return s + (isNaN(q) ? 1 : q);
+                  }, 0) || 0;
+                  return (
+                    <div key={row.id}
+                      className="grid grid-cols-[1fr_120px_80px_140px] gap-2 px-5 py-3.5 items-center hover:bg-slate-50 transition-colors">
+                      <span className="text-sm text-slate-700 font-medium tabular-nums">{dt}</span>
+                      <span className="text-right font-bold text-indigo-700">¥{row.total_amount.toLocaleString()}</span>
+                      <span className="text-right text-slate-500 text-sm">{itemCount}品</span>
+                      <div className="flex gap-1.5 justify-center">
+                        <button
+                          onClick={() => setDetailRow(row)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 text-xs font-semibold border border-slate-200 hover:border-indigo-300 transition-all active:scale-95"
+                        >
+                          内容修正
+                        </button>
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          disabled={deletingId === row.id}
+                          className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 text-xs font-semibold border border-red-200 hover:border-red-400 transition-all active:scale-95 disabled:opacity-40"
+                        >
+                          {deletingId === row.id ? "⏳" : "削除"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </section>
-          </>
-        )}
+            )}
+          </div>
+        </section>
       </main>
+
+      {/* 注文詳細モーダル */}
+      {detailRow && (
+        <OrderDetailModal row={detailRow} onClose={() => setDetailRow(null)} />
+      )}
     </div>
   );
 }

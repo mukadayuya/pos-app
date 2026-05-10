@@ -1,0 +1,69 @@
+# FLOWS POS — プロジェクト憲法 (.clinerules)
+
+## ブランド
+- アプリ名: **FLOWS**
+- タグライン: **by Infotainment**
+- ロゴ: インディゴ→バイオレットのグラデーション正方形に白文字「FL」
+
+## デザイン原則
+- 背景: `bg-[#F5F6FA]`（全ページ統一）
+- カード: `bg-white rounded-3xl shadow-[0_2px_12px_rgb(0,0,0,0.06)] ring-1 ring-black/[0.04]`
+- ヘッダー: `bg-white/80 backdrop-blur-xl border-b border-black/[0.05]`（グラスモーフィズム）
+- アクセント: indigo-600（プライマリ）/ amber-500（セカンダリ／受給チャンス）
+- ホバー: `hover:-translate-y-0.5 active:scale-95 transition-all duration-200`
+- タイポ: font-black for headings, font-semibold for labels, tabular-nums for numbers
+
+## 技術スタック
+- Next.js 16 App Router + TypeScript（strict）
+- Tailwind CSS v4（JIT任意値OK）
+- Supabase（PostgreSQL + PostgREST + RLS）
+- "use client" は必要最小限のコンポーネントのみ
+
+## DB ルール
+- テーブルが存在しなくてもクラッシュしない（`isTableMissingError` でフォールバック）
+- 新カラム追加は `setup_full.sql` の DO ブロックに必ずマイグレーションを追記
+- RLS は `anon_all` ポリシーで匿名読み書きを許可
+
+## コーディング規約
+- コメントは「なぜ」だけ書く。「何をしているか」は書かない
+- エラー処理は境界（Supabase呼び出し、ユーザー入力）のみ
+- 不要な抽象化・将来を見越した設計は禁止
+- 型は `src/types/pos.ts` に集約
+
+## 機能メモ
+- カテゴリー: Supabase `categories` テーブルから動的取得。未設定時は DEFAULT_CATEGORIES にフォールバック
+- 税率: `isTakeout`（カテゴリー名 === "テイクアウト"）なら8%、それ以外10%
+- 担当者: localStorage `pos_staff_name` に保存
+- 客層: `maleCount` / `femaleCount`（整数カウンター）、sales テーブルに保存
+
+## 管理者ダッシュボード（/admin）
+- アクセス: コンサルタント専用。スタッフは `/register` のみ使用
+- ルート: `/admin`（ダッシュボード）/ `/admin/sales`（売上詳細）
+- DB: `stores` テーブル → `sales.store_id` FK → `employees.store_id` FK
+- セットアップ: `supabase/setup_admin.sql` を `setup_full.sql` の後に実行
+- アラートロジック（クライアントサイド計算）:
+  - `sales_drop`: 当月売上 < 前月売上 × 0.95（事業再構築補助金候補）
+  - `employee_increase`: 当月新規雇用数 > 0（キャリアアップ / 雇用調整助成金候補）
+- NULL store_id の sales は先頭登録店舗（Kitchen Kazu）に帰属
+- 管理者型は `src/lib/adminDb.ts` に集約（`src/types/pos.ts` には混入しない）
+- グラフ: 外部ライブラリ不使用。純粋 SVG で実装（`MiniBarChart` コンポーネント）
+
+## 売上管理画面（/sales-data） — 唯一の売上管理画面
+- `/admin` は廃止。売上管理は `/sales-data` に一本化。
+- レイアウト: `h-screen flex flex-col` → header + `flex flex-1 overflow-hidden` → sidebar + main
+- 左サイドバー（`bg-violet-900`・`w-52`）: この日の売上 / 会計一覧 / カテゴリー別 / 商品別 / 担当者別 / 時間帯別
+- 対象月セレクター: サイドバー内（非 today タブのみ）
+- storeId 管理: `string | null | undefined`（undefined = 未取得）。undefined 中は月別 fetch をスキップ
+- アナリティクス: カテゴリー・商品・担当者・時間帯は全て `monthOrders` から client-side 集計
+- 訂正モーダル: 品目ごとに数量 ±1 → `calcTotal()` 自動再計算 → `updateSaleRecord()` 更新
+- 削除: `window.confirm` 禁止。インライン確認 UI（per-row confirm state）
+- 訂正・削除後は `loadSummaries(storeId)` を呼んで「この日の売上」KPI を即再計算
+- `SaleDetailRow` / `SaleDetailItem` / `SaleRecordUpdate` 型は `src/lib/db.ts` に集約
+
+## 設定・精算画面（/settings）
+- デザイン: violet-800 ヘッダー + slate-50 背景（sales-data と統一）
+- 横タブ: 店舗設定 / 点検・精算 / ハードウェア
+- 点検・精算サブタブ:
+  - 点検: `fetchPeriodSummary` + `fetchTodayHourlySales` で今日のKPIを表示
+  - レジ金入力: 9種紙幣・硬貨カウンター（純 UI state、DB なし）
+  - 精算実行: 売上 vs レジ金差異 + 精算レポート印刷ボタン（mPOP）

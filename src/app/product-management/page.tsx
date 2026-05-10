@@ -2,36 +2,451 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { MenuItem, TaxRate } from "@/types/pos";
+import NumpadModal from "@/components/NumpadModal";
+import { MenuItem, MenuItemOptions, OptionGroup, OptionItem, TaxRate } from "@/types/pos";
+import { validateTemplateForm, applyTemplate } from "@/lib/optionTemplates";
+import { fetchIsTakeoutEnabled, persistIsTakeoutEnabled, fetchEmojiSettings, persistEmojiSettings, EmojiSettings, DEFAULT_EMOJIS, fetchAnalysisMode, persistAnalysisMode, AnalysisMode } from "@/lib/storeSettings";
 import {
   fetchMenuItems, saveMenuItem, updateMenuItem, deleteMenuItem,
   fetchCategories, saveCategory, updateCategoryRecord, deleteCategoryRecord,
   cleanupLegacyCategories, isValidUUID,
   CategoryRecord,
+  OptionTemplate,
+  fetchOptionTemplates, saveOptionTemplate, updateOptionTemplate, deleteOptionTemplate, seedDefaultOptionTemplates,
 } from "@/lib/db";
 
-const EMOJI_OPTIONS = [
-  "🍔","🍕","🍜","🍣","🍱","🥗","🍗","🍟",
-  "🍰","🍦","🍮","🎂","☕","🥤","🍺","🍵",
-  "🫖","🍊","🧃","🍶","🥩","🍛","🍝","🫕",
-];
-
-type PageTab = "items" | "categories";
+type PageTab = "items" | "categories" | "options" | "display";
 
 interface ItemEditState {
-  name: string; price: string; category: string; emoji: string; taxRate: TaxRate;
+  name: string; price: string; category: string; emoji: string;
+  taxRate: TaxRate; taxInclusive: boolean;
+  options: MenuItemOptions;
+  isTakeoutAvailable: boolean;
+}
+
+const TAX_RATES: { rate: TaxRate; label: string }[] = [
+  { rate: 0.10, label: "10%" },
+  { rate: 0.08, label: "8%" },
+  { rate: 0.01, label: "1%" },
+  { rate: 0,    label: "0%" },
+];
+
+function taxBadgeCls(r: TaxRate) {
+  if (r === 0.08) return "bg-amber-900 text-amber-400";
+  if (r === 0.01) return "bg-purple-900 text-purple-400";
+  if (r === 0)    return "bg-slate-700 text-slate-500";
+  return "bg-slate-700 text-slate-400";
+}
+
+// ─── 共通：オプショングループエディター ──────────────────────────
+function OptionGroupsEditor({
+  groups,
+  onChange,
+  templates = [],
+  isTaxInclusive = false,
+  taxRate,
+}: {
+  groups: OptionGroup[];
+  onChange: (groups: OptionGroup[]) => void;
+  templates?: OptionTemplate[];
+  isTaxInclusive?: boolean;
+  taxRate?: number;
+}) {
+  const [showTmplPicker, setShowTmplPicker] = useState(false);
+
+  const addGroup = () => {
+    const newGroup: OptionGroup = {
+      id: crypto.randomUUID(),
+      name: "",
+      items: [{ id: crypto.randomUUID(), name: "", price: 0 }],
+    };
+    onChange([...groups, newGroup]);
+  };
+
+  const appendFromTemplate = (tmpl: OptionTemplate) => {
+    const toAdd = applyTemplate(tmpl.groups).filter(
+      g => !groups.some(e => e.name === g.name)
+    );
+    onChange([...groups, ...toAdd]);
+    setShowTmplPicker(false);
+  };
+
+  const updateGroup = (gi: number, partial: Partial<OptionGroup>) => {
+    onChange(groups.map((g, i) => i === gi ? { ...g, ...partial } : g));
+  };
+
+  const removeGroup = (gi: number) => onChange(groups.filter((_, i) => i !== gi));
+
+  const updateItem = (gi: number, ii: number, partial: Partial<OptionItem>) => {
+    const nextItems = groups[gi].items.map((it, i) => i === ii ? { ...it, ...partial } : it);
+    updateGroup(gi, { items: nextItems });
+  };
+
+  const removeItem = (gi: number, ii: number) => {
+    updateGroup(gi, { items: groups[gi].items.filter((_, i) => i !== ii) });
+  };
+
+  const addItem = (gi: number) => {
+    updateGroup(gi, { items: [...groups[gi].items, { id: crypto.randomUUID(), name: "", price: 0 }] });
+  };
+
+  return (
+    <div className="space-y-3">
+      {groups.length === 0 && (
+        <p className="text-xs text-slate-600 text-center py-2">オプションなし</p>
+      )}
+      {groups.map((group, gi) => (
+        <div key={group.id} className="border border-slate-700 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 bg-slate-800 px-3 py-2">
+            <input
+              type="text"
+              value={group.name}
+              onChange={e => updateGroup(gi, { name: e.target.value })}
+              placeholder="カテゴリ名（例：ご飯の量）"
+              className="flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder-slate-600"
+            />
+            <button
+              type="button"
+              onClick={() => removeGroup(gi)}
+              className="w-6 h-6 rounded-md bg-slate-700 hover:bg-red-900 text-slate-400 hover:text-red-400 flex items-center justify-center text-xs transition-all"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-3 space-y-1.5">
+            {group.items.map((optItem, ii) => (
+              <div key={optItem.id} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={optItem.name}
+                  onChange={e => updateItem(gi, ii, { name: e.target.value })}
+                  placeholder="項目名"
+                  className="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-teal-500 transition-all"
+                />
+                <input
+                  type="number"
+                  value={optItem.price}
+                  onChange={e => updateItem(gi, ii, { price: Number(e.target.value) })}
+                  className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-teal-500 transition-all text-right tabular-nums"
+                />
+                <span className="text-[10px] text-slate-500 flex-shrink-0">円</span>
+                {taxRate !== undefined && optItem.price !== 0 && (
+                  <span className="text-[10px] text-slate-400 flex-shrink-0 whitespace-nowrap">
+                    {isTaxInclusive
+                      ? `≈税抜${Math.floor(optItem.price / (1 + taxRate))}円`
+                      : `→税込${Math.round(optItem.price * (1 + taxRate))}円`}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeItem(gi, ii)}
+                  className="w-6 h-6 rounded-md bg-slate-700 hover:bg-red-900 text-slate-500 hover:text-red-400 flex items-center justify-center text-xs transition-all flex-shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => addItem(gi)}
+              className="text-[10px] text-teal-500 hover:text-teal-400 font-semibold mt-1 transition-colors"
+            >
+              ＋ 項目を追加
+            </button>
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={addGroup}
+          className="text-xs bg-teal-700 hover:bg-teal-600 text-teal-200 px-2.5 py-1.5 rounded-lg font-semibold transition-all active:scale-95"
+        >
+          ＋ 空のカテゴリを追加
+        </button>
+        {templates.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowTmplPicker(v => !v)}
+              className="text-xs bg-slate-700 hover:bg-indigo-800 border border-slate-600 hover:border-indigo-500 text-slate-300 hover:text-indigo-200 px-2.5 py-1.5 rounded-lg font-semibold transition-all active:scale-95"
+            >
+              📋 テンプレートから引用
+            </button>
+            {showTmplPicker && (
+              <div className="absolute bottom-full left-0 mb-1 z-20 bg-slate-800 border border-slate-600 rounded-xl shadow-xl py-1 min-w-[180px]">
+                {templates.map(tmpl => (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => appendFromTemplate(tmpl)}
+                    className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-indigo-900 hover:text-indigo-200 transition-colors"
+                  >
+                    {tmpl.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── オプションテンプレート管理タブ ──────────────────────────────
+function OptionsTab({
+  templates,
+  onRefresh,
+}: {
+  templates: OptionTemplate[];
+  onRefresh: () => void;
+}) {
+  const [adding, setAdding]           = useState(false);
+  const [editingId, setEditingId]     = useState<string | null>(null);
+  const [formName, setFormName]       = useState("");
+  const [formGroups, setFormGroups]   = useState<OptionGroup[]>([]);
+  const [busy, setBusy]               = useState(false);
+  const [err, setErr]                 = useState("");
+  const [isTaxInclusive, setIsTaxInclusive] = useState(true); // trueなら税込入力、falseなら税抜入力
+
+  function openAdd() {
+    setEditingId(null);
+    setFormName("");
+    setFormGroups([]);
+    setErr("");
+    setIsTaxInclusive(true);
+    setAdding(true);
+  }
+
+  function openEdit(tmpl: OptionTemplate) {
+    setAdding(false);
+    setEditingId(tmpl.id);
+    setFormName(tmpl.name);
+    setFormGroups(applyTemplate(tmpl.groups));
+    setErr("");
+    setIsTaxInclusive(false);
+  }
+
+  function cancelForm() {
+    setAdding(false);
+    setEditingId(null);
+    setErr("");
+  }
+
+  async function handleSave() {
+    const validationErr = validateTemplateForm(formName, formGroups);
+    if (validationErr) { setErr(validationErr); return; }
+    setBusy(true);
+    // --- 税込・税抜の価格変換処理を追加 ---
+  const processedGroups = formGroups.map(group => ({
+    ...group,
+    items: group.items.map(item => ({
+      ...item,
+      // 税込モードなら 1.1 で割って税抜価格を算出。小数点以下は四捨五入。
+      price: isTaxInclusive
+        ? Math.round(Number(item.price) / 1.1)
+        : Number(item.price),
+    })),
+  }));
+  // ------------------------------------
+  
+    try {
+      if (editingId) {
+        await updateOptionTemplate(editingId, { name: formName.trim(), groups: processedGroups});
+      } else {
+        await saveOptionTemplate({ name: formName.trim(), groups: processedGroups });
+      }
+      cancelForm();
+      onRefresh();
+    } catch (e: unknown) {
+      setErr("保存に失敗しました: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(tmpl: OptionTemplate) {
+    if (!confirm(`「${tmpl.name}」を削除しますか？`)) return;
+    setBusy(true);
+    try {
+      await deleteOptionTemplate(tmpl.id);
+      onRefresh();
+    } catch (e: unknown) {
+      alert("削除に失敗しました: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const showForm = adding || !!editingId;
+
+  return (
+    <div className="space-y-4">
+      {/* 説明バナー */}
+      <div className="bg-slate-800/60 border border-teal-800 rounded-2xl p-4">
+        <p className="text-sm font-semibold text-teal-300 mb-1">📋 オプションテンプレートとは？</p>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          オプションセットをテンプレートとして保存し、商品登録時に一括で適用できます。
+        </p>
+      </div>
+
+      {/* 追加ボタン */}
+      {!showForm && (
+        <button
+          onClick={openAdd}
+          className="w-full py-3 border-2 border-dashed border-slate-600 hover:border-teal-500 hover:bg-teal-900/20 text-slate-400 hover:text-teal-300 rounded-2xl text-sm font-semibold transition-all"
+        >
+          ＋ 新規テンプレートを追加
+        </button>
+      )}
+
+      {/* 追加 / 編集フォーム */}
+      {showForm && (
+        <div className="bg-slate-800 rounded-2xl border border-teal-600 p-4 space-y-4">
+          <p className="text-sm font-semibold text-teal-300">
+            {editingId ? "テンプレートを編集" : "新規テンプレートを追加"}
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">
+              テンプレート名 <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={formName}
+              onChange={e => { setFormName(e.target.value); setErr(""); }}
+              placeholder="例：ご飯セット、サイドメニュー選択"
+              autoFocus
+              className="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-teal-500 transition-all placeholder-slate-600"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">※ 商品名の入力は不要です</p>
+            {/* 税込・税抜切り替えスイッチを追加 */}
+<div className="flex items-center gap-4 my-6 p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">入力形式</span>
+  <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+    <button
+      type="button"
+      onClick={() => setIsTaxInclusive(true)}
+      className={`px-4 py-1.5 rounded-md text-[10px] font-black transition-all ${
+        isTaxInclusive 
+          ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20' 
+          : 'text-slate-500 hover:text-slate-300'
+      }`}
+    >
+      税込
+    </button>
+    <button
+      type="button"
+      onClick={() => setIsTaxInclusive(false)}
+      className={`px-4 py-1.5 rounded-md text-[10px] font-black transition-all ${
+        !isTaxInclusive 
+          ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20' 
+          : 'text-slate-500 hover:text-slate-300'
+      }`}
+    >
+      税抜
+    </button>
+  </div>
+  <span className="text-[10px] text-slate-500 italic">
+    {isTaxInclusive ? '※入力価格を1.1で割って税抜で保存します' : '※入力価格をそのまま税抜として保存します'}
+  </span>
+</div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-400 mb-2">オプション内容（{isTaxInclusive ? '税込' : '税抜'}・円）</p>
+            <OptionGroupsEditor
+              groups={formGroups}
+              onChange={setFormGroups}
+              templates={templates.filter(t => t.id !== editingId)}
+              isTaxInclusive={isTaxInclusive}
+              taxRate={0.10}
+            />
+          </div>
+
+          {err && <p className="text-xs text-red-400">{err}</p>}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={busy}
+              className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
+            >
+              {busy ? "保存中..." : editingId ? "✓ 更新する" : "＋ 追加する"}
+            </button>
+            <button
+              onClick={cancelForm}
+              className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-sm font-semibold transition-all active:scale-95"
+            >
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* テンプレート一覧 */}
+      {templates.length === 0 ? (
+        <div className="text-center py-12 text-slate-500 text-sm">
+          テンプレートがありません
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {templates.map(tmpl => (
+            <div
+              key={tmpl.id}
+              className="bg-slate-800 rounded-2xl border border-slate-700 px-4 py-3.5"
+            >
+              {editingId === tmpl.id ? null : (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white">{tmpl.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {tmpl.groups.length === 0
+                        ? "グループなし"
+                        : tmpl.groups.map(g => g.name || "（未設定）").join(" · ")}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-teal-900 text-teal-300 flex-shrink-0">
+                    {tmpl.groups.length}グループ
+                  </span>
+                  <button
+                    onClick={() => openEdit(tmpl)}
+                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-semibold transition-all active:scale-95 flex-shrink-0"
+                  >
+                    編集
+                  </button>
+                  <button
+                    onClick={() => handleDelete(tmpl)}
+                    disabled={busy}
+                    className="px-3 py-1.5 bg-red-900/60 hover:bg-red-900 text-red-400 rounded-lg text-xs font-semibold transition-all active:scale-95 flex-shrink-0 disabled:opacity-50"
+                  >
+                    削除
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── カテゴリー設定タブ ────────────────────────────────────────
 function CategoriesTab({
   categories,
   itemsByCat,
+  allItems,
   onRefresh,
 }: {
   categories: CategoryRecord[];
   itemsByCat: Record<string, number>;
+  allItems: MenuItem[];
   onRefresh: () => void;
 }) {
+  const takeoutCatId = categories.find(c => c.name === "テイクアウト")?.id;
+  const takeoutAvailableCount = allItems.filter(i => i.isTakeoutAvailable !== false).length;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
   const [adding, setAdding]       = useState(false);
@@ -81,7 +496,6 @@ function CategoriesTab({
     if (!newName.trim()) { setErr("カテゴリー名を入力してください"); return; }
     setBusy(true);
     try {
-      // id は指定しない → DB が UUID を auto-generate して返す
       await saveCategory({
         name: newName.trim(),
         display_order: categories.length,
@@ -89,7 +503,6 @@ function CategoriesTab({
       setNewName("");
       setAdding(false);
       setErr("");
-      // DB から categories を再取得して UUID を確実に同期
       onRefresh();
     } catch (e: unknown) {
       setErr((e as Error).message);
@@ -100,7 +513,6 @@ function CategoriesTab({
 
   return (
     <div className="space-y-4">
-      {/* DB マイグレーション案内（カテゴリーが0件の場合） */}
       {categories.length === 0 && (
         <div className="bg-amber-950 border border-amber-700 rounded-2xl p-4 space-y-2">
           <p className="text-sm font-bold text-amber-300">⚠️ カテゴリーが見つかりません</p>
@@ -110,7 +522,6 @@ function CategoriesTab({
         </div>
       )}
 
-      {/* 新規追加フォーム */}
       {adding ? (
         <div className="bg-slate-800 rounded-2xl border border-teal-600 p-4 space-y-3">
           <p className="text-sm font-semibold text-teal-300">新規カテゴリーを追加</p>
@@ -148,11 +559,8 @@ function CategoriesTab({
         </button>
       )}
 
-      {/* カテゴリー一覧 */}
       {categories.length === 0 ? (
-        <div className="text-center py-12 text-slate-500 text-sm">
-          カテゴリーがありません
-        </div>
+        <div className="text-center py-12 text-slate-500 text-sm">カテゴリーがありません</div>
       ) : (
         <div className="space-y-2">
           {categories.map((cat, idx) => (
@@ -188,13 +596,18 @@ function CategoriesTab({
                     <p className="text-sm font-semibold text-white">{cat.name}</p>
                     <p className="text-xs text-slate-500 mt-0.5">ID: {cat.id}</p>
                   </div>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
-                    (itemsByCat[cat.id] ?? 0) > 0
-                      ? "bg-teal-900 text-teal-300"
-                      : "bg-slate-700 text-slate-500"
-                  }`}>
-                    {itemsByCat[cat.id] ?? 0}件
-                  </span>
+                  {(() => {
+                    const count = cat.id === takeoutCatId
+                      ? takeoutAvailableCount
+                      : (itemsByCat[cat.id] ?? 0);
+                    return (
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
+                        count > 0 ? "bg-teal-900 text-teal-300" : "bg-slate-700 text-slate-500"
+                      }`}>
+                        {count}件{cat.id === takeoutCatId ? " (可)" : ""}
+                      </span>
+                    );
+                  })()}
                   <button
                     onClick={() => startEdit(cat)}
                     className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-semibold transition-all active:scale-95 flex-shrink-0"
@@ -215,7 +628,6 @@ function CategoriesTab({
       )}
 
       {!adding && err && <p className="text-xs text-red-400 text-center">{err}</p>}
-
       <p className="text-xs text-slate-600 text-center pt-2">
         ※ 商品が登録されているカテゴリーは削除できません
       </p>
@@ -223,10 +635,13 @@ function CategoriesTab({
   );
 }
 
-// ─── 商品編集フォーム（共通） ─────────────────────────────────
+// ─── 商品編集フォーム ─────────────────────────────────────────
 function ItemForm({
   state,
   categories,
+  templates,
+  isEmojiEnabled,
+  availableEmojis,
   onChange,
   onSave,
   onCancel,
@@ -235,6 +650,9 @@ function ItemForm({
 }: {
   state: ItemEditState;
   categories: CategoryRecord[];
+  templates: OptionTemplate[];
+  isEmojiEnabled: boolean;
+  availableEmojis: string[];
   onChange: (s: ItemEditState) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -242,23 +660,26 @@ function ItemForm({
   busy: boolean;
 }) {
   const set = (partial: Partial<ItemEditState>) => onChange({ ...state, ...partial });
+  const [showPriceNumpad, setShowPriceNumpad] = useState(false);
 
   return (
     <div className="space-y-4">
       {/* 絵文字 */}
-      <div>
-        <p className="text-xs font-semibold text-slate-400 mb-2">絵文字</p>
-        <div className="flex flex-wrap gap-1.5">
-          {EMOJI_OPTIONS.map(e => (
-            <button key={e} onClick={() => set({ emoji: e })}
-              className={`w-10 h-10 text-xl rounded-lg border-2 transition-all ${
-                state.emoji === e ? "border-teal-500 bg-teal-900" : "border-slate-600 hover:border-slate-500"
-              }`}>
-              {e}
-            </button>
-          ))}
+      {isEmojiEnabled && (
+        <div>
+          <p className="text-xs font-semibold text-slate-400 mb-2">絵文字</p>
+          <div className="flex flex-wrap gap-2">
+            {availableEmojis.map(e => (
+              <button key={e} onClick={() => set({ emoji: e })}
+                className={`w-11 h-11 text-2xl rounded-xl border-2 transition-all ${
+                  state.emoji === e ? "border-teal-500 bg-teal-900" : "border-slate-600 hover:border-slate-500"
+                }`}>
+                {e}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -268,23 +689,44 @@ function ItemForm({
         </div>
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-1">価格（円）</label>
-          <input type="number" value={state.price} min="1" onChange={e => set({ price: e.target.value })}
-            className="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-teal-500 transition-all" />
+          <div className="flex gap-2">
+            <input type="number" value={state.price} min="1" onChange={e => set({ price: e.target.value })}
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-teal-500 transition-all" />
+            <button
+              type="button"
+              onClick={() => setShowPriceNumpad(true)}
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-base transition-colors"
+              title="テンキーで入力"
+            >
+              ⌨️
+            </button>
+          </div>
+          {showPriceNumpad && (
+            <NumpadModal
+              label="価格入力"
+              subtitle={state.taxInclusive ? "税込金額を入力" : "税抜金額を入力"}
+              initialValue={parseInt(state.price || "0", 10) || 0}
+              quickAdjusts={[+1000, +100, -100, -1000]}
+              min={1}
+              confirmLabel="価格を確定"
+              onConfirm={value => { set({ price: String(value) }); setShowPriceNumpad(false); }}
+              onClose={() => setShowPriceNumpad(false)}
+            />
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* カテゴリー + 消費税率 */}
+      <div className="grid grid-cols-2 gap-6 items-start">
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-2">カテゴリー</label>
           {categories.length === 0 ? (
-            <p className="text-xs text-amber-400 py-2">
-              まずカテゴリーを登録してください
-            </p>
+            <p className="text-xs text-amber-400 py-2">まずカテゴリーを登録してください</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
                 <button key={cat.id} onClick={() => set({ category: cat.id })}
-                  className={`flex-1 min-w-fit py-2 px-2 rounded-xl text-sm font-semibold border-2 transition-all ${
+                  className={`flex-1 min-w-fit py-2 px-3 rounded-xl text-sm font-semibold border-2 transition-all ${
                     state.category === cat.id
                       ? "border-teal-500 bg-teal-900 text-teal-300"
                       : "border-slate-600 text-slate-400 hover:border-slate-500"
@@ -297,19 +739,111 @@ function ItemForm({
         </div>
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-2">消費税率</label>
-          <div className="flex gap-2">
-            {([0.10, 0.08] as TaxRate[]).map(rate => (
+          <div className="grid grid-cols-4 gap-2">
+            {TAX_RATES.map(({ rate, label }) => (
               <button key={rate} onClick={() => set({ taxRate: rate })}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${
+                className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
                   state.taxRate === rate
                     ? "border-amber-500 bg-amber-900 text-amber-300"
                     : "border-slate-600 text-slate-400 hover:border-slate-500"
                 }`}>
-                {rate === 0.10 ? "10%" : "8%"}
+                {label}
               </button>
             ))}
           </div>
         </div>
+      </div>
+
+      {/* 価格入力（内税/外税） */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-slate-400 flex-shrink-0">価格入力</span>
+        <button
+          type="button"
+          onClick={() => set({ taxInclusive: !state.taxInclusive })}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full border-2 transition-all ${
+            state.taxInclusive ? "bg-teal-600 border-teal-500" : "bg-slate-700 border-slate-600"
+          }`}
+        >
+          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            state.taxInclusive ? "translate-x-5" : "translate-x-0.5"
+          }`} />
+        </button>
+        <span className={`text-xs font-semibold ${state.taxInclusive ? "text-teal-400" : "text-slate-500"}`}>
+          {state.taxInclusive ? "内税（税込入力）" : "外税（税抜入力）"}
+        </span>
+        {state.taxInclusive && state.price && !isNaN(parseInt(state.price, 10)) && (
+          <span className="text-xs text-teal-400 ml-auto">
+            税抜換算: ¥{Math.floor(parseInt(state.price, 10) / (1 + state.taxRate)).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      {/* テイクアウト設定 */}
+      <div className="flex items-center gap-3 border-t border-slate-700/50 pt-3">
+        <span className="text-xs font-semibold text-slate-400 flex-shrink-0">テイクアウト対応</span>
+        <button
+          type="button"
+          onClick={() => set({ isTakeoutAvailable: !state.isTakeoutAvailable })}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full border-2 transition-all ${
+            state.isTakeoutAvailable ? "bg-teal-600 border-teal-500" : "bg-slate-700 border-slate-600"
+          }`}
+        >
+          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            state.isTakeoutAvailable ? "translate-x-5" : "translate-x-0.5"
+          }`} />
+        </button>
+        <span className={`text-xs font-semibold ${state.isTakeoutAvailable ? "text-teal-400" : "text-slate-500"}`}>
+          {state.isTakeoutAvailable ? "テイクアウト可" : "店内のみ"}
+        </span>
+      </div>
+
+      {/* ── オプション設定 ──── */}
+      <div className="bg-slate-900/60 rounded-2xl p-4 space-y-4 border border-slate-700">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">オプション設定（税抜・円）</p>
+        </div>
+
+        {/* テンプレートから追加（既存グループに append） */}
+        {templates.length > 0 && (
+          <div>
+            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest mb-1.5">テンプレートを追加</p>
+            <div className="flex flex-wrap gap-1.5">
+              {templates.map(tmpl => (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => {
+                    const existing = state.options.optionGroups;
+                    const toAdd = applyTemplate(tmpl.groups).filter(
+                      g => !existing.some(e => e.name === g.name)
+                    );
+                    if (toAdd.length > 0) {
+                      set({ options: { optionGroups: [...existing, ...toAdd] } });
+                    }
+                  }}
+                  className="px-2.5 py-1 bg-slate-700 hover:bg-teal-800 border border-slate-600 hover:border-teal-500 text-slate-300 hover:text-teal-200 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                >
+                  📋 {tmpl.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => set({ options: { optionGroups: [] } })}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-500 hover:text-slate-300 rounded-lg text-xs font-semibold transition-all"
+              >
+                クリア
+              </button>
+            </div>
+          </div>
+        )}
+
+        <OptionGroupsEditor
+          groups={state.options.optionGroups}
+          onChange={groups => set({ options: { optionGroups: groups } })}
+          templates={templates}
+          isTaxInclusive={false}
+          taxRate={state.taxRate}
+        />
       </div>
 
       <div className="flex gap-2 pt-1">
@@ -326,13 +860,321 @@ function ItemForm({
   );
 }
 
+// ─── 絵文字バリデーション ─────────────────────────────────────
+// Intl.Segmenter でグラフェムクラスタが 1 つかを確認し、
+// \p{Extended_Pictographic} で絵文字かどうかを判定する。
+function isSingleEmoji(input: string): boolean {
+  if (!input) return false;
+  const segments = [...new Intl.Segmenter().segment(input)];
+  return segments.length === 1 && /\p{Extended_Pictographic}/u.test(input);
+}
+
+// ─── 表示設定タブ ─────────────────────────────────────────────
+function DisplayTab({
+  emojiSettings,
+  onEmojiSettingsChange,
+}: {
+  emojiSettings: EmojiSettings;
+  onEmojiSettingsChange: (s: EmojiSettings) => void;
+}) {
+  const [isTakeoutEnabled, setIsTakeoutEnabled] = useState<boolean>(true);
+  const [settingsLoaded, setSettingsLoaded]     = useState<boolean>(false);
+  const [isTakeoutSaving, setIsTakeoutSaving]   = useState<boolean>(false);
+  const [takeoutToast, setTakeoutToast]         = useState<{ msg: string; ok: boolean } | null>(null);
+  const [addEmojiInput, setAddEmojiInput]       = useState("");
+  const [addEmojiError, setAddEmojiError]       = useState("");
+  const [emojiSaving, setEmojiSaving]           = useState(false);
+  const [analysisMode, setAnalysisMode]         = useState<AnalysisMode>("SIMPLE");
+  const [analysisSaving, setAnalysisSaving]     = useState(false);
+  const [analysisToast, setAnalysisToast]       = useState<{ msg: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    fetchIsTakeoutEnabled().then(enabled => {
+      setIsTakeoutEnabled(enabled);
+      setSettingsLoaded(true);
+    }).catch(() => setSettingsLoaded(true));
+    fetchAnalysisMode().then(setAnalysisMode).catch(() => {});
+  }, []);
+
+  const handleTakeoutToggle = async (value: boolean) => {
+    setIsTakeoutEnabled(value);
+    setIsTakeoutSaving(true);
+    setTakeoutToast(null);
+    try {
+      await persistIsTakeoutEnabled(value);
+      setTakeoutToast({ msg: "✓ 設定を保存しました", ok: true });
+      setTimeout(() => setTakeoutToast(null), 3000);
+    } catch (e: unknown) {
+      // 保存失敗 → UI を元の値に戻す
+      setIsTakeoutEnabled(!value);
+      const detail = e instanceof Error ? e.message : String(e);
+      setTakeoutToast({ msg: `✗ 保存に失敗しました — ${detail}`, ok: false });
+      setTimeout(() => setTakeoutToast(null), 6000);
+    } finally {
+      setIsTakeoutSaving(false);
+    }
+  };
+
+  const handleAnalysisModeToggle = async (next: AnalysisMode) => {
+    setAnalysisMode(next);
+    setAnalysisSaving(true);
+    setAnalysisToast(null);
+    try {
+      await persistAnalysisMode(next);
+      setAnalysisToast({ msg: "✓ 設定を保存しました", ok: true });
+      setTimeout(() => setAnalysisToast(null), 3000);
+    } catch (e: unknown) {
+      setAnalysisMode(next === "STATISTICAL" ? "SIMPLE" : "STATISTICAL");
+      const detail = e instanceof Error ? e.message : String(e);
+      setAnalysisToast({ msg: `✗ 保存に失敗しました — ${detail}`, ok: false });
+      setTimeout(() => setAnalysisToast(null), 6000);
+    } finally {
+      setAnalysisSaving(false);
+    }
+  };
+
+  const saveEmoji = async (settings: EmojiSettings) => {
+    setEmojiSaving(true);
+    try {
+      await persistEmojiSettings(settings);
+      onEmojiSettingsChange(settings);
+    } catch (e) {
+      console.warn("[DisplayTab] 絵文字設定保存エラー:", e);
+    } finally {
+      setEmojiSaving(false);
+    }
+  };
+
+  const removeEmoji = (emoji: string) => {
+    saveEmoji({ ...emojiSettings, availableEmojis: emojiSettings.availableEmojis.filter(e => e !== emoji) });
+  };
+
+  const addEmoji = () => {
+    const trimmed = addEmojiInput.trim();
+    if (!trimmed) return;
+
+    if (!isSingleEmoji(trimmed)) {
+      const segments = [...new Intl.Segmenter().segment(trimmed)];
+      setAddEmojiError(
+        segments.length > 1
+          ? "絵文字は1つだけ入力してください"
+          : "絵文字のみ入力できます（例：🍣 🍕）"
+      );
+      return;
+    }
+
+    if (emojiSettings.availableEmojis.includes(trimmed)) {
+      setAddEmojiError("すでにリストに含まれています");
+      return;
+    }
+
+    setAddEmojiError("");
+    saveEmoji({ ...emojiSettings, availableEmojis: [...emojiSettings.availableEmojis, trimmed] });
+    setAddEmojiInput("");
+  };
+
+  const resetToDefault = () => {
+    if (!confirm("絵文字リストをデフォルトに戻しますか？")) return;
+    saveEmoji({ ...emojiSettings, availableEmojis: DEFAULT_EMOJIS });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* テイクアウト機能 */}
+      <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-5">
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">機能の表示 / 非表示</h2>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-white">テイクアウト機能</p>
+            <p className="text-xs text-slate-400">
+              無効にするとレジ画面のテイクアウトボタンが完全に非表示になります
+            </p>
+          </div>
+          <button
+            onClick={() => handleTakeoutToggle(!isTakeoutEnabled)}
+            disabled={!settingsLoaded || isTakeoutSaving}
+            className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-wait ${
+              isTakeoutEnabled ? "bg-teal-500" : "bg-slate-600"
+            }`}
+            role="switch"
+            aria-checked={isTakeoutEnabled}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                isTakeoutEnabled ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className={`text-xs px-3 py-2 rounded-xl font-medium ${
+          isTakeoutEnabled
+            ? "bg-teal-900/40 text-teal-300 border border-teal-800/60"
+            : "bg-slate-700 text-slate-400 border border-slate-600"
+        }`}>
+          {isTakeoutSaving
+            ? "保存中..."
+            : isTakeoutEnabled
+              ? "テイクアウト機能：有効（レジ画面に表示）"
+              : "テイクアウト機能：無効（レジ画面から非表示）"}
+        </div>
+
+        {takeoutToast && (
+          <div className={`text-xs px-3 py-2 rounded-xl font-semibold transition-all ${
+            takeoutToast.ok
+              ? "bg-teal-950 text-teal-300 border border-teal-700"
+              : "bg-red-950 text-red-300 border border-red-800"
+          }`}>
+            {takeoutToast.msg}
+          </div>
+        )}
+      </div>
+
+      {/* AI客層分析モード */}
+      <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-5">
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">売上分析設定</h2>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-white">AI客層分析モード</p>
+            <p className="text-xs text-slate-400">
+              有効にすると、お一人様（ソロ客）の注文データを参考にして、複数人グループ客の男女別売上をAIが自動で予測・計算します
+            </p>
+          </div>
+          <button
+            onClick={() => handleAnalysisModeToggle(analysisMode === "STATISTICAL" ? "SIMPLE" : "STATISTICAL")}
+            disabled={analysisSaving}
+            className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-wait ${
+              analysisMode === "STATISTICAL" ? "bg-teal-500" : "bg-slate-600"
+            }`}
+            role="switch"
+            aria-checked={analysisMode === "STATISTICAL"}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                analysisMode === "STATISTICAL" ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className={`text-xs px-3 py-2 rounded-xl font-medium ${
+          analysisMode === "STATISTICAL"
+            ? "bg-teal-900/40 text-teal-300 border border-teal-800/60"
+            : "bg-slate-700 text-slate-400 border border-slate-600"
+        }`}>
+          {analysisSaving
+            ? "保存中..."
+            : analysisMode === "STATISTICAL"
+              ? "AI分析中：ソロ客の傾向から、グループ客の内訳を賢く予測しています"
+              : "標準モード：全体の売上を人数で割った、シンプルな平均値を表示します"}
+        </div>
+
+        {analysisToast && (
+          <div className={`text-xs px-3 py-2 rounded-xl font-semibold transition-all ${
+            analysisToast.ok
+              ? "bg-teal-950 text-teal-300 border border-teal-700"
+              : "bg-red-950 text-red-300 border border-red-800"
+          }`}>
+            {analysisToast.msg}
+          </div>
+        )}
+      </div>
+
+      {/* 絵文字設定 */}
+      <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 space-y-5">
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">絵文字設定</h2>
+
+        {/* 絵文字有効/無効 */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-white">絵文字を使用する</p>
+            <p className="text-xs text-slate-400">
+              無効にすると商品登録時の絵文字選択UIが非表示になります
+            </p>
+          </div>
+          <button
+            onClick={() => saveEmoji({ ...emojiSettings, isEmojiEnabled: !emojiSettings.isEmojiEnabled })}
+            disabled={emojiSaving}
+            className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-wait ${
+              emojiSettings.isEmojiEnabled ? "bg-teal-500" : "bg-slate-600"
+            }`}
+            role="switch"
+            aria-checked={emojiSettings.isEmojiEnabled}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                emojiSettings.isEmojiEnabled ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* 絵文字リスト編集 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-400">
+              使用できる絵文字（{emojiSettings.availableEmojis.length}個）
+            </p>
+            <button
+              onClick={resetToDefault}
+              className="text-[10px] text-slate-500 hover:text-slate-300 underline transition-colors"
+            >
+              デフォルトに戻す
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {emojiSettings.availableEmojis.map(emoji => (
+              <div key={emoji} className="relative group">
+                <span className="text-2xl w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg cursor-default select-none">
+                  {emoji}
+                </span>
+                <button
+                  onClick={() => removeEmoji(emoji)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 hover:bg-red-500 text-white rounded-full text-[9px] hidden group-hover:flex items-center justify-center transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={addEmojiInput}
+              onChange={e => { setAddEmojiInput(e.target.value); setAddEmojiError(""); }}
+              onKeyDown={e => e.key === "Enter" && addEmoji()}
+              placeholder="絵文字を入力して追加（例：🍣）"
+              className="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-teal-500 transition-all placeholder-slate-600"
+            />
+            <button
+              onClick={addEmoji}
+              disabled={!addEmojiInput.trim() || emojiSaving}
+              className="px-4 py-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-teal-200 rounded-xl text-sm font-semibold transition-all active:scale-95"
+            >
+              追加
+            </button>
+          </div>
+          {addEmojiError && (
+            <p className="text-xs text-red-400">{addEmojiError}</p>
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── メインページ ─────────────────────────────────────────────
 export default function ProductManagementPage() {
-  const [pageTab, setPageTab]     = useState<PageTab>("items");
-  const [items, setItems]         = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<CategoryRecord[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
+  const [pageTab, setPageTab]         = useState<PageTab>("items");
+  const [items, setItems]             = useState<MenuItem[]>([]);
+  const [categories, setCategories]   = useState<CategoryRecord[]>([]);
+  const [templates, setTemplates]     = useState<OptionTemplate[]>([]);
+  const [emojiSettings, setEmojiSettings] = useState<EmojiSettings>({ isEmojiEnabled: true, availableEmojis: DEFAULT_EMOJIS });
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
 
   // 商品タブの状態
   const [editingId, setEditingId]     = useState<string | null>(null);
@@ -341,21 +1183,29 @@ export default function ProductManagementPage() {
   const [busy, setBusy]               = useState(false);
 
   // 商品追加モーダル
-  const [showAdd, setShowAdd]     = useState(false);
-  const [newItem, setNewItem]     = useState<ItemEditState>({
-    name: "", price: "", category: "", emoji: "🍔", taxRate: 0.10,
+  const [showAdd, setShowAdd]         = useState(false);
+  const [newItem, setNewItem]         = useState<ItemEditState>({
+    name: "", price: "", category: "", emoji: "🍔", taxRate: 0.10, taxInclusive: false,
+    options: { optionGroups: [] },
+    isTakeoutAvailable: true,
   });
-  const [addError, setAddError]   = useState("");
+  const [addError, setAddError]       = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [menuData, catData] = await Promise.all([fetchMenuItems(), fetchCategories()]);
+      const [menuData, catData, tmplRaw, emojiSettingsData] = await Promise.all([
+        fetchMenuItems(),
+        fetchCategories(),
+        fetchOptionTemplates(),
+        fetchEmojiSettings(),
+      ]);
+      const tmplData = await seedDefaultOptionTemplates(tmplRaw);
       setItems(menuData);
-      // UUID 形式でないカテゴリーはState に入れない
       setCategories(catData.filter(c => isValidUUID(c.id)));
-      if (filterCat === "all") setFilterCat("all");
+      setTemplates(tmplData);
+      setEmojiSettings(emojiSettingsData);
     } catch (e: unknown) {
       setError((e as Error).message ?? "読み込みエラー");
     } finally {
@@ -368,7 +1218,6 @@ export default function ProductManagementPage() {
     load();
   }, [load]);
 
-  // カテゴリー別商品数
   const itemsByCat: Record<string, number> = {};
   for (const item of items) {
     itemsByCat[item.category] = (itemsByCat[item.category] ?? 0) + 1;
@@ -380,18 +1229,25 @@ export default function ProductManagementPage() {
   // ─ 商品編集 ─
   function startEdit(item: MenuItem) {
     setEditingId(item.id);
-    setEditState({ name: item.name, price: String(item.price), category: item.category, emoji: item.emoji, taxRate: item.taxRate });
+    const srcGroups = item.options?.optionGroups ?? [];
+    setEditState({
+      name: item.name, price: String(item.price), category: item.category, emoji: item.emoji ?? "",
+      taxRate: item.taxRate, taxInclusive: false,
+      options: { optionGroups: srcGroups.map(g => ({ ...g, items: [...g.items] })) },
+      isTakeoutAvailable: item.isTakeoutAvailable !== false,
+    });
   }
   function cancelEdit() { setEditingId(null); setEditState(null); }
 
   async function saveEdit(id: string) {
     if (!editState) return;
-    const price = parseInt(editState.price, 10);
-    if (!editState.name.trim() || isNaN(price) || price <= 0) return;
+    const raw = parseInt(editState.price, 10);
+    if (!editState.name.trim() || isNaN(raw) || raw <= 0) return;
+    const price = editState.taxInclusive ? Math.floor(raw / (1 + editState.taxRate)) : raw;
     setBusy(true);
     try {
-      await updateMenuItem(id, { name: editState.name.trim(), price, category: editState.category, emoji: editState.emoji });
-      setItems(prev => prev.map(i => i.id === id ? { ...i, ...editState, price, taxRate: editState.taxRate } : i));
+      await updateMenuItem(id, { name: editState.name.trim(), price, category: editState.category, emoji: editState.emoji || null, tax_rate: editState.taxRate, options: editState.options, is_takeout_available: editState.isTakeoutAvailable });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, ...editState, price, taxRate: editState.taxRate, isTakeoutAvailable: editState.isTakeoutAvailable } : i));
       setEditingId(null); setEditState(null);
     } catch (e: unknown) { alert("保存に失敗しました: " + (e as Error).message); }
     finally { setBusy(false); }
@@ -408,33 +1264,49 @@ export default function ProductManagementPage() {
   // ─ 商品追加 ─
   async function handleAdd() {
     setAddError("");
-    const price = parseInt(newItem.price, 10);
+    const raw = parseInt(newItem.price, 10);
     if (!newItem.name.trim()) { setAddError("名前を入力してください"); return; }
-    if (isNaN(price) || price <= 0) { setAddError("正しい価格を入力してください"); return; }
+    if (isNaN(raw) || raw <= 0) { setAddError("正しい価格を入力してください"); return; }
     if (!newItem.category) { setAddError("カテゴリーを選択してください"); return; }
+    const price = newItem.taxInclusive ? Math.floor(raw / (1 + newItem.taxRate)) : raw;
     setBusy(true);
     try {
       const item: MenuItem = {
         id: crypto.randomUUID(),
         name: newItem.name.trim(), price,
         category: newItem.category,
-        emoji: newItem.emoji,
+        emoji: newItem.emoji || undefined,
         taxRate: newItem.taxRate,
+        options: newItem.options,
+        isTakeoutAvailable: newItem.isTakeoutAvailable,
       };
       await saveMenuItem(item);
       await load();
-      setNewItem({ name: "", price: "", category: categories[0]?.id ?? "", emoji: "🍔", taxRate: 0.10 });
+      setNewItem({ name: "", price: "", category: categories[0]?.id ?? "", emoji: "🍔", taxRate: 0.10, taxInclusive: false, options: { optionGroups: [] }, isTakeoutAvailable: true });
       setShowAdd(false);
     } catch (e: unknown) { setAddError("追加に失敗しました: " + (e as Error).message); }
     finally { setBusy(false); }
   }
 
-  // 追加モーダルを開く時にデフォルトカテゴリーをセット
   function openAddModal() {
-    setNewItem(prev => ({ ...prev, category: categories[0]?.id ?? "" }));
+    setNewItem(prev => ({
+      ...prev,
+      category: categories[0]?.id ?? "",
+      emoji: emojiSettings.isEmojiEnabled ? (emojiSettings.availableEmojis[0] ?? "") : "",
+      taxInclusive: false,
+      options: { optionGroups: [] },
+      isTakeoutAvailable: true,
+    }));
     setAddError("");
     setShowAdd(true);
   }
+
+  const TAB_CONFIG: { key: PageTab; label: string }[] = [
+    { key: "items",      label: `🍽️ 商品一覧（${items.length}件）` },
+    { key: "options",    label: `📋 オプション管理（${templates.length}件）` },
+    { key: "categories", label: "🗂️ カテゴリー設定" },
+    { key: "display",    label: "⚙️ 表示設定" },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -452,18 +1324,21 @@ export default function ProductManagementPage() {
             ＋ 商品を追加
           </button>
         )}
+        {pageTab === "options" && (
+          <p className="text-xs text-slate-500">テンプレートをまず作成し、商品登録時に適用できます</p>
+        )}
       </header>
 
       {/* タブバー */}
       <div className="flex border-b border-slate-800 bg-slate-900">
-        {(["items", "categories"] as PageTab[]).map(tab => (
-          <button key={tab} onClick={() => setPageTab(tab)}
+        {TAB_CONFIG.map(({ key, label }) => (
+          <button key={key} onClick={() => setPageTab(key)}
             className={`flex-1 py-3 text-sm font-semibold transition-all ${
-              pageTab === tab
+              pageTab === key
                 ? "text-teal-300 border-b-2 border-teal-400 bg-slate-800"
                 : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
             }`}>
-            {tab === "items" ? `🍽️ 商品一覧（${items.length}件）` : "🗂️ カテゴリー設定"}
+            {label}
           </button>
         ))}
       </div>
@@ -472,16 +1347,40 @@ export default function ProductManagementPage() {
         {loading ? (
           <div className="text-center py-16 text-slate-500">読み込み中...</div>
         ) : error ? (
-          <div className="text-center py-16 text-red-400">{error}</div>
-        ) : pageTab === "categories" ? (
-          /* ── カテゴリー設定タブ ─────────────────────── */
-          <CategoriesTab
-            categories={categories}
-            itemsByCat={itemsByCat}
-            onRefresh={load}
+          <div className="bg-amber-950 border border-amber-700 rounded-2xl p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="text-amber-300 font-bold text-base">データベーステーブルが見つかりません</p>
+                <p className="text-amber-400 text-sm mt-1">Supabase の SQL Editor で以下のファイルを実行してください。</p>
+              </div>
+            </div>
+            <div className="bg-amber-900/40 rounded-xl p-4 font-mono text-xs text-amber-200 leading-relaxed">
+              <p className="text-amber-400 font-semibold mb-2"># Supabase Dashboard → SQL Editor で実行</p>
+              <p>supabase/setup_full.sql</p>
+            </div>
+            <p className="text-xs text-red-400 bg-red-950/50 rounded-lg px-3 py-2">詳細: {error}</p>
+            <button
+              onClick={load}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
+            >
+              🔄 再試行
+            </button>
+          </div>
+        ) : pageTab === "display" ? (
+          /* ── 表示設定タブ ───────────────────────────────── */
+          <DisplayTab
+            emojiSettings={emojiSettings}
+            onEmojiSettingsChange={setEmojiSettings}
           />
+        ) : pageTab === "options" ? (
+          /* ── オプション管理タブ ─────────────────────────── */
+          <OptionsTab templates={templates} onRefresh={load} />
+        ) : pageTab === "categories" ? (
+          /* ── カテゴリー設定タブ ─────────────────────────── */
+          <CategoriesTab categories={categories} itemsByCat={itemsByCat} allItems={items} onRefresh={load} />
         ) : (
-          /* ── 商品一覧タブ ───────────────────────────── */
+          /* ── 商品一覧タブ ───────────────────────────────── */
           <>
             {/* カテゴリーフィルター */}
             <div className="flex gap-2 flex-wrap">
@@ -517,6 +1416,9 @@ export default function ProductManagementPage() {
                         <ItemForm
                           state={editState}
                           categories={categories}
+                          templates={templates}
+                          isEmojiEnabled={emojiSettings.isEmojiEnabled}
+                          availableEmojis={emojiSettings.availableEmojis}
                           onChange={setEditState}
                           onSave={() => saveEdit(item.id)}
                           onCancel={cancelEdit}
@@ -526,16 +1428,14 @@ export default function ProductManagementPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-4 px-4 py-3">
-                        <span className="text-3xl w-10 text-center flex-shrink-0">{item.emoji}</span>
+                        <span className="text-3xl w-10 text-center flex-shrink-0">{item.emoji ?? ""}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-white truncate">{item.name}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs text-slate-400">{catName(item.category)}</span>
                             <span className="text-xs text-slate-600">·</span>
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${
-                              item.taxRate === 0.08 ? "bg-amber-900 text-amber-400" : "bg-slate-700 text-slate-400"
-                            }`}>
-                              税{item.taxRate === 0.08 ? "8%" : "10%"}
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${taxBadgeCls(item.taxRate)}`}>
+                              税{TAX_RATES.find(t => t.rate === item.taxRate)?.label ?? `${item.taxRate * 100}%`}
                             </span>
                           </div>
                         </div>
@@ -565,7 +1465,7 @@ export default function ProductManagementPage() {
       {/* 商品追加モーダル */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
               <h2 className="text-base font-bold">商品を追加</h2>
               <button onClick={() => setShowAdd(false)}
@@ -589,6 +1489,9 @@ export default function ProductManagementPage() {
                   <ItemForm
                     state={newItem}
                     categories={categories}
+                    templates={templates}
+                    isEmojiEnabled={emojiSettings.isEmojiEnabled}
+                    availableEmojis={emojiSettings.availableEmojis}
                     onChange={setNewItem}
                     onSave={handleAdd}
                     onCancel={() => setShowAdd(false)}

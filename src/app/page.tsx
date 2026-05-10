@@ -5,52 +5,21 @@ import { useEffect, useState } from "react";
 import SubsidyWizardModal from "@/components/SubsidyWizardModal";
 
 const LS_BANNER_DISMISSED = "subsidy_banner_dismissed_at";
-const LS_BOT_VISITED = "subsidy_bot_visited";
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const LS_BOT_VISITED      = "subsidy_bot_visited";
+const THREE_DAYS_MS       = 3 * 24 * 60 * 60 * 1000;
 
-const tiles = [
-  {
-    label: "レジ",
-    icon: "🧾",
-    href: "/register",
-    bg: "bg-indigo-600 hover:bg-indigo-500",
-    available: true,
-  },
-  {
-    label: "点検 / 精算",
-    icon: "🖨️",
-    href: "/settings",
-    bg: "bg-slate-700 hover:bg-slate-600",
-    available: true,
-  },
-  {
-    label: "売上データ",
-    icon: "📊",
-    href: "/sales-data",
-    bg: "bg-violet-700 hover:bg-violet-600",
-    available: true,
-  },
-  {
-    label: "入出金管理",
-    icon: "💵",
-    href: "#",
-    bg: "bg-slate-700 hover:bg-slate-600",
-    available: false,
-  },
-  {
-    label: "商品管理",
-    icon: "🍽️",
-    href: "/product-management",
-    bg: "bg-teal-700 hover:bg-teal-600",
-    available: true,
-  },
-  {
-    label: "クーポン・\n割引設定",
-    icon: "🏷️",
-    href: "#",
-    bg: "bg-slate-700 hover:bg-slate-600",
-    available: false,
-  },
+type TileStyle = "primary" | "accent" | "card" | "disabled";
+
+const tiles: {
+  label: string; icon: string; href: string;
+  style: TileStyle; iconBg?: string;
+}[] = [
+  { label: "レジ",          icon: "🧾", href: "/register",           style: "primary"  },
+  { label: "受給チャンス",   icon: "✨", href: "/employees",           style: "accent"   },
+  { label: "売上データ",     icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
+  { label: "商品管理",       icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
+  { label: "点検 / 精算",   icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
+  { label: "入出金管理",     icon: "💴", href: "#",                    style: "disabled"  },
 ];
 
 function checkBannerVisible(): boolean {
@@ -64,7 +33,7 @@ function checkBannerVisible(): boolean {
 }
 
 export default function HomePage() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow]           = useState(new Date());
   const [showWizard, setShowWizard] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
 
@@ -84,26 +53,20 @@ export default function HomePage() {
     localStorage.setItem(LS_BANNER_DISMISSED, String(Date.now()));
     setShowBanner(false);
   };
-
   const handleBotVisited = () => {
     localStorage.setItem(LS_BOT_VISITED, "true");
     setShowBanner(false);
   };
 
   const dateStr = now.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
+    year: "numeric", month: "long", day: "numeric", weekday: "short",
   });
   const timeStr = now.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#F5F6FA] flex flex-col">
       <SubsidyWizardModal
         isOpen={showWizard}
         onClose={() => setShowWizard(false)}
@@ -111,25 +74,30 @@ export default function HomePage() {
       />
 
       {/* ヘッダー */}
-      <header className="flex items-center justify-between px-8 py-5 border-b border-slate-800">
+      <header className="flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-xl border-b border-black/[0.05] shadow-[0_1px_0_rgb(0,0,0,0.04)]">
+        {/* FLOWS ロゴ */}
         <div className="flex items-center gap-3">
-          <span className="text-3xl">🍽️</span>
-          <div>
-            <h1 className="text-white text-xl font-bold tracking-wide leading-tight">
-              Kitchen Kazu
-            </h1>
-            <p className="text-slate-500 text-xs">POS レジシステム</p>
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[12px] flex items-center justify-center shadow-[0_2px_12px_rgba(99,102,241,0.4)]">
+            <span className="text-white text-sm font-black tracking-tight">FL</span>
+          </div>
+          <div className="leading-none">
+            <p className="text-xl font-black text-slate-900 tracking-tight leading-none">FLOWS</p>
+            <p className="text-[10px] text-slate-400 font-medium tracking-[0.12em] uppercase mt-0.5">
+              by Infotainment
+            </p>
           </div>
         </div>
+
+        {/* 日時 */}
         <div className="text-right">
-          <p className="text-slate-400 text-sm">{dateStr}</p>
-          <p className="text-white text-2xl font-mono font-bold tracking-widest">
+          <p className="text-slate-400 text-xs font-medium">{dateStr}</p>
+          <p className="text-slate-900 text-2xl font-black font-mono tracking-wider mt-0.5 tabular-nums">
             {timeStr}
           </p>
         </div>
       </header>
 
-      {/* 損失回避 通知バナー（15:00〜16:00、Bot遷移後は非表示、閉じたら3日後に再表示） */}
+      {/* 受給チャンス バナー */}
       {showBanner && (
         <SubsidyNotificationBanner
           onOpen={() => setShowWizard(true)}
@@ -137,72 +105,96 @@ export default function HomePage() {
         />
       )}
 
-      {/* タイルグリッド */}
-      <main className="flex-1 flex items-center justify-center p-8">
-        <div className="grid grid-cols-3 gap-5 w-full max-w-2xl">
+      {/* メインタイルグリッド */}
+      <main className="flex-1 flex items-center justify-center p-10">
+        <div className="grid grid-cols-3 gap-5 w-full max-w-xl">
           {tiles.map((tile) => {
-            const inner = (
-              <div
-                className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl aspect-square w-full transition-all active:scale-95 ${tile.bg} ${
-                  tile.available ? "shadow-lg cursor-pointer" : "opacity-40 cursor-not-allowed"
-                }`}
-              >
-                <span className="text-5xl leading-none">{tile.icon}</span>
-                <span className="text-white text-base font-bold text-center leading-snug whitespace-pre-line px-2">
-                  {tile.label}
-                </span>
-                {!tile.available && (
-                  <span className="absolute top-2.5 right-2.5 bg-slate-600 text-slate-300 text-xs px-1.5 py-0.5 rounded-md font-medium">
-                    準備中
-                  </span>
-                )}
-              </div>
-            );
-
-            return tile.available && tile.href !== "#" ? (
-              <Link key={tile.label} href={tile.href}>
-                {inner}
-              </Link>
-            ) : (
-              <div key={tile.label}>{inner}</div>
-            );
+            const tileEl = <Tile key={tile.label} {...tile} />;
+            if (tile.style === "disabled" || tile.href === "#") {
+              return <div key={tile.label}>{tileEl}</div>;
+            }
+            return <Link key={tile.label} href={tile.href}>{tileEl}</Link>;
           })}
         </div>
       </main>
 
-      <footer className="text-center py-4 text-slate-700 text-xs">
-        Kitchen Kazu POS v2.0
+      <footer className="text-center py-4 text-slate-300 text-xs font-medium tracking-wide">
+        © 2026 Infotainment · FLOWS v1.0
       </footer>
     </div>
   );
 }
 
-function SubsidyNotificationBanner({
-  onOpen,
-  onClose,
+function Tile({
+  label, icon, style, iconBg,
 }: {
-  onOpen: () => void;
-  onClose: () => void;
+  label: string; icon: string; style: TileStyle; iconBg?: string;
 }) {
+  if (style === "primary") {
+    return (
+      <div className="bg-indigo-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+        shadow-[0_4px_24px_rgba(99,102,241,0.38)] hover:shadow-[0_8px_36px_rgba(99,102,241,0.5)]
+        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer">
+        <span className="text-5xl leading-none">{icon}</span>
+        <span className="text-white text-base font-bold tracking-tight">{label}</span>
+      </div>
+    );
+  }
+
+  if (style === "accent") {
+    return (
+      <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+        shadow-[0_4px_24px_rgba(251,191,36,0.4)] hover:shadow-[0_8px_36px_rgba(251,191,36,0.55)]
+        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer">
+        <span className="text-5xl leading-none">{icon}</span>
+        <span className="text-white text-base font-bold tracking-tight text-center leading-snug">{label}</span>
+      </div>
+    );
+  }
+
+  if (style === "disabled") {
+    return (
+      <div className="relative bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+        ring-1 ring-black/[0.04] shadow-[0_2px_12px_rgb(0,0,0,0.04)] opacity-50 cursor-not-allowed">
+        <div className={`w-14 h-14 ${iconBg ?? "bg-slate-50"} rounded-2xl flex items-center justify-center`}>
+          <span className="text-3xl leading-none">{icon}</span>
+        </div>
+        <span className="text-slate-500 text-sm font-semibold tracking-tight text-center leading-snug">{label}</span>
+        <span className="absolute top-2.5 right-2.5 bg-slate-100 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+          準備中
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-6 mt-4 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-600 rounded-2xl px-5 py-4">
+    <div className="bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+      ring-1 ring-black/[0.04] shadow-[0_2px_12px_rgb(0,0,0,0.06)]
+      hover:shadow-[0_8px_32px_rgb(0,0,0,0.10)] hover:-translate-y-0.5
+      active:scale-95 transition-all duration-200 cursor-pointer">
+      <div className={`w-14 h-14 ${iconBg ?? "bg-slate-50"} rounded-2xl flex items-center justify-center shadow-sm`}>
+        <span className="text-3xl leading-none">{icon}</span>
+      </div>
+      <span className="text-slate-800 text-sm font-bold tracking-tight text-center leading-snug">{label}</span>
+    </div>
+  );
+}
+
+function SubsidyNotificationBanner({ onOpen, onClose }: { onOpen: () => void; onClose: () => void }) {
+  return (
+    <div className="mx-8 mt-5 bg-white ring-1 ring-amber-200 shadow-[0_4px_20px_rgba(251,191,36,0.18)] rounded-2xl px-5 py-4">
       <div className="flex items-start gap-3">
-        <span className="text-amber-400 text-xl mt-0.5 flex-shrink-0">⚠️</span>
-        <p className="flex-1 text-amber-100 text-sm font-bold leading-snug">
-          【4/22更新】厨房助成金の申請期限が近づいています。未受給の金額（想定）を確認してください。
+        <span className="text-amber-500 text-xl mt-0.5 flex-shrink-0">✨</span>
+        <p className="flex-1 text-slate-700 text-sm font-semibold leading-snug">
+          【受給チャンス】厨房助成金の申請期限が近づいています。未受給の金額を確認してください。
         </p>
-        <button
-          onClick={onClose}
-          className="flex-shrink-0 text-amber-600 hover:text-amber-400 text-lg leading-none mt-0.5"
-          aria-label="閉じる"
-        >
+        <button onClick={onClose}
+          className="flex-shrink-0 text-slate-300 hover:text-slate-500 text-lg leading-none mt-0.5 transition-colors">
           ✕
         </button>
       </div>
-      <button
-        onClick={onOpen}
-        className="mt-3 w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-xl transition-all active:scale-95"
-      >
+      <button onClick={onOpen}
+        className="mt-3 w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-all active:scale-95 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
         未受給の金額を確認する →
       </button>
     </div>
