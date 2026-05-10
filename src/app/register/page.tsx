@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { MenuItem, OrderItem, OrderOptions, SalesRecord, ServiceTab, OrderDiscount, HoldEntry, TaxRate } from "@/types/pos";
 import { menuItems as defaultMenuItems } from "@/data/menu";
@@ -16,6 +16,7 @@ import OptionModal from "@/components/OptionModal";
 import CheckoutScreen from "@/components/CheckoutScreen";
 import FloatingNumpad from "@/components/FloatingNumpad";
 import HoldRecallModal from "@/components/HoldRecallModal";
+import { useRoleLayout } from "@/hooks/useRoleLayout";
 
 const HOLD_STORAGE_KEY     = "pos_held_orders";
 const ORDER_STORAGE_KEY    = "pos_order_items";
@@ -118,8 +119,71 @@ function StaffPicker({
   );
 }
 
+// ── テーブルビュー用メニューグリッド（大きなカード、タップ不可） ──────────
+function TableMenuGrid({
+  activeCategoryId,
+  isTakeout,
+  menuItems,
+}: {
+  activeCategoryId: string;
+  isTakeout: boolean;
+  menuItems: MenuItem[];
+}) {
+  const filtered = isTakeout
+    ? menuItems.filter(item => item.isTakeoutAvailable !== false)
+    : menuItems.filter(item => item.category === activeCategoryId);
+
+  return (
+    <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+      {filtered.map(item => {
+        const effectiveTaxRate = isTakeout ? 0.08 : item.taxRate;
+        const taxIncludedPrice = Math.round(item.price * (1 + effectiveTaxRate));
+        return (
+          <div
+            key={item.id}
+            className="bg-white rounded-3xl p-6 flex flex-col items-center gap-4
+              shadow-[0_2px_16px_rgb(0,0,0,0.07)] ring-1 ring-black/[0.04] select-none"
+          >
+            {item.emoji && (
+              <span className="text-7xl leading-none">{item.emoji}</span>
+            )}
+            <div className="w-full text-center space-y-1">
+              <p className="text-base font-bold text-slate-800 tracking-tight leading-snug">
+                {item.name}
+              </p>
+              <p className="text-3xl font-black text-indigo-600 tracking-tight">
+                ¥{taxIncludedPrice.toLocaleString()}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                税抜 ¥{item.price.toLocaleString()} ·{" "}
+                <span className={isTakeout ? "text-teal-600" : ""}>
+                  {isTakeout ? "8%" : "10%"}
+                </span>
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── メインページ ──────────────────────────────────────────────
+/**
+ * Default export wraps RegisterPageInner in a <Suspense> boundary.
+ * This is required by Next.js App Router when useSearchParams() is used
+ * inside a statically prerendered route (build will fail otherwise).
+ */
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#F5F6FA]" />}>
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
+  const role = useRoleLayout();
   const [categories, setCategories]         = useState<CategoryRecord[]>(DEFAULT_CATEGORIES);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("dinner");
   const [isTakeout, setIsTakeout]           = useState<boolean>(false);
@@ -155,6 +219,8 @@ export default function RegisterPage() {
   const [isManualInput, setIsManualInput]       = useState(false);
   const [editingItemKey, setEditingItemKey]     = useState<string | null>(null);
   const [saveError, setSaveError]               = useState<{ record: SalesRecord; attempt: number } | null>(null);
+  // mobile role: which panel is active in the bottom tab bar
+  const [mobileTab, setMobileTab]               = useState<"menu" | "order">("menu");
 
   // activeTab をカテゴリー名と isTakeout フラグから導出
   const selectedCategory = categories.find(c => c.id === activeCategoryId);
@@ -420,6 +486,275 @@ export default function RegisterPage() {
     }]);
   }, []);
 
+  // ─────────────────────────────────────────────────────────────
+  // Shared order panel props (used by both handy and mobile roles)
+  // ─────────────────────────────────────────────────────────────
+  const orderPanelProps = {
+    items: orderItems,
+    maleCount,
+    femaleCount,
+    discount,
+    holdCount: holds.length,
+    onMaleChange: setMaleCount,
+    onFemaleChange: setFemaleCount,
+    onIncrement: handleIncrement,
+    onDecrement: handleDecrement,
+    onRemove: handleRemove,
+    onCheckout: () => setShowCheckout(true),
+    onClear: () => { setOrderItems([]); setDiscount(null); setEditingItemKey(null); },
+    onDiscountChange: setDiscount,
+    onItemDiscountChange: handleItemDiscountChange,
+    onHold: handleHold,
+    onRecallOpen: () => setShowHoldRecall(true),
+    onEditPrice: (key: string) => { setEditingItemKey(key); setIsManualInput(false); },
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Modals that appear on top regardless of role
+  // ─────────────────────────────────────────────────────────────
+  const sharedModals = (
+    <>
+      {/* オプション選択モーダル */}
+      {pendingItem && (
+        <OptionModal
+          item={pendingItem}
+          taxRate={pendingItem.taxRate ?? 0.10}
+          onConfirm={handleOptionConfirm}
+          onClose={() => setPendingItem(null)}
+        />
+      )}
+
+      {/* 手入力 / 金額変更テンキー */}
+      {(isManualInput || (editingItemKey !== null && orderItems.some(o => o.itemKey === editingItemKey))) && (() => {
+        const ei = editingItemKey ? orderItems.find(o => o.itemKey === editingItemKey) : null;
+        return (
+          <FloatingNumpad
+            key={editingItemKey ?? "manual"}
+            onAdd={handleManualAdd}
+            onEditConfirm={handleEditItemPrice}
+            editingItem={ei ? {
+              itemKey: ei.itemKey,
+              name: ei.menuItem.name,
+              currentUnitPrice: ei.unitPrice,
+              taxRate: ei.taxRate,
+            } : null}
+            defaultTaxRate={isTakeout ? 0.08 : 0.10}
+            onClose={() => { setIsManualInput(false); setEditingItemKey(null); }}
+          />
+        );
+      })()}
+
+      {/* 保留呼び出しモーダル */}
+      {showHoldRecall && (
+        <HoldRecallModal
+          holds={holds}
+          onRecall={handleRecall}
+          onDelete={handleDeleteHold}
+          onClose={() => setShowHoldRecall(false)}
+        />
+      )}
+
+      {/* 会計画面 */}
+      {showCheckout && (
+        <CheckoutScreen
+          items={orderItems}
+          serviceTab={activeTab}
+          maleCount={maleCount}
+          femaleCount={femaleCount}
+          staff={staffName || undefined}
+          discount={discount}
+          onComplete={handleCheckoutComplete}
+          onCancel={() => setShowCheckout(false)}
+          onDone={handleCheckoutDone}
+        />
+      )}
+    </>
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // TABLE role: customer-facing menu browser, no order panel
+  // ─────────────────────────────────────────────────────────────
+  if (role === "table") {
+    return (
+      <div className="flex flex-col h-screen bg-[#F5F6FA] overflow-hidden">
+        {/* テーブルビューヘッダー：店舗名のみ表示 */}
+        <header className="flex items-center justify-between px-6 py-4 bg-white/90 backdrop-blur-xl border-b border-black/[0.05] shadow-sm flex-shrink-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[12px] flex items-center justify-center shadow-[0_2px_10px_rgba(99,102,241,0.4)]">
+              <span className="text-white text-xs font-black tracking-tight">FL</span>
+            </div>
+            <div className="leading-none">
+              <p className="text-lg font-black text-slate-900 tracking-tight leading-none">FLOWS</p>
+              <p className="text-[10px] font-medium text-slate-400 tracking-[0.12em] uppercase mt-0.5">by Infotainment</p>
+            </div>
+          </div>
+          <span className={`text-xs px-3 py-1.5 rounded-full font-semibold ring-1 ${
+            activeTab === "dinner"
+              ? "bg-indigo-50 text-indigo-700 ring-indigo-200/60"
+              : "bg-amber-50 text-amber-700 ring-amber-200/60"
+          }`}>
+            {selectedCategory?.name ?? "夜部"} メニュー
+          </span>
+        </header>
+
+        {/* メインコンテンツ：カテゴリ＋大きなメニューカード */}
+        <div className="flex flex-1 overflow-hidden">
+          <CategoryBar
+            categories={categories}
+            activeCategoryId={activeCategoryId}
+            onCategoryChange={id => { handleCategoryChange(id); }}
+            isTakeout={isTakeout}
+            onTakeoutSelect={handleTakeoutSelect}
+            isTakeoutEnabled={isTakeoutEnabled}
+            isManualInput={false}
+            onManualInputSelect={() => {}}
+          />
+          {/* メニューグリッド：カードを大きく表示 */}
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F5F6FA]">
+            <TableMenuGrid
+              activeCategoryId={activeCategoryId}
+              isTakeout={isTakeout}
+              menuItems={menuItems}
+            />
+          </div>
+        </div>
+
+        {/* 下部：スタッフ呼び出しバナー（チェックアウト不可） */}
+        <div className="flex-shrink-0 bg-white border-t border-slate-200 px-6 py-4 shadow-[0_-4px_20px_rgb(0,0,0,0.06)]">
+          <button
+            disabled
+            className="w-full py-5 rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-black text-lg tracking-wide shadow-[0_4px_20px_rgba(99,102,241,0.4)] cursor-default select-none"
+          >
+            📲 ご注文はスタッフまで / スタッフをお呼びください
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MOBILE role: single-column stacked layout with bottom tabs
+  // ─────────────────────────────────────────────────────────────
+  if (role === "mobile") {
+    return (
+      <div className="flex flex-col h-screen bg-[#F5F6FA] overflow-hidden">
+        {/* DB保存失敗バナー */}
+        {saveError && (
+          <div className="fixed top-0 inset-x-0 z-[60] bg-red-600 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <p className="text-sm font-bold">
+                保存エラー{saveError.attempt > 1 ? `（${saveError.attempt}回目）` : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRetrySave}
+                className="text-xs font-bold bg-white text-red-600 px-3 py-1.5 rounded-lg"
+              >
+                再試行
+              </button>
+              <button
+                onClick={() => setSaveError(null)}
+                className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* モバイルヘッダー：コンパクト */}
+        <header className="flex items-center justify-between px-4 py-2.5 bg-white/90 backdrop-blur-xl border-b border-black/[0.05] shadow-sm flex-shrink-0 z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[8px] flex items-center justify-center shadow-[0_2px_6px_rgba(99,102,241,0.35)]">
+              <span className="text-white text-[9px] font-black tracking-tight">FL</span>
+            </div>
+            <span className="text-sm font-black text-slate-900 tracking-tight">FLOWS</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ring-1 ${
+              isTakeout
+                ? "bg-teal-50 text-teal-700 ring-teal-200/60"
+                : activeTab === "dinner"
+                ? "bg-indigo-50 text-indigo-700 ring-indigo-200/60"
+                : "bg-amber-50 text-amber-700 ring-amber-200/60"
+            }`}>
+              {isTakeout ? "テイクアウト" : selectedCategory?.name ?? "夜部"}
+            </span>
+          </div>
+          <StaffPicker current={staffName} onSelect={handleSelectStaff} />
+        </header>
+
+        {/* カテゴリバー（水平スクロール可） */}
+        <div className="flex-shrink-0 bg-white border-b border-slate-100">
+          <CategoryBar
+            categories={categories}
+            activeCategoryId={activeCategoryId}
+            onCategoryChange={id => { handleCategoryChange(id); setIsManualInput(false); }}
+            isTakeout={isTakeout}
+            onTakeoutSelect={() => { handleTakeoutSelect(); setIsManualInput(false); }}
+            isTakeoutEnabled={isTakeoutEnabled}
+            isManualInput={isManualInput}
+            onManualInputSelect={() => setIsManualInput(m => !m)}
+          />
+        </div>
+
+        {/* メインエリア：アクティブタブに応じてパネル切り替え */}
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === "menu" ? (
+            <div className="h-full overflow-y-auto p-3 bg-[#F5F6FA]">
+              <MenuPanel
+                activeCategoryId={activeCategoryId}
+                isTakeout={isTakeout}
+                menuItems={menuItems}
+                onAddItem={item => { handleMenuItemTap(item); setMobileTab("order"); }}
+              />
+            </div>
+          ) : (
+            <div className="h-full overflow-hidden">
+              <OrderPanel {...orderPanelProps} />
+            </div>
+          )}
+        </div>
+
+        {/* ボトムタブバー：メニュー ｜ 注文確認 */}
+        <div className="flex-shrink-0 flex border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgb(0,0,0,0.06)]">
+          <button
+            onClick={() => setMobileTab("menu")}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 min-h-[56px] transition-colors ${
+              mobileTab === "menu"
+                ? "text-indigo-600 bg-indigo-50"
+                : "text-slate-400 hover:text-slate-600 active:bg-slate-50"
+            }`}
+          >
+            <span className="text-xl leading-none">🍽</span>
+            <span className="text-[11px] font-bold tracking-tight">メニュー</span>
+          </button>
+          <button
+            onClick={() => setMobileTab("order")}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 min-h-[56px] transition-colors relative ${
+              mobileTab === "order"
+                ? "text-indigo-600 bg-indigo-50"
+                : "text-slate-400 hover:text-slate-600 active:bg-slate-50"
+            }`}
+          >
+            <span className="text-xl leading-none">🛒</span>
+            <span className="text-[11px] font-bold tracking-tight">注文確認</span>
+            {orderItems.length > 0 && (
+              <span className="absolute top-2 right-[calc(50%-22px)] min-w-[18px] h-[18px] bg-indigo-600 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1">
+                {orderItems.reduce((s, i) => s + i.quantity, 0)}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {sharedModals}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // HANDY role (default): existing full POS layout — unchanged
+  // ─────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-[#F5F6FA] overflow-hidden">
 
@@ -542,25 +877,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="w-72 flex-shrink-0 overflow-hidden">
-          <OrderPanel
-            items={orderItems}
-            maleCount={maleCount}
-            femaleCount={femaleCount}
-            discount={discount}
-            holdCount={holds.length}
-            onMaleChange={setMaleCount}
-            onFemaleChange={setFemaleCount}
-            onIncrement={handleIncrement}
-            onDecrement={handleDecrement}
-            onRemove={handleRemove}
-            onCheckout={() => setShowCheckout(true)}
-            onClear={() => { setOrderItems([]); setDiscount(null); setEditingItemKey(null); }}
-            onDiscountChange={setDiscount}
-            onItemDiscountChange={handleItemDiscountChange}
-            onHold={handleHold}
-            onRecallOpen={() => setShowHoldRecall(true)}
-            onEditPrice={key => { setEditingItemKey(key); setIsManualInput(false); }}
-          />
+          <OrderPanel {...orderPanelProps} />
         </div>
 
         {/* 履歴スライドパネル */}
@@ -583,61 +900,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* オプション選択モーダル */}
-      {pendingItem && (
-        <OptionModal
-          item={pendingItem}
-          taxRate={pendingItem.taxRate ?? 0.10}
-          onConfirm={handleOptionConfirm}
-          onClose={() => setPendingItem(null)}
-        />
-      )}
-
-      {/* 手入力 / 金額変更テンキー */}
-      {/* editingItemKey が設定されているが商品がカートから消えた場合は表示しない */}
-      {(isManualInput || (editingItemKey !== null && orderItems.some(o => o.itemKey === editingItemKey))) && (() => {
-        const ei = editingItemKey ? orderItems.find(o => o.itemKey === editingItemKey) : null;
-        return (
-          <FloatingNumpad
-            key={editingItemKey ?? "manual"}
-            onAdd={handleManualAdd}
-            onEditConfirm={handleEditItemPrice}
-            editingItem={ei ? {
-              itemKey: ei.itemKey,
-              name: ei.menuItem.name,
-              currentUnitPrice: ei.unitPrice,
-              taxRate: ei.taxRate,
-            } : null}
-            defaultTaxRate={isTakeout ? 0.08 : 0.10}
-            onClose={() => { setIsManualInput(false); setEditingItemKey(null); }}
-          />
-        );
-      })()}
-
-      {/* 保留呼び出しモーダル */}
-      {showHoldRecall && (
-        <HoldRecallModal
-          holds={holds}
-          onRecall={handleRecall}
-          onDelete={handleDeleteHold}
-          onClose={() => setShowHoldRecall(false)}
-        />
-      )}
-
-      {/* 会計画面 */}
-      {showCheckout && (
-        <CheckoutScreen
-          items={orderItems}
-          serviceTab={activeTab}
-          maleCount={maleCount}
-          femaleCount={femaleCount}
-          staff={staffName || undefined}
-          discount={discount}
-          onComplete={handleCheckoutComplete}
-          onCancel={() => setShowCheckout(false)}
-          onDone={handleCheckoutDone}
-        />
-      )}
+      {sharedModals}
     </div>
   );
 }

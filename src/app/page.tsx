@@ -14,12 +14,13 @@ const tiles: {
   label: string; icon: string; href: string;
   style: TileStyle; iconBg?: string;
 }[] = [
-  { label: "レジ",          icon: "🧾", href: "/register",           style: "primary"  },
-  { label: "受給チャンス",   icon: "✨", href: "/employees",           style: "accent"   },
-  { label: "売上データ",     icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
-  { label: "商品管理",       icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
-  { label: "点検 / 精算",   icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
-  { label: "入出金管理",     icon: "💴", href: "#",                    style: "disabled"  },
+  { label: "レジ",                    icon: "🧾", href: "/register",           style: "primary"  },
+  { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent"   },
+  { label: "売上データ",               icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
+  { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
+  { label: "点検 / 精算",             icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
+  { label: "入出金管理",               icon: "💴", href: "#",                    style: "disabled"  },
+  { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50" },
 ];
 
 function checkBannerVisible(): boolean {
