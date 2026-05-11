@@ -61,29 +61,39 @@ async function callOpenRouterModel(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   model: string,
 ): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type":  "application/json",
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer":  "https://pos-app.vercel.app",
-      "X-Title":       "FLOWS POS",
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 1024 }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer":  "https://pos-app.vercel.app",
+        "X-Title":       "FLOWS POS",
+      },
+      body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+      signal: controller.signal,
+    });
 
-  const text = await res.text().catch(() => "");
-  if (!res.ok) {
-    if (isEndpointError(res.status, text)) {
-      throw new EndpointError(`model unavailable: ${model} (${res.status})`);
+    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      if (isEndpointError(res.status, text)) {
+        throw new EndpointError(`model unavailable: ${model} (${res.status})`);
+      }
+      throw new Error(`OpenRouter エラー ${res.status}: ${text}`);
     }
-    throw new Error(`OpenRouter エラー ${res.status}: ${text}`);
-  }
 
-  const data = JSON.parse(text) as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices[0]?.message?.content;
-  if (!content) throw new Error("OpenRouter レスポンスにテキストがありません");
-  return content;
+    const data = JSON.parse(text) as { choices: Array<{ message: { content: string } }> };
+    const content = data.choices[0]?.message?.content;
+    if (!content) throw new Error("OpenRouter レスポンスにテキストがありません");
+    return content;
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw new EndpointError(`timeout: ${model}`);
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // エンドポイント廃止を示す専用エラークラス
@@ -119,19 +129,29 @@ type GeminiApiResponse = { candidates: Array<{ content: GeminiContent }> };
 
 async function callGeminiFallback(contents: GeminiContent[]): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Gemini API エラー ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Gemini API エラー ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as GeminiApiResponse;
+    const text = data.candidates[0]?.content?.parts[0]?.text;
+    if (!text) throw new Error("Gemini レスポンスにテキストがありません");
+    return text;
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw new Error("Gemini API タイムアウト (5s)");
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  const data = (await res.json()) as GeminiApiResponse;
-  const text = data.candidates[0]?.content?.parts[0]?.text;
-  if (!text) throw new Error("Gemini レスポンスにテキストがありません");
-  return text;
 }
 
 // ── POST ハンドラ ─────────────────────────────────────────────

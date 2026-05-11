@@ -8,6 +8,9 @@ import { menuItems as staticMenuItems } from "@/data/menu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { type Lang, t } from "@/lib/i18n";
 import type { UpsellSuggestion } from "@/app/api/upsell/route";
+import VideoBackground from "@/components/VideoBackground";
+import { addKdsOrder } from "@/lib/kdsStore";
+import { recordOrder } from "@/lib/toppingAnalytics";
 
 // ─── 型定義 ────────────────────────────────────────────────────
 
@@ -475,7 +478,24 @@ function CustomerOrderInner() {
             getCategoryColor={categoryColorMap}
             onRemove={removeFromCart}
             onSwitchMenu={() => setActiveTab("menu")}
-            onOrderSent={() => setOrderSentModal(true)}
+            onOrderSent={() => {
+              // KDS に注文を送信 + トッピング分析を記録
+              addKdsOrder({
+                id: `order-${Date.now()}`,
+                items: cart.map(c => ({
+                  name: c.menuItem.name,
+                  emoji: c.menuItem.emoji,
+                  options: c.selectedOptions.map(o => `${o.groupName}: ${o.itemName}`),
+                  qty: c.quantity,
+                  servingTime: c.servingTime,
+                })),
+                lang,
+                createdAt: Date.now(),
+                status: "new",
+              });
+              recordOrder(cart.map(c => c.menuItem.name));
+              setOrderSentModal(true);
+            }}
           />
         )}
         {activeTab === "ai" && (
@@ -886,10 +906,14 @@ function ProductDetailModal({
           ✕
         </button>
 
-        {/* 絵文字エリア */}
-        <div className={`h-36 flex items-center justify-center bg-gradient-to-br ${categoryColor}`}>
-          <span className="text-7xl drop-shadow-md">{item.emoji ?? "🍽️"}</span>
-        </div>
+        {/* シズル動画 / 絵文字エリア */}
+        <VideoBackground
+          videoUrl={item.videoUrl}
+          fallbackGradient={categoryColor}
+          emoji={item.emoji}
+          height={item.videoUrl ? "h-56" : "h-36"}
+          overlayOpacity={item.videoUrl ? 0.40 : 0}
+        />
 
         {/* コンテンツ */}
         <div className="p-5 flex flex-col gap-5">

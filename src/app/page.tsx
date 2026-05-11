@@ -22,6 +22,7 @@ const tiles: {
   { label: "入出金管理",               icon: "💴", href: "#",                    style: "disabled"  },
   { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50" },
   { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100" },
+  { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50"  },
 ];
 
 function checkBannerVisible(): boolean {
