@@ -680,7 +680,7 @@ function MenuTab({
 
       {/* ── 商品グリッド ── */}
       <div className="flex-1 overflow-y-auto p-2.5 pb-0">
-        <div className={["grid", isTable ? "grid-cols-3 gap-3" : "grid-cols-2 gap-2.5"].join(" ")}>
+        <div className="grid grid-cols-2 gap-2.5">
           {items.map((item) => (
             <ProductCard
               key={item.id}
@@ -742,9 +742,8 @@ function ProductCard({
       <button
         onClick={onClick}
         className={[
-          "w-full flex-shrink-0 flex items-center justify-center relative overflow-hidden",
+          "w-full flex-shrink-0 flex items-center justify-center relative overflow-hidden aspect-[4/3]",
           !item.imageUrl ? `bg-gradient-to-br ${color}` : "bg-slate-100",
-          isTable ? "h-36" : "h-28",
         ].join(" ")}
       >
         {item.imageUrl ? (
@@ -756,7 +755,7 @@ function ProductCard({
             loading="lazy"
           />
         ) : (
-          <span className={["drop-shadow-md select-none", isTable ? "text-7xl" : "text-6xl"].join(" ")}>
+          <span className="text-5xl drop-shadow-md select-none">
             {item.emoji ?? "🍽️"}
           </span>
         )}
@@ -778,14 +777,14 @@ function ProductCard({
         <div className="flex items-center gap-2 mt-auto pt-1">
           <button
             onClick={onClick}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm shadow-amber-300/60 hover:shadow-md active:scale-95 transition-all duration-150"
+            className="flex-1 flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-2 rounded-xl shadow-sm shadow-amber-300/60 hover:shadow-md active:scale-95 transition-all duration-150 whitespace-nowrap"
           >
-            <span className="text-[15px] leading-none font-black">＋</span>
-            <span className="tracking-wide">{t(lang, "add")}</span>
+            <span className="text-sm leading-none font-black">＋</span>
+            <span>{t(lang, "add")}</span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
-            className="flex-shrink-0 w-9 h-9 bg-stone-100 text-stone-500 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-stone-200 active:scale-95 transition-all duration-150"
+            className="flex-shrink-0 w-8 h-8 bg-stone-100 text-stone-500 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-stone-200 active:scale-95 transition-all duration-150"
             title="AIコンシェルジュに相談"
           >
             <span className="text-sm">🤖</span>
