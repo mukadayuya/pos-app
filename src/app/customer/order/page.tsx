@@ -149,7 +149,15 @@ function CustomerOrderInner() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("menu");
   const [lang, setLang] = useState<Lang>("ja");
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem("flows_cart_v1");
+      return saved ? (JSON.parse(saved) as CartItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
   const [detailItem, setDetailItem] = useState<MenuItem | null>(null);
@@ -206,6 +214,13 @@ function CustomerOrderInner() {
     load();
     return () => clearTimeout(slowTimer);
   }, []);
+
+  // ── カートをlocalStorageに同期 ──────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem("flows_cart_v1", JSON.stringify(cart));
+    } catch { /* quota exceeded など — 無視 */ }
+  }, [cart]);
 
   // ── 言語変更時の挨拶リセット ──────────────────────
   useEffect(() => {
@@ -494,7 +509,11 @@ function CustomerOrderInner() {
                 status: "new",
               });
               recordOrder(cart.map(c => c.menuItem.name));
+              setCart([]);
+              localStorage.removeItem("flows_cart_v1");
+              setCheckoutCalled(false);
               setOrderSentModal(true);
+              setActiveTab("menu");
             }}
           />
         )}
@@ -529,6 +548,16 @@ function CustomerOrderInner() {
           onDismiss={() => {
             setUpsellBanner(null);
             if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
+          }}
+          onCta={(targetName) => {
+            const found = menuItems.find(m => m.name === targetName);
+            setUpsellBanner(null);
+            if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
+            if (found) {
+              setDetailItem(found);
+            } else {
+              setActiveTab("menu");
+            }
           }}
         />
       )}
@@ -1132,7 +1161,7 @@ function CartTab({
           <span className="text-sm font-bold text-slate-600">合計</span>
           <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
         </div>
-        <p className="text-[11px] text-slate-400">※ 税込金額（{(10 * 100).toFixed(0)}%）です</p>
+        <p className="text-[11px] text-slate-400">※ 税込金額（10%）です</p>
         <button
           onClick={onOrderSent}
           className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
@@ -1376,11 +1405,13 @@ function UpsellBanner({
   loading,
   lang,
   onDismiss,
+  onCta,
 }: {
   suggestion: UpsellSuggestion | null;
   loading: boolean;
   lang: Lang;
   onDismiss: () => void;
+  onCta: (targetItemName: string) => void;
 }) {
   return (
     <div
@@ -1441,6 +1472,7 @@ function UpsellBanner({
 
             {/* CTAボタン */}
             <button
+              onClick={() => onCta(suggestion.targetItemName)}
               className={[
                 "flex-shrink-0 px-4 py-2.5 rounded-xl",
                 "bg-amber-600 text-white font-black text-sm",

@@ -56,11 +56,11 @@ function urgencyBadge(
   return { label: "ON TIME", cls: "bg-emerald-600 text-white" };
 }
 
-function servingIcon(t: KdsOrderItem["servingTime"]): string {
-  if (t === "before") return "⬆️";
-  if (t === "after") return "⬇️";
-  return "➡️";
-}
+const SERVING_SECTIONS: { key: KdsOrderItem["servingTime"]; label: string; icon: string }[] = [
+  { key: "before", label: "先に", icon: "🥗" },
+  { key: "with",   label: "メインと", icon: "🍽️" },
+  { key: "after",  label: "後で", icon: "☕" },
+];
 
 // ---------------------------------------------------------------------------
 // Demo order factory
@@ -133,44 +133,51 @@ function OrderCard({ order, elapsedMs: elapsed, onStatusChange }: CardProps) {
         </div>
       </div>
 
-      {/* Items */}
-      <ul className="flex flex-col gap-1.5 flex-1">
-        {order.items.map((item, idx) => (
-          <li key={idx} className="flex items-start gap-1.5">
-            <span className="text-base leading-none mt-0.5">
-              {item.emoji ?? "🍽️"}
-            </span>
-            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-semibold text-slate-100 truncate">
-                  {item.name}
-                </span>
-                <span className="text-xs bg-slate-700 text-slate-300 rounded px-1 py-0.5 shrink-0">
-                  ×{item.qty}
-                </span>
-                <span
-                  className="text-xs text-slate-500 shrink-0"
-                  title={item.servingTime}
-                >
-                  {servingIcon(item.servingTime)}
-                </span>
-              </div>
-              {item.options.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {item.options.map((opt, oi) => (
-                    <span
-                      key={oi}
-                      className="text-xs bg-slate-800 text-slate-400 rounded px-1 py-0.5 border border-slate-700"
-                    >
-                      {opt}
+      {/* Items — grouped by serving time */}
+      <div className="flex flex-col gap-2 flex-1">
+        {SERVING_SECTIONS.map(({ key, label, icon }) => {
+          const sectionItems = order.items.filter(i => i.servingTime === key);
+          if (sectionItems.length === 0) return null;
+          return (
+            <div key={key}>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                {icon} {label}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {sectionItems.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-1.5">
+                    <span className="text-base leading-none mt-0.5">
+                      {item.emoji ?? "🍽️"}
                     </span>
-                  ))}
-                </div>
-              )}
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-semibold text-slate-100 truncate">
+                          {item.name}
+                        </span>
+                        <span className="text-xs bg-slate-700 text-slate-300 rounded px-1 py-0.5 shrink-0">
+                          ×{item.qty}
+                        </span>
+                      </div>
+                      {item.options.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {item.options.map((opt, oi) => (
+                            <span
+                              key={oi}
+                              className="text-xs bg-slate-800 text-slate-400 rounded px-1 py-0.5 border border-slate-700"
+                            >
+                              {opt}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
 
       {/* Action buttons */}
       <div className="flex gap-1.5 pt-1 border-t border-slate-800">
