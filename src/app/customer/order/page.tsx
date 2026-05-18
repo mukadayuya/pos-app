@@ -47,13 +47,13 @@ const LANGUAGES: { code: Lang; flag: string; label: string }[] = [
 ];
 
 const CATEGORY_COLORS: string[] = [
-  "from-violet-400 to-purple-500",
-  "from-emerald-400 to-teal-500",
   "from-amber-400 to-orange-500",
+  "from-emerald-400 to-teal-500",
   "from-rose-400 to-pink-500",
   "from-sky-400 to-blue-500",
   "from-lime-400 to-green-500",
-  "from-fuchsia-400 to-pink-600",
+  "from-yellow-400 to-amber-500",
+  "from-red-400 to-rose-500",
   "from-cyan-400 to-sky-500",
 ];
 
@@ -102,7 +102,7 @@ class OrderErrorBoundary extends Component<
             <p className="text-slate-500 text-sm">メニューの取得に失敗しました。</p>
             <button
               onClick={() => { this.setState({ hasError: false, errorMsg: "" }); window.location.reload(); }}
-              className="w-full bg-violet-600 text-white font-bold py-3 rounded-2xl hover:bg-violet-700 transition-colors"
+              className="w-full bg-stone-800 text-white font-bold py-3 rounded-2xl hover:bg-stone-900 transition-colors"
             >
               再試行
             </button>
@@ -122,7 +122,7 @@ export default function CustomerOrderPage() {
       <Suspense fallback={
         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
             <p className="text-slate-500 text-sm">読み込み中...</p>
           </div>
         </div>
@@ -398,7 +398,7 @@ function CustomerOrderInner() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">メニューを読み込んでいます...</p>
           {loadSlow && (
             <div className="flex flex-col items-center gap-2 mt-2 animate-fade-in">
@@ -409,7 +409,7 @@ function CustomerOrderInner() {
                   setCategories([]);
                   setLoading(false);
                 }}
-                className="px-5 py-2.5 bg-violet-600 text-white text-sm font-bold rounded-xl shadow hover:bg-violet-700 transition-colors"
+                className="px-5 py-2.5 bg-stone-800 text-white text-sm font-bold rounded-xl shadow hover:bg-stone-900 transition-colors"
               >
                 オフラインモードで起動
               </button>
@@ -423,14 +423,14 @@ function CustomerOrderInner() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50">
       {/* ── ヘッダー ── */}
-      <header className="h-14 flex-shrink-0 bg-gradient-to-r from-violet-600 to-purple-700 flex items-center justify-between px-4 shadow-lg z-20">
+      <header className="h-14 flex-shrink-0 bg-gradient-to-r from-stone-900 to-stone-800 flex items-center justify-between px-4 shadow-lg z-20">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
             <span className="text-white text-xs font-black tracking-tight">FL</span>
           </div>
           <div className="leading-none">
             <p className="text-white font-black text-base tracking-tight">FLOWS</p>
-            <p className="text-violet-200 text-[10px] font-medium tracking-widest uppercase">by Infotainment</p>
+            <p className="text-stone-400 text-[10px] font-medium tracking-widest uppercase">by Infotainment</p>
           </div>
         </div>
 
@@ -590,7 +590,7 @@ function TabButton({
       <span
         className={[
           "absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full transition-all duration-200",
-          active ? "bg-violet-600" : "bg-transparent",
+          active ? "bg-amber-500" : "bg-transparent",
         ].join(" ")}
       />
 
@@ -598,7 +598,7 @@ function TabButton({
       <span className="relative">
         <span className="text-xl leading-none">{icon}</span>
         {badge !== undefined && (
-          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-violet-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {badge}
           </span>
         )}
@@ -607,7 +607,7 @@ function TabButton({
       <span
         className={[
           "text-[10px] font-semibold leading-none transition-colors duration-200",
-          active ? "text-violet-600" : "text-slate-400",
+          active ? "text-amber-600" : "text-stone-400",
         ].join(" ")}
       >
         {label}
@@ -660,8 +660,8 @@ function MenuTab({
             className={[
               "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold transition-all",
               activeCategoryId === "all"
-                ? "bg-violet-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-200",
+                ? "bg-amber-600 text-white shadow-sm"
+                : "text-stone-600 hover:bg-stone-200",
             ].join(" ")}
           >
             全品
@@ -674,8 +674,8 @@ function MenuTab({
               className={[
                 "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold transition-all leading-tight",
                 activeCategoryId === cat.id
-                  ? "bg-violet-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-200",
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "text-stone-600 hover:bg-stone-200",
               ].join(" ")}
             >
               {cat.name}
@@ -749,7 +749,7 @@ function ProductCard({
 
         {/* カート内数量バッジ */}
         {cartQty > 0 && (
-          <span className="absolute top-2 right-2 min-w-[26px] h-[26px] bg-violet-700 text-white text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
+          <span className="absolute top-2 right-2 min-w-[26px] h-[26px] bg-amber-600 text-white text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
             {cartQty}
           </span>
         )}
@@ -763,7 +763,7 @@ function ProductCard({
           <p className="font-bold text-slate-800 leading-snug line-clamp-2 text-sm">
             {item.name}
           </p>
-          <p className="text-violet-600 font-black text-base">
+          <p className="text-stone-900 font-black text-base">
             {formatPrice(item.price)}
           </p>
         </button>
@@ -776,10 +776,10 @@ function ProductCard({
             onClick={onClick}
             className={[
               "flex-1 flex items-center justify-center gap-1.5",
-              "bg-gradient-to-r from-violet-600 to-purple-600 text-white",
+              "bg-gradient-to-r from-amber-500 to-orange-500 text-white",
               "text-xs font-bold py-2.5 rounded-xl",
-              "shadow-sm shadow-violet-300/60",
-              "hover:shadow-md hover:shadow-violet-400/50 hover:from-violet-500 hover:to-purple-500",
+              "shadow-sm shadow-amber-300/60",
+              "hover:shadow-md hover:shadow-amber-400/50 hover:from-amber-400 hover:to-orange-400",
               "active:scale-95 transition-all duration-150",
             ].join(" ")}
           >
@@ -792,10 +792,10 @@ function ProductCard({
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
             className={[
               "flex-shrink-0 flex items-center gap-1",
-              "bg-violet-50 text-violet-600",
+              "bg-stone-100 text-stone-500",
               "text-[11px] font-semibold px-2.5 py-2.5 rounded-xl",
-              "border border-violet-200",
-              "hover:bg-violet-100 hover:border-violet-300",
+              "border border-stone-200",
+              "hover:bg-stone-200 hover:border-stone-300",
               "active:scale-95 transition-all duration-150",
             ].join(" ")}
             title="AIコンシェルジュに相談"
@@ -920,7 +920,7 @@ function ProductDetailModal({
           {/* 商品名・価格 */}
           <div>
             <h2 className="text-lg font-black text-slate-800 leading-tight">{item.name}</h2>
-            <p className="text-2xl font-black text-violet-600 mt-1">{formatPrice(unitPrice)}</p>
+            <p className="text-2xl font-black text-stone-900 mt-1">{formatPrice(unitPrice)}</p>
             {optionDelta !== 0 && (
               <p className="text-xs text-slate-500 mt-0.5">
                 (基本価格: {formatPrice(item.price)})
@@ -939,8 +939,8 @@ function ProductDetailModal({
                   className={[
                     "flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all",
                     servingTime === opt.value
-                      ? "border-violet-500 bg-violet-50 text-violet-700"
-                      : "border-slate-200 text-slate-500 hover:border-violet-300",
+                      ? "border-amber-500 bg-amber-50 text-amber-800"
+                      : "border-stone-200 text-stone-500 hover:border-amber-300",
                   ].join(" ")}
                 >
                   <span className="text-lg">{opt.icon}</span>
@@ -963,8 +963,8 @@ function ProductDetailModal({
                       className={[
                         "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
                         selected?.itemId === optItem.id
-                          ? "border-violet-500 bg-violet-50"
-                          : "border-slate-200 hover:border-violet-300",
+                          ? "border-amber-500 bg-amber-50"
+                          : "border-stone-200 hover:border-amber-300",
                       ].join(" ")}
                     >
                       <input
@@ -975,7 +975,7 @@ function ProductDetailModal({
                         onChange={() =>
                           handleOptionChange(group.id, group.name, optItem.id, optItem.name, optItem.price)
                         }
-                        className="accent-violet-600"
+                        className="accent-amber-600"
                       />
                       <span className="flex-1 text-sm font-medium text-slate-700">{optItem.name}</span>
                       {optItem.price !== 0 && (
@@ -1004,17 +1004,17 @@ function ProductDetailModal({
               <span className="text-2xl font-black text-slate-800 w-8 text-center">{quantity}</span>
               <button
                 onClick={() => setQuantity((q) => q + 1)}
-                className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl font-bold text-violet-600 hover:bg-violet-200 transition-all"
+                className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl font-bold text-amber-700 hover:bg-amber-200 transition-all"
               >
                 ＋
               </button>
-              <span className="ml-auto text-xl font-black text-violet-600">{formatPrice(total)}</span>
+              <span className="ml-auto text-xl font-black text-stone-900">{formatPrice(total)}</span>
             </div>
           </div>
 
           {/* 深層アップセル：コンボ褒めトースト */}
           {comboToast && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 rounded-xl text-violet-700 text-sm font-semibold animate-[slideUp_0.3s_ease-out]">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold animate-[slideUp_0.3s_ease-out]">
               {comboToast}
             </div>
           )}
@@ -1022,7 +1022,7 @@ function ProductDetailModal({
           {/* カートに追加 */}
           <button
             onClick={() => onAddToCart(quantity, servingTime, selectedOptions)}
-            className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(139,92,246,0.4)] hover:shadow-[0_6px_28px_rgba(139,92,246,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
           >
             カートに追加 — {formatPrice(total)}
           </button>
@@ -1059,7 +1059,7 @@ function CartTab({
         </div>
         <button
           onClick={onSwitchMenu}
-          className="mt-2 px-6 py-3 bg-violet-600 text-white font-bold rounded-2xl text-sm shadow-sm hover:bg-violet-700 transition-colors"
+          className="mt-2 px-6 py-3 bg-stone-800 text-white font-bold rounded-2xl text-sm shadow-sm hover:bg-stone-900 transition-colors"
         >
           メニューを見る
         </button>
@@ -1104,12 +1104,12 @@ function CartTab({
                     {cartItem.selectedOptions.map((o) => o.itemName).join(" · ")}
                   </p>
                 )}
-                <p className="text-[11px] text-violet-500 font-medium mt-0.5">
+                <p className="text-[11px] text-stone-400 font-medium mt-0.5">
                   {servingLabel[cartItem.servingTime]}
                 </p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-xs text-slate-500">×{cartItem.quantity}</span>
-                  <span className="text-sm font-black text-violet-600">{formatPrice(subtotal)}</span>
+                  <span className="text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
                 </div>
               </div>
 
@@ -1130,12 +1130,12 @@ function CartTab({
       <div className="flex-shrink-0 bg-white border-t border-slate-200 p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold text-slate-600">合計</span>
-          <span className="text-2xl font-black text-violet-600">{formatPrice(cartTotal)}</span>
+          <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
         </div>
         <p className="text-[11px] text-slate-400">※ 税込金額（{(10 * 100).toFixed(0)}%）です</p>
         <button
           onClick={onOrderSent}
-          className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(139,92,246,0.4)] hover:shadow-[0_6px_28px_rgba(139,92,246,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
         >
           注文をスタッフに送る 🙌
         </button>
@@ -1185,12 +1185,12 @@ function AiTab({
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={isTyping ? t(lang, "sending") : t(lang, "chatPlaceholder")}
             disabled={isTyping}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent disabled:opacity-50 transition-all"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent disabled:opacity-50 transition-all"
           />
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
-            className="w-11 h-11 bg-gradient-to-br from-violet-600 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-[0_2px_12px_rgba(139,92,246,0.4)] hover:shadow-[0_4px_20px_rgba(139,92,246,0.55)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-95 transition-all"
+            className="w-11 h-11 bg-gradient-to-br from-stone-700 to-stone-900 rounded-xl flex items-center justify-center text-white shadow-[0_2px_12px_rgba(0,0,0,0.2)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-95 transition-all"
             aria-label="送信"
           >
             <SendIcon />
@@ -1259,7 +1259,7 @@ function CheckoutTab({
                   <p className="text-sm font-bold text-slate-800 leading-tight line-clamp-1">{cartItem.menuItem.name}</p>
                   <p className="text-xs text-slate-500">×{cartItem.quantity}</p>
                 </div>
-                <span className="text-sm font-black text-violet-600">{formatPrice(subtotal)}</span>
+                <span className="text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
               </div>
             );
           })
@@ -1270,7 +1270,7 @@ function CheckoutTab({
         {cart.length > 0 && (
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-slate-600">合計金額</span>
-            <span className="text-2xl font-black text-violet-600">{formatPrice(cartTotal)}</span>
+            <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
           </div>
         )}
 
@@ -1308,7 +1308,7 @@ function SuccessModal({
         <p className="text-base font-bold text-slate-800 leading-relaxed">{message}</p>
         <button
           onClick={onClose}
-          className="mt-2 w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold py-3 rounded-2xl shadow-sm hover:shadow-md transition-all"
+          className="mt-2 w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 rounded-2xl shadow-sm hover:shadow-md transition-all"
         >
           OK
         </button>
@@ -1324,7 +1324,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mr-2 flex-shrink-0 mt-1 shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center mr-2 flex-shrink-0 mt-1 shadow-sm">
           <span className="text-white text-xs font-bold">AI</span>
         </div>
       )}
@@ -1332,7 +1332,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         className={[
           "max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
           isUser
-            ? "bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-tr-sm shadow-[0_2px_12px_rgba(139,92,246,0.35)]"
+            ? "bg-gradient-to-br from-stone-800 to-stone-900 text-white rounded-tr-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
             : "bg-white text-slate-800 rounded-tl-sm shadow-[0_2px_12px_rgb(0,0,0,0.07)] ring-1 ring-black/[0.04]",
         ].join(" ")}
       >
@@ -1347,13 +1347,13 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 function TypingDots() {
   return (
     <div className="flex justify-start">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mr-2 flex-shrink-0 shadow-sm">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center mr-2 flex-shrink-0 shadow-sm">
         <span className="text-white text-xs font-bold">AI</span>
       </div>
       <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-[0_2px_12px_rgb(0,0,0,0.07)] ring-1 ring-black/[0.04] flex items-center gap-1">
-        <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:0ms]" />
-        <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:150ms]" />
-        <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:300ms]" />
+        <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:150ms]" />
+        <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:300ms]" />
       </div>
     </div>
   );
@@ -1385,17 +1385,16 @@ function UpsellBanner({
   return (
     <div
       className={[
-        "mx-3 mb-2 rounded-2xl shadow-[0_4px_24px_rgba(124,58,237,0.25)]",
-        "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600",
-        "border border-violet-400/30 overflow-hidden",
+        "mx-3 mb-2 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)]",
+        "bg-amber-50 border border-amber-200",
         "animate-[slideUp_0.35s_cubic-bezier(0.34,1.56,0.64,1)]",
       ].join(" ")}
     >
       {loading ? (
         /* ── 分析中スピナー ── */
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin flex-shrink-0" />
-          <p className="text-white/90 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
+          <div className="w-5 h-5 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin flex-shrink-0" />
+          <p className="text-amber-800 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
         </div>
       ) : suggestion ? (
         /* ── 提案バナー ── */
@@ -1404,7 +1403,7 @@ function UpsellBanner({
           <div className="flex items-center justify-between px-4 pt-3 pb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-base">✨</span>
-              <span className="text-white/80 text-[11px] font-bold tracking-widest uppercase">
+              <span className="text-amber-700 text-[11px] font-bold tracking-widest uppercase">
                 {t(lang, "upsellTitle")}
               </span>
               {/* 希少性バッジ */}
@@ -1414,7 +1413,7 @@ function UpsellBanner({
             </div>
             <button
               onClick={onDismiss}
-              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white/80 text-xs transition-colors"
+              className="w-7 h-7 rounded-full bg-amber-100 hover:bg-amber-200 flex items-center justify-center text-amber-600 text-xs transition-colors"
               aria-label="dismiss"
             >
               ✕
@@ -1427,15 +1426,15 @@ function UpsellBanner({
               {/* アイテム名 + ペアリング */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-2xl">{suggestion.targetItemEmoji}</span>
-                <span className="text-white font-black text-base truncate">
+                <span className="text-stone-900 font-black text-base truncate">
                   {suggestion.targetItemName}
                 </span>
               </div>
-              <p className="text-violet-100 text-xs leading-relaxed truncate">
+              <p className="text-amber-800 text-xs leading-relaxed truncate">
                 {suggestion.pairingText}
               </p>
               {/* シズル感テキスト */}
-              <p className="text-violet-100/80 text-[10px] mt-0.5 line-clamp-1 italic">
+              <p className="text-amber-700/80 text-[10px] mt-0.5 line-clamp-1 italic">
                 ✨ {suggestion.sizzleText}
               </p>
             </div>
@@ -1444,9 +1443,9 @@ function UpsellBanner({
             <button
               className={[
                 "flex-shrink-0 px-4 py-2.5 rounded-xl",
-                "bg-white text-violet-700 font-black text-sm",
-                "shadow-lg shadow-violet-900/30",
-                "hover:bg-violet-50 active:scale-95 transition-all",
+                "bg-amber-600 text-white font-black text-sm",
+                "shadow-md shadow-amber-900/20",
+                "hover:bg-amber-700 active:scale-95 transition-all",
               ].join(" ")}
             >
               {suggestion.ctaText} →
