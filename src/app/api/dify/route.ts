@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // ─── Dify API プロキシ ────────────────────────────────────────
 // 目的: APIキーをブラウザに露出させずに Dify を呼び出す。
 //

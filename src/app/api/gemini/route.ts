@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // ─── AI APIプロキシ (OpenRouter優先、Gemini直結フォールバック) ──────────────
 // 環境変数:
 //   OPENROUTER_API_KEY=sk-or-v1-...  ← 優先
