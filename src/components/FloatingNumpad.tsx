@@ -58,6 +58,7 @@ export default function FloatingNumpad({
   const [taxRate, setTaxRate] = useState<TaxRate>(isEditMode ? editingItem!.taxRate : defaultTaxRate);
   const [label, setLabel]     = useState(isEditMode ? editingItem!.name : "");
   const [reason, setReason]   = useState<Reason | null>(null);
+  const [taxInclInput, setTaxInclInput] = useState(false);
   const [pos, setPos]         = useState({ x: 80, y: 60 });
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -132,6 +133,13 @@ export default function FloatingNumpad({
   const origIncl = isEditMode ? Math.round(editingItem!.currentUnitPrice * (1 + editingItem!.taxRate)) : 0;
   const diffIncl = isEditMode && rawValue > 0 ? taxIncl - origIncl : 0;
 
+  // 税込入力モード: 入力値を税込として扱い、税抜に逆算
+  const taxExclFromIncl = taxInclInput && rawValue > 0 && taxRate > 0
+    ? Math.round(rawValue / (1 + taxRate))
+    : rawValue;
+  const displayTaxIncl = taxInclInput ? rawValue : taxIncl;
+  const displayTaxExcl = taxInclInput ? taxExclFromIncl : rawValue;
+
   const handleConfirm = () => {
     if (rawValue <= 0) return;
     if (isDiscountMode && onDiscountConfirm) {
@@ -139,7 +147,8 @@ export default function FloatingNumpad({
     } else if (isEditMode && onEditConfirm) {
       onEditConfirm(editingItem!.itemKey, rawValue, taxRate, reason ?? undefined);
     } else {
-      onAdd(rawValue, taxRate, label.trim() || "手入力");
+      const priceToAdd = taxInclInput ? taxExclFromIncl : rawValue;
+      onAdd(priceToAdd, taxRate, label.trim() || "手入力");
       setInput("");
       setLabel("");
     }
@@ -292,17 +301,43 @@ export default function FloatingNumpad({
             </div>
           )}
 
-          {/* 追加モード: 金額表示 */}
+          {/* 追加モード: 税込/税抜トグル + 金額表示 */}
           {!isEditMode && !isDiscountMode && (
-            <div className="rounded-2xl px-4 py-3 text-center bg-slate-50">
-              <p className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                {rawValue > 0 ? rawValue.toLocaleString() : "0"}
-                <span className="text-base font-normal text-slate-400 ml-1">円（税抜）</span>
-              </p>
-              {taxIncl > 0 && taxRate > 0 && (
-                <p className="text-xs text-slate-400 mt-0.5">税込 {taxIncl.toLocaleString()}円</p>
-              )}
-            </div>
+            <>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setTaxInclInput(false); setInput(""); }}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                    !taxInclInput ? "bg-slate-800 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  税抜で入力
+                </button>
+                <button
+                  onClick={() => { setTaxInclInput(true); setInput(""); }}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                    taxInclInput ? "bg-indigo-600 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  税込で入力
+                </button>
+              </div>
+              <div className="rounded-2xl px-4 py-3 text-center bg-slate-50">
+                <p className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">
+                  {rawValue > 0 ? rawValue.toLocaleString() : "0"}
+                  <span className="text-base font-normal text-slate-400 ml-1">
+                    円（{taxInclInput ? "税込" : "税抜"}）
+                  </span>
+                </p>
+                {rawValue > 0 && taxRate > 0 && (
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {taxInclInput
+                      ? `税抜換算 ${displayTaxExcl.toLocaleString()}円`
+                      : `税込 ${displayTaxIncl.toLocaleString()}円`}
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
           {/* 編集モード: クイック加減算 */}
@@ -429,7 +464,7 @@ export default function FloatingNumpad({
                 ? `割引を設定 → ${effectiveDiscountValue.toLocaleString()}${discountInput!.type === "fixed" ? "円引き" : "%引き"}`
                 : isEditMode
                 ? `価格を変更 → ${taxIncl.toLocaleString()}円 税込`
-                : `注文に追加 ${taxIncl.toLocaleString()}円 税込`
+                : `注文に追加 ${displayTaxIncl.toLocaleString()}円 税込`
               : "金額を入力してください"
             }
           </button>

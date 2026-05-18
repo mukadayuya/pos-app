@@ -38,6 +38,7 @@ export interface MenuItem {
   price: number;
   category: Category;
   emoji?: string;
+  videoUrl?: string;            // シズル動画URL（mp4推奨）
   taxRate: TaxRate;
   options?: MenuItemOptions;
   isTakeoutAvailable?: boolean; // undefined は true と同義

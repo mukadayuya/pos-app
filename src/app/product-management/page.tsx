@@ -1318,12 +1318,19 @@ export default function ProductManagementPage() {
           <span className="text-xl">🍽️</span>
           <h1 className="text-lg font-bold">商品管理</h1>
         </div>
-        {pageTab === "items" && (
-          <button onClick={openAddModal}
-            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all active:scale-95">
-            ＋ 商品を追加
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <Link href="/employees"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all active:scale-95 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
+            <span>🏅</span>
+            <span>補助金診断</span>
+          </Link>
+          {pageTab === "items" && (
+            <button onClick={openAddModal}
+              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all active:scale-95">
+              ＋ 商品を追加
+            </button>
+          )}
+        </div>
         {pageTab === "options" && (
           <p className="text-xs text-slate-500">テンプレートをまず作成し、商品登録時に適用できます</p>
         )}

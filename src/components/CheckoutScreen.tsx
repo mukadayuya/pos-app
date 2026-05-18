@@ -212,15 +212,19 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         <h2 className="text-3xl font-bold text-slate-900 tracking-tight">会計完了</h2>
         <div className="bg-white ring-1 ring-slate-200 shadow-sm rounded-3xl p-8 w-full max-w-sm space-y-4">
           <div className="text-center">
-            <p className="text-slate-500 text-sm">お会計金額</p>
-            <p className="text-5xl font-black text-indigo-700 mt-1 font-mono tracking-tight">
-              ¥{completedRecord.total.toLocaleString()}
+            <p className="text-slate-500 text-base font-bold">お会計金額</p>
+            <p className="text-5xl font-black text-indigo-700 mt-1 font-mono tracking-tight tabular-nums">
+              {completedRecord.total.toLocaleString()}
+              <span className="text-2xl font-bold ml-1">円</span>
             </p>
           </div>
           {cashChange > 0 && (
-            <div className="bg-emerald-50 ring-1 ring-emerald-200 rounded-2xl px-6 py-4 text-center">
-              <p className="text-emerald-600 text-sm font-medium">お釣り</p>
-              <p className="text-3xl font-black text-emerald-700 font-mono">¥{cashChange.toLocaleString()}</p>
+            <div className="bg-emerald-50 ring-2 ring-emerald-300 rounded-2xl px-6 py-5 text-center">
+              <p className="text-emerald-600 text-base font-bold tracking-widest mb-1">お 釣 り</p>
+              <p className="text-6xl font-black text-emerald-700 font-mono tabular-nums leading-none flex items-baseline justify-center gap-1">
+                {cashChange.toLocaleString()}
+                <span className="text-2xl font-bold">円</span>
+              </p>
             </div>
           )}
         </div>
@@ -364,41 +368,43 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         </div>
 
         {/* ── 中央：金額サマリー ────────────────────────── */}
-        <div className="w-[30%] min-w-0 flex flex-col items-stretch justify-center bg-white border-r border-slate-200 px-4 py-6 gap-4 overflow-hidden">
+        <div className="w-[30%] min-w-0 flex flex-col items-stretch justify-center bg-indigo-200 border-r border-indigo-300 px-4 py-6 gap-4 overflow-hidden">
 
           {/* 合計金額 */}
-          <div className="text-center">
+          <div className="text-center bg-slate-900 rounded-2xl px-4 py-4">
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">合計金額</p>
             {discountAmount > 0 && (
-              <p className="text-slate-300 text-lg font-bold line-through tabular-nums">{baseTotal.toLocaleString()}</p>
+              <p className="text-slate-500 text-lg font-bold line-through tabular-nums">{baseTotal.toLocaleString()}</p>
             )}
-            <p className="text-[clamp(1.75rem,4.5vw,3.5rem)] font-black text-slate-900 font-mono leading-none tracking-tight tabular-nums truncate">
+            <p className="text-[clamp(1.75rem,4.5vw,3.5rem)] font-black text-white font-mono leading-none tracking-tight tabular-nums truncate">
               {total.toLocaleString()}
             </p>
-            <p className="text-slate-400 text-[10px] mt-1">
+            <p className="text-slate-500 text-[10px] mt-1">
               うち税 {totalTax.toLocaleString()}
-              {discountAmount > 0 && <span className="text-orange-500 ml-2">割引 −{discountAmount.toLocaleString()}</span>}
+              {discountAmount > 0 && <span className="text-orange-400 ml-2">割引 −{discountAmount.toLocaleString()}</span>}
             </p>
           </div>
 
-          <div className="border-t border-slate-100" />
+          <div className="border-t-2 border-indigo-200" />
 
           {/* お預かり */}
-          <div className="text-center">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
+          <div className="text-center bg-white rounded-2xl px-4 py-3 shadow-sm">
+            <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">
               {METHODS.find(m => m.id === activeMethod)?.label}　お預かり
             </p>
             <p className={`text-[clamp(1.75rem,4.5vw,3.5rem)] font-black font-mono leading-none tracking-tight tabular-nums truncate ${
-              getAmt(activeMethod) > 0 ? "text-indigo-700" : "text-slate-200"
+              getAmt(activeMethod) > 0 ? "text-indigo-700" : "text-slate-300"
             }`}>
               {getAmt(activeMethod) > 0 ? getAmt(activeMethod).toLocaleString() : "─"}
             </p>
           </div>
 
-          <div className="border-t border-slate-100" />
+          <div className="border-t-2 border-indigo-200" />
 
           {/* お釣り / 不足額 */}
-          <div className="text-center">
+          <div className={`text-center rounded-2xl px-4 py-3 shadow-sm ${
+            diff > 0 ? "bg-emerald-100" : diff < 0 ? "bg-red-100" : "bg-white"
+          }`}>
             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${
               diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-500" : "text-slate-400"
             }`}>
@@ -407,13 +413,13 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
             <p className={`text-[clamp(1.75rem,5vw,4rem)] font-black font-mono leading-none tracking-tight tabular-nums truncate ${
               diff > 0 ? "text-emerald-600"
               : diff < 0 ? "text-red-500"
-              : "text-slate-200"
+              : "text-slate-300"
             }`}>
               {Math.abs(diff).toLocaleString()}
             </p>
           </div>
 
-          <div className="border-t border-slate-100" />
+          <div className="border-t-2 border-indigo-200" />
 
           {/* ちょうど預かり ＋ 会計確定 */}
           <div className="space-y-2.5">

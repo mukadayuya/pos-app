@@ -3,6 +3,17 @@
 import { useState } from "react";
 import { MenuItem, Category } from "@/types/pos";
 import { categoryLabels } from "@/data/menu";
+import SubsidyWizardModal from "@/components/SubsidyWizardModal";
+
+// 補助金対象となりうる機材キーワード
+const SUBSIDY_EQUIPMENT_KEYWORDS = [
+  "洗浄機", "食洗機", "冷蔵庫", "冷凍庫", "製氷機", "ショーケース",
+  "オーブン", "レンジ", "スチコン", "POS", "タブレット", "コンロ", "フリーザー",
+] as const;
+
+function detectEquipmentKeyword(name: string): string | null {
+  return SUBSIDY_EQUIPMENT_KEYWORDS.find((kw) => name.includes(kw)) ?? null;
+}
 
 interface AddMenuPanelProps {
   onAdd: (item: MenuItem) => void;
@@ -24,6 +35,10 @@ export default function AddMenuPanel({ onAdd, onClose }: AddMenuPanelProps) {
   const [emoji, setEmoji] = useState("🍔");
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
+  const [subsidyModalOpen, setSubsidyModalOpen] = useState(false);
+  const [subsidyKeyword, setSubsidyKeyword] = useState<string | null>(null);
+
+  const detectedKeyword = detectEquipmentKeyword(name);
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -91,6 +106,24 @@ export default function AddMenuPanel({ onAdd, onClose }: AddMenuPanelProps) {
             placeholder="例：抹茶ラテ"
             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
           />
+          {detectedKeyword && (
+            <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <span className="text-amber-500 text-base shrink-0">⚡</span>
+              <p className="text-xs text-amber-800 leading-snug flex-1">
+                この機材は補助金で実質75%OFFになる可能性があります
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubsidyKeyword(detectedKeyword);
+                  setSubsidyModalOpen(true);
+                }}
+                className="shrink-0 text-xs font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors whitespace-nowrap"
+              >
+                詳細を確認
+              </button>
+            </div>
+          )}
         </div>
 
         <div>
@@ -138,6 +171,12 @@ export default function AddMenuPanel({ onAdd, onClose }: AddMenuPanelProps) {
           追加する
         </button>
       </div>
+
+      <SubsidyWizardModal
+        isOpen={subsidyModalOpen}
+        onClose={() => setSubsidyModalOpen(false)}
+        menuKeywords={subsidyKeyword ? [subsidyKeyword] : []}
+      />
     </div>
   );
 }
