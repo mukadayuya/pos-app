@@ -643,15 +643,30 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
   const toItem = (item: Record<string, unknown>): MenuItem => ({
     id:                 item.id as string,
     name:               item.name as string,
+    name_en:            (item.name_en as string | null | undefined) || undefined,
+    name_zh:            (item.name_zh as string | null | undefined) || undefined,
+    name_ko:            (item.name_ko as string | null | undefined) || undefined,
     price:              item.price as number,
     category:           item.category as string,
-    emoji:              (item.emoji as string | null | undefined) || (item.image_url as string | null | undefined) || undefined,
+    emoji:              (item.emoji as string | null | undefined) || undefined,
+    imageUrl:           (item.image_url as string | null | undefined) || undefined,
     taxRate:            ((item.tax_rate as number) ?? 0.10) as TaxRate,
     options:            item.options as MenuItemOptions | undefined,
     isTakeoutAvailable: (item.is_takeout_available as boolean | undefined) !== false,
   });
 
-  // Try 1: all new columns
+  // Try 1: all columns including translations
+  {
+    const { data, error } = await supabase
+      .from("menus")
+      .select("id, name, name_en, name_zh, name_ko, price, category, emoji, image_url, tax_rate, options, is_takeout_available")
+      .order("created_at", { ascending: true });
+    if (!error) return (data ?? []).map(toItem);
+    if (isTableMissingError(error)) return [];
+    if (error.code !== "42703") throw error;
+  }
+
+  // Try 2: without translation columns
   {
     const { data, error } = await supabase
       .from("menus")
@@ -662,7 +677,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     if (error.code !== "42703") throw error;
   }
 
-  // Try 2: without options column
+  // Try 3: without options column
   {
     const { data, error } = await supabase
       .from("menus")
@@ -673,7 +688,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     if (error.code !== "42703") throw error;
   }
 
-  // Try 3: without tax_rate either
+  // Try 4: without tax_rate either
   {
     const { data, error } = await supabase
       .from("menus")
@@ -684,7 +699,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     if (error.code !== "42703") throw error;
   }
 
-  // Try 4: base columns only (no image_url)
+  // Try 5: base columns only (no image_url)
   {
     const { data, error } = await supabase
       .from("menus")
@@ -720,7 +735,7 @@ export async function saveMenuItem(item: MenuItem): Promise<void> {
 
 export async function updateMenuItem(
   id: string,
-  updates: { name?: string; price?: number; category?: string; emoji?: string | null; tax_rate?: number; options?: MenuItemOptions; is_takeout_available?: boolean }
+  updates: { name?: string; name_en?: string; name_zh?: string; name_ko?: string; price?: number; category?: string; emoji?: string | null; tax_rate?: number; options?: MenuItemOptions; is_takeout_available?: boolean }
 ): Promise<void> {
   if (!supabase) throw new Error("Supabase not configured");
 

@@ -35,6 +35,9 @@ export interface OptionSelection {
 export interface MenuItem {
   id: string;
   name: string;
+  name_en?: string;
+  name_zh?: string;
+  name_ko?: string;
   price: number;
   category: Category;
   emoji?: string;

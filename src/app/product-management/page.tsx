@@ -1166,6 +1166,27 @@ function DisplayTab({
   );
 }
 
+// ─── 商品名自動翻訳 ──────────────────────────────────────────────
+async function autoTranslateItemName(name: string): Promise<{ name_en: string; name_zh: string; name_ko: string }> {
+  const langs = ["en", "zh", "ko"] as const;
+  const results = await Promise.all(
+    langs.map(async (targetLang) => {
+      try {
+        const res = await fetch("/api/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "translate", text: name, targetLang }),
+        });
+        const data = await res.json();
+        return data.ok ? (data.result as string) : name;
+      } catch {
+        return name;
+      }
+    })
+  );
+  return { name_en: results[0], name_zh: results[1], name_ko: results[2] };
+}
+
 // ─── メインページ ─────────────────────────────────────────────
 export default function ProductManagementPage() {
   const [pageTab, setPageTab]         = useState<PageTab>("items");
@@ -1244,11 +1265,13 @@ export default function ProductManagementPage() {
     const raw = parseInt(editState.price, 10);
     if (!editState.name.trim() || isNaN(raw) || raw <= 0) return;
     const price = editState.taxInclusive ? Math.floor(raw / (1 + editState.taxRate)) : raw;
+    const trimmedName = editState.name.trim();
     setBusy(true);
     try {
-      await updateMenuItem(id, { name: editState.name.trim(), price, category: editState.category, emoji: editState.emoji || null, tax_rate: editState.taxRate, options: editState.options, is_takeout_available: editState.isTakeoutAvailable });
+      await updateMenuItem(id, { name: trimmedName, price, category: editState.category, emoji: editState.emoji || null, tax_rate: editState.taxRate, options: editState.options, is_takeout_available: editState.isTakeoutAvailable });
       setItems(prev => prev.map(i => i.id === id ? { ...i, ...editState, price, taxRate: editState.taxRate, isTakeoutAvailable: editState.isTakeoutAvailable } : i));
       setEditingId(null); setEditState(null);
+      autoTranslateItemName(trimmedName).then(t => updateMenuItem(id, t)).catch(() => {});
     } catch (e: unknown) { alert("保存に失敗しました: " + (e as Error).message); }
     finally { setBusy(false); }
   }
@@ -1281,6 +1304,7 @@ export default function ProductManagementPage() {
         isTakeoutAvailable: newItem.isTakeoutAvailable,
       };
       await saveMenuItem(item);
+      autoTranslateItemName(item.name).then(tr => updateMenuItem(item.id, tr)).catch(() => {});
       await load();
       setNewItem({ name: "", price: "", category: categories[0]?.id ?? "", emoji: "🍔", taxRate: 0.10, taxInclusive: false, options: { optionGroups: [] }, isTakeoutAvailable: true });
       setShowAdd(false);

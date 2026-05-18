@@ -46,22 +46,7 @@ const LANGUAGES: { code: Lang; flag: string; label: string }[] = [
   { code: "ko", flag: "🇰🇷", label: "한국어" },
 ];
 
-const CATEGORY_COLORS: string[] = [
-  "from-amber-400 to-orange-500",
-  "from-emerald-400 to-teal-500",
-  "from-rose-400 to-pink-500",
-  "from-sky-400 to-blue-500",
-  "from-lime-400 to-green-500",
-  "from-yellow-400 to-amber-500",
-  "from-red-400 to-rose-500",
-  "from-cyan-400 to-sky-500",
-];
-
 // ─── ユーティリティ ────────────────────────────────────────────────
-
-function getCategoryColor(index: number): string {
-  return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
-}
 
 function calcItemTotal(item: CartItem): number {
   const optionDelta = item.selectedOptions.reduce((s, o) => s + o.price, 0);
@@ -70,6 +55,13 @@ function calcItemTotal(item: CartItem): number {
 
 function formatPrice(n: number): string {
   return `¥${n.toLocaleString("ja-JP")}`;
+}
+
+function localName(item: MenuItem, lang: Lang): string {
+  if (lang === "en") return item.name_en ?? item.name;
+  if (lang === "zh") return item.name_zh ?? item.name;
+  if (lang === "ko") return item.name_ko ?? item.name;
+  return item.name;
 }
 
 // ─── Error Boundary ─────────────────────────────────────────────
@@ -89,14 +81,14 @@ class OrderErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl shadow-lg p-8 max-w-sm w-full text-center space-y-4">
+        <div className="min-h-screen bg-white flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm p-8 max-w-sm w-full text-center space-y-4">
             <span className="text-5xl">⚠️</span>
-            <h2 className="text-lg font-black text-slate-800">読み込みエラー</h2>
-            <p className="text-slate-500 text-sm">メニューの取得に失敗しました。</p>
+            <h2 className="text-lg font-black text-stone-800">読み込みエラー</h2>
+            <p className="text-stone-500 text-sm">メニューの取得に失敗しました。</p>
             <button
               onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-              className="w-full bg-stone-800 text-white font-bold py-3 rounded-2xl hover:bg-stone-900 transition-colors"
+              className="w-full bg-stone-900 text-white font-bold py-3 rounded-2xl hover:bg-stone-800 transition-colors"
             >
               再試行
             </button>
@@ -108,16 +100,16 @@ class OrderErrorBoundary extends Component<
   }
 }
 
-// ─── メインページ (ErrorBoundary + Suspense ラッパー) ─────────────
+// ─── メインページ ─────────────────────────────────────────────
 
 export default function CustomerOrderPage() {
   return (
     <OrderErrorBoundary>
       <Suspense fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-slate-500 text-sm">読み込み中...</p>
+            <div className="w-10 h-10 border-4 border-stone-300 border-t-stone-800 rounded-full animate-spin" />
+            <p className="text-stone-400 text-sm">読み込み中...</p>
           </div>
         </div>
       }>
@@ -132,10 +124,9 @@ export default function CustomerOrderPage() {
 function CustomerOrderInner() {
   const searchParams = useSearchParams();
   const roleParam  = searchParams.get("role");
-  const tableParam = searchParams.get("table"); // テーブル番号
+  const tableParam = searchParams.get("table");
   const isTable    = roleParam !== "mobile";
 
-  // ── 状態 ─────────────────────────────────
   const [menuItems, setMenuItems]   = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -155,27 +146,23 @@ function CustomerOrderInner() {
   });
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
-  const [detailItem, setDetailItem]       = useState<MenuItem | null>(null);
+  const [detailItem, setDetailItem]         = useState<MenuItem | null>(null);
   const [orderSentModal, setOrderSentModal] = useState(false);
   const [checkoutCalled, setCheckoutCalled] = useState(false);
 
-  // ── アップセルバナー ────────────────────────────
   const [upsellBanner, setUpsellBanner]   = useState<UpsellSuggestion | null>(null);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const upsellDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const upsellDismissRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // AI チャット
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput]       = useState("");
   const [isTyping, setIsTyping]         = useState(false);
-  const chatBottomRef       = useRef<HTMLDivElement>(null);
-  const pendingAiMessage    = useRef<string | null>(null);
+  const chatBottomRef    = useRef<HTMLDivElement>(null);
+  const pendingAiMessage = useRef<string | null>(null);
 
-  // ── データ取得 ─────────────────────────────────
   useEffect(() => {
     const slowTimer = setTimeout(() => setLoadSlow(true), 3000);
-
     async function load() {
       try {
         let items: MenuItem[];
@@ -208,24 +195,18 @@ function CustomerOrderInner() {
     return () => clearTimeout(slowTimer);
   }, []);
 
-  // ── カートをlocalStorageに同期 ──────────────────────
   useEffect(() => {
     try { localStorage.setItem("flows_cart_v1", JSON.stringify(cart)); } catch { /* quota */ }
   }, [cart]);
 
-  // ── 言語変更時の挨拶リセット ──────────────────────
   useEffect(() => {
-    setChatMessages([
-      { id: "greeting", role: "assistant", text: t(lang, "greeting") },
-    ]);
+    setChatMessages([{ id: "greeting", role: "assistant", text: t(lang, "greeting") }]);
   }, [lang]);
 
-  // ── チャット末尾スクロール ──────────────────────
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isTyping]);
 
-  // ── AI タブ遷移後にペンディングメッセージを送信 ──────
   useEffect(() => {
     if (activeTab === "ai" && pendingAiMessage.current) {
       const msg = pendingAiMessage.current;
@@ -235,19 +216,6 @@ function CustomerOrderInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // ── カテゴリーカラーマップ ──────────────────────
-  const categoryColorMap = useCallback(
-    (categoryId: string): string => {
-      const idx = categories.findIndex((c) => c.id === categoryId);
-      if (idx >= 0) return getCategoryColor(idx);
-      const allCats = Array.from(new Set(menuItems.map((m) => m.category)));
-      const sidx = allCats.indexOf(categoryId);
-      return getCategoryColor(sidx >= 0 ? sidx : 0);
-    },
-    [categories, menuItems],
-  );
-
-  // ── フィルタリング ──────────────────────────────
   const filteredItems =
     activeCategoryId === "all"
       ? menuItems
@@ -261,17 +229,8 @@ function CustomerOrderInner() {
     [categories],
   );
 
-  // ── カート操作 ──────────────────────────────────
-  function addToCart(
-    item: MenuItem,
-    quantity: number,
-    servingTime: ServingTime,
-    selectedOptions: OptionSelection[],
-  ) {
-    setCart(prev => [
-      ...prev,
-      { id: `${item.id}-${Date.now()}`, menuItem: item, quantity, servingTime, selectedOptions },
-    ]);
+  function addToCart(item: MenuItem, quantity: number, servingTime: ServingTime, selectedOptions: OptionSelection[]) {
+    setCart(prev => [...prev, { id: `${item.id}-${Date.now()}`, menuItem: item, quantity, servingTime, selectedOptions }]);
   }
 
   function removeFromCart(cartId: string) {
@@ -283,20 +242,13 @@ function CustomerOrderInner() {
   }
 
   function decrementCart(cartId: string) {
-    setCart(prev =>
-      prev.reduce<CartItem[]>((acc, c) => {
-        if (c.id === cartId) {
-          if (c.quantity > 1) acc.push({ ...c, quantity: c.quantity - 1 });
-          // quantity が1以下なら削除
-        } else {
-          acc.push(c);
-        }
-        return acc;
-      }, [])
-    );
+    setCart(prev => prev.reduce<CartItem[]>((acc, c) => {
+      if (c.id === cartId) { if (c.quantity > 1) acc.push({ ...c, quantity: c.quantity - 1 }); }
+      else { acc.push(c); }
+      return acc;
+    }, []));
   }
 
-  // ── カート増加を監視 → アップセル発火 ──────────
   const prevCartLengthRef = useRef(0);
   useEffect(() => {
     const added = cart.length > prevCartLengthRef.current;
@@ -305,7 +257,6 @@ function CustomerOrderInner() {
     setUpsellBanner(null);
     if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
     if (cart.length > 6) return;
-
     if (upsellDebounceRef.current) clearTimeout(upsellDebounceRef.current);
     upsellDebounceRef.current = setTimeout(() => {
       const controller = new AbortController();
@@ -316,14 +267,9 @@ function CustomerOrderInner() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          cartItems: cart.map(c => ({
-            name: c.menuItem.name, emoji: c.menuItem.emoji,
-            category: c.menuItem.category, price: c.menuItem.price,
-          })),
+          cartItems: cart.map(c => ({ name: c.menuItem.name, emoji: c.menuItem.emoji, category: c.menuItem.category, price: c.menuItem.price })),
           lang,
-          allMenuItems: menuItems.slice(0, 30).map(m => ({
-            name: m.name, emoji: m.emoji, category: m.category, price: m.price,
-          })),
+          allMenuItems: menuItems.slice(0, 30).map(m => ({ name: m.name, emoji: m.emoji, category: m.category, price: m.price })),
         }),
       })
         .then(r => r.ok ? r.json() : Promise.reject())
@@ -333,7 +279,7 @@ function CustomerOrderInner() {
             upsellDismissRef.current = setTimeout(() => setUpsellBanner(null), 18000);
           }
         })
-        .catch(() => { /* サイレント失敗 */ })
+        .catch(() => { /* silent */ })
         .finally(() => { clearTimeout(timeoutId); setUpsellLoading(false); });
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,7 +295,6 @@ function CustomerOrderInner() {
   const cartTotal = cart.reduce((s, c) => s + calcItemTotal(c), 0);
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
 
-  // ── AI コンシェルジュ ───────────────────────────
   const sendChatMessage = useCallback(
     async (text: string) => {
       const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: "user", text };
@@ -376,10 +321,7 @@ function CustomerOrderInner() {
         const aiText = data.ok && data.result ? data.result : data.error ?? t(lang, "aiError");
         setChatMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: aiText }]);
       } catch {
-        setChatMessages((prev) => [
-          ...prev,
-          { id: `a-err-${Date.now()}`, role: "assistant", text: t(lang, "aiError") },
-        ]);
+        setChatMessages((prev) => [...prev, { id: `a-err-${Date.now()}`, role: "assistant", text: t(lang, "aiError") }]);
       } finally {
         setIsTyping(false);
       }
@@ -395,24 +337,22 @@ function CustomerOrderInner() {
   }
 
   function handleAiConsult(item: MenuItem) {
-    const msg = `この料理について教えてください: ${item.name}（${formatPrice(item.price)}）`;
-    pendingAiMessage.current = msg;
+    pendingAiMessage.current = `この料理について教えてください: ${item.name}（${formatPrice(item.price)}）`;
     setActiveTab("ai");
   }
 
-  // ── レンダリング ────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">{t(lang, "loadingMenu")}</p>
+          <div className="w-12 h-12 border-4 border-stone-200 border-t-stone-800 rounded-full animate-spin" />
+          <p className="text-stone-400 text-sm">{t(lang, "loadingMenu")}</p>
           {loadSlow && (
             <div className="flex flex-col items-center gap-2 mt-2">
-              <p className="text-slate-400 text-xs">{t(lang, "loadingSlow")}</p>
+              <p className="text-stone-400 text-xs">{t(lang, "loadingSlow")}</p>
               <button
                 onClick={() => { setMenuItems(staticMenuItems); setCategories([]); setLoading(false); }}
-                className="px-5 py-2.5 bg-stone-800 text-white text-sm font-bold rounded-xl shadow hover:bg-stone-900 transition-colors"
+                className="px-5 py-2.5 bg-stone-900 text-white text-sm font-bold rounded-xl shadow hover:bg-stone-800 transition-colors"
               >
                 {t(lang, "startOffline")}
               </button>
@@ -424,29 +364,25 @@ function CustomerOrderInner() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-stone-50">
       {/* ── ヘッダー ── */}
-      <header className="h-14 flex-shrink-0 bg-gradient-to-r from-stone-900 to-stone-800 flex items-center justify-between px-4 shadow-lg z-20">
+      <header className="h-14 flex-shrink-0 bg-stone-900 flex items-center justify-between px-4 shadow-sm z-20">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+          <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center">
             <span className="text-white text-xs font-black tracking-tight">FL</span>
           </div>
           <div className="leading-none">
             <p className="text-white font-black text-base tracking-tight">FLOWS</p>
-            {/* テーブル番号 or モバイルオーダー表示 */}
             {isTable && tableParam ? (
-              <p className="text-amber-400 text-[11px] font-bold">
-                {tableParam}{t(lang, "tableLabel")}
-              </p>
+              <p className="text-stone-400 text-[11px] font-medium">{tableParam}{t(lang, "tableLabel")}</p>
             ) : (
-              <p className="text-stone-400 text-[10px] font-medium tracking-widest uppercase">
+              <p className="text-stone-500 text-[10px] font-medium tracking-widest uppercase">
                 {isTable ? "Table Order" : "Mobile Order"}
               </p>
             )}
           </div>
         </div>
 
-        {/* 言語セレクタ */}
         <div className="flex gap-1">
           {LANGUAGES.map((l) => (
             <button
@@ -454,9 +390,7 @@ function CustomerOrderInner() {
               onClick={() => setLang(l.code)}
               className={[
                 "w-8 h-8 rounded-full text-base flex items-center justify-center transition-all",
-                lang === l.code
-                  ? "bg-white shadow-md scale-110"
-                  : "bg-white/20 hover:bg-white/35",
+                lang === l.code ? "bg-white shadow-md scale-110" : "bg-white/10 hover:bg-white/20",
               ].join(" ")}
               title={l.label}
             >
@@ -476,11 +410,9 @@ function CustomerOrderInner() {
             activeCategoryId={activeCategoryId}
             onCategoryChange={setActiveCategoryId}
             getCategoryName={getCategoryName}
-            categoryColorMap={categoryColorMap}
             cart={cart}
             cartTotal={cartTotal}
             cartCount={cartCount}
-            isTable={isTable}
             lang={lang}
             onOpenDetail={setDetailItem}
             onAiConsult={handleAiConsult}
@@ -492,7 +424,6 @@ function CustomerOrderInner() {
             cart={cart}
             cartTotal={cartTotal}
             lang={lang}
-            getCategoryColor={categoryColorMap}
             onRemove={removeFromCart}
             onIncrement={incrementCart}
             onDecrement={decrementCart}
@@ -501,15 +432,11 @@ function CustomerOrderInner() {
               addKdsOrder({
                 id: `order-${Date.now()}`,
                 items: cart.map(c => ({
-                  name: c.menuItem.name,
-                  emoji: c.menuItem.emoji,
+                  name: c.menuItem.name, emoji: c.menuItem.emoji,
                   options: c.selectedOptions.map(o => `${o.groupName}: ${o.itemName}`),
-                  qty: c.quantity,
-                  servingTime: c.servingTime,
+                  qty: c.quantity, servingTime: c.servingTime,
                 })),
-                lang,
-                createdAt: Date.now(),
-                status: "new",
+                lang, createdAt: Date.now(), status: "new",
               });
               recordOrder(cart.map(c => c.menuItem.name));
               setCart([]);
@@ -536,7 +463,6 @@ function CustomerOrderInner() {
             cart={cart}
             cartTotal={cartTotal}
             lang={lang}
-            categoryColorMap={categoryColorMap}
             called={checkoutCalled}
             onCall={() => setCheckoutCalled(true)}
           />
@@ -560,33 +486,24 @@ function CustomerOrderInner() {
       )}
 
       {/* ── ボトムタブバー ── */}
-      <nav className="h-16 flex-shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgb(0,0,0,0.07)] flex z-20">
-        <TabButton icon="🍽️" label={t(lang, "tabMenu")}    active={activeTab === "menu"}     onClick={() => setActiveTab("menu")} />
-        <TabButton icon="🛒" label={t(lang, "tabCart")}    active={activeTab === "cart"}     onClick={() => setActiveTab("cart")} badge={cartCount > 0 ? cartCount : undefined} />
-        <TabButton icon="💬" label={t(lang, "tabAi")}      active={activeTab === "ai"}       onClick={() => setActiveTab("ai")} />
-        <TabButton icon="💳" label={t(lang, "tabBill")}    active={activeTab === "checkout"} onClick={() => setActiveTab("checkout")} />
+      <nav className="h-16 flex-shrink-0 bg-white border-t border-stone-200 flex z-20">
+        <TabButton icon="🍽️" label={t(lang, "tabMenu")}  active={activeTab === "menu"}     onClick={() => setActiveTab("menu")} />
+        <TabButton icon="🛒" label={t(lang, "tabCart")}  active={activeTab === "cart"}     onClick={() => setActiveTab("cart")} badge={cartCount > 0 ? cartCount : undefined} />
+        <TabButton icon="💬" label={t(lang, "tabAi")}    active={activeTab === "ai"}       onClick={() => setActiveTab("ai")} />
+        <TabButton icon="💳" label={t(lang, "tabBill")}  active={activeTab === "checkout"} onClick={() => setActiveTab("checkout")} />
       </nav>
 
-      {/* ── 商品詳細モーダル ── */}
       {detailItem && (
         <ProductDetailModal
           item={detailItem}
-          categoryColor={categoryColorMap(detailItem.category)}
           lang={lang}
           onClose={() => setDetailItem(null)}
-          onAddToCart={(qty, servingTime, opts) => {
-            addToCart(detailItem, qty, servingTime, opts);
-            setDetailItem(null);
-          }}
+          onAddToCart={(qty, servingTime, opts) => { addToCart(detailItem, qty, servingTime, opts); setDetailItem(null); }}
         />
       )}
 
-      {/* ── 注文完了モーダル ── */}
       {orderSentModal && (
-        <SuccessModal
-          message={t(lang, "orderSuccess")}
-          onClose={() => setOrderSentModal(false)}
-        />
+        <SuccessModal message={t(lang, "orderSuccess")} onClose={() => setOrderSentModal(false)} />
       )}
     </div>
   );
@@ -594,23 +511,21 @@ function CustomerOrderInner() {
 
 // ─── タブボタン ────────────────────────────────────────────────
 
-function TabButton({
-  icon, label, active, badge, onClick,
-}: {
+function TabButton({ icon, label, active, badge, onClick }: {
   icon: string; label: string; active: boolean; badge?: number; onClick: () => void;
 }) {
   return (
     <button onClick={onClick} className="flex-1 flex flex-col items-center justify-center gap-0.5 relative pt-1">
-      <span className={["absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full transition-all duration-200", active ? "bg-amber-500" : "bg-transparent"].join(" ")} />
+      <span className={["absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full transition-all duration-200", active ? "bg-stone-900" : "bg-transparent"].join(" ")} />
       <span className="relative">
         <span className="text-xl leading-none">{icon}</span>
         {badge !== undefined && (
-          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-stone-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {badge}
           </span>
         )}
       </span>
-      <span className={["text-[10px] font-semibold leading-none transition-colors duration-200", active ? "text-amber-600" : "text-stone-400"].join(" ")}>
+      <span className={["text-[10px] font-semibold leading-none transition-colors duration-200", active ? "text-stone-900" : "text-stone-400"].join(" ")}>
         {label}
       </span>
     </button>
@@ -621,8 +536,8 @@ function TabButton({
 
 function MenuTab({
   items, categories, menuItems, activeCategoryId, onCategoryChange,
-  getCategoryName, categoryColorMap, cart, cartTotal, cartCount,
-  isTable, lang, onOpenDetail, onAiConsult, onGoToCart,
+  getCategoryName, cart, cartTotal, cartCount, lang,
+  onOpenDetail, onAiConsult, onGoToCart,
 }: {
   items: MenuItem[];
   categories: CategoryRecord[];
@@ -630,11 +545,9 @@ function MenuTab({
   activeCategoryId: string;
   onCategoryChange: (id: string) => void;
   getCategoryName: (id: string) => string;
-  categoryColorMap: (id: string) => string;
   cart: CartItem[];
   cartTotal: number;
   cartCount: number;
-  isTable: boolean;
   lang: Lang;
   onOpenDetail: (item: MenuItem) => void;
   onAiConsult: (item: MenuItem) => void;
@@ -647,16 +560,13 @@ function MenuTab({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* ── 横スクロールカテゴリーピル ── */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-3 py-2.5 overflow-x-auto scrollbar-hide">
+      {/* 横スクロールカテゴリーピル */}
+      <div className="flex-shrink-0 bg-white border-b border-stone-200 px-3 py-3 overflow-x-auto scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           <button
             onClick={() => onCategoryChange("all")}
-            className={[
-              "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all",
-              activeCategoryId === "all"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "bg-slate-100 text-stone-600 hover:bg-slate-200",
+            className={["px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
+              activeCategoryId === "all" ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200",
             ].join(" ")}
           >
             {t(lang, "allItems")}
@@ -665,11 +575,8 @@ function MenuTab({
             <button
               key={cat.id}
               onClick={() => onCategoryChange(cat.id)}
-              className={[
-                "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all",
-                activeCategoryId === cat.id
-                  ? "bg-amber-600 text-white shadow-sm"
-                  : "bg-slate-100 text-stone-600 hover:bg-slate-200",
+              className={["px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
+                activeCategoryId === cat.id ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200",
               ].join(" ")}
             >
               {cat.name}
@@ -678,41 +585,38 @@ function MenuTab({
         </div>
       </div>
 
-      {/* ── 商品グリッド ── */}
-      <div className="flex-1 overflow-y-auto p-2.5 pb-0">
+      {/* 商品グリッド */}
+      <div className="flex-1 overflow-y-auto p-3 pb-0">
         <div className="grid grid-cols-2 gap-2.5">
           {items.map((item) => (
             <ProductCard
               key={item.id}
               item={item}
-              color={categoryColorMap(item.category)}
               cartQty={cart.filter((c) => c.menuItem.id === item.id).reduce((s, c) => s + c.quantity, 0)}
-              isTable={isTable}
               lang={lang}
               onClick={() => onOpenDetail(item)}
               onAiConsult={() => onAiConsult(item)}
             />
           ))}
           {items.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-stone-400 gap-2">
               <span className="text-5xl">🍽️</span>
               <p className="text-sm font-medium">{t(lang, "noItems")}</p>
             </div>
           )}
         </div>
-        {/* カートバー分のスペース */}
         {cartCount > 0 && <div className="h-16" />}
       </div>
 
-      {/* ── スティッキーカートバー（カートに1点以上あるとき） ── */}
+      {/* スティッキーカートバー */}
       {cartCount > 0 && (
-        <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-[0_-2px_12px_rgb(0,0,0,0.06)]">
-          <span className="text-sm font-bold text-slate-600">
+        <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-2.5 flex items-center justify-between">
+          <span className="text-sm font-bold text-stone-600">
             {cartCount}{lang === "ja" ? "点" : lang === "zh" ? "件" : lang === "ko" ? "개" : " item(s)"}
           </span>
           <button
             onClick={onGoToCart}
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black px-5 py-2 rounded-xl text-sm shadow-md shadow-amber-300/50 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-stone-900 text-white font-bold px-5 py-2 rounded-xl text-sm active:scale-95 transition-all"
           >
             {t(lang, "cartBarSee")} {formatPrice(cartTotal)} →
           </button>
@@ -724,70 +628,53 @@ function MenuTab({
 
 // ─── 商品カード ────────────────────────────────────────────────
 
-function ProductCard({
-  item, color, cartQty, isTable, lang, onClick, onAiConsult,
-}: {
+function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
   item: MenuItem;
-  color: string;
   cartQty: number;
-  isTable: boolean;
   lang: Lang;
   onClick: () => void;
   onAiConsult: () => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200/60 flex flex-col transition-transform active:scale-[0.97] relative">
-
-      {/* ── ビジュアルエリア（画像 or 絵文字グラデーション） ── */}
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-200/80 flex flex-col active:scale-[0.97] transition-transform">
+      {/* ビジュアルエリア */}
       <button
         onClick={onClick}
-        className={[
-          "w-full flex-shrink-0 flex items-center justify-center relative overflow-hidden aspect-[4/3]",
-          !item.imageUrl ? `bg-gradient-to-br ${color}` : "bg-slate-100",
-        ].join(" ")}
+        className="w-full aspect-[4/3] overflow-hidden flex items-center justify-center relative bg-stone-100"
       >
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <span className="text-5xl drop-shadow-md select-none">
-            {item.emoji ?? "🍽️"}
-          </span>
+          <span className="text-5xl drop-shadow-sm select-none">{item.emoji ?? "🍽️"}</span>
         )}
-
         {cartQty > 0 && (
-          <span className="absolute top-2 right-2 min-w-[26px] h-[26px] bg-amber-600 text-white text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
+          <span className="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] bg-stone-900 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white">
             {cartQty}
           </span>
         )}
       </button>
 
-      {/* ── テキスト・アクションエリア ── */}
-      <div className="px-3 pt-2.5 pb-3 flex flex-col gap-2 flex-1">
-        <button onClick={onClick} className="text-left space-y-0.5">
-          <p className="font-bold text-slate-800 leading-snug line-clamp-2 text-sm">{item.name}</p>
-          <p className="text-stone-900 font-black text-base">{formatPrice(item.price)}</p>
+      {/* テキスト・アクション */}
+      <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1.5">
+        <button onClick={onClick} className="text-left">
+          <p className="font-semibold text-stone-800 text-xs leading-snug line-clamp-2">{localName(item, lang)}</p>
+          <p className="text-stone-900 font-bold text-sm mt-0.5">{formatPrice(item.price)}</p>
         </button>
-
-        <div className="flex items-center gap-2 mt-auto pt-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={onClick}
-            className="flex-1 flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold py-2 rounded-xl shadow-sm shadow-amber-300/60 hover:shadow-md active:scale-95 transition-all duration-150 whitespace-nowrap"
+            className="flex-1 bg-stone-900 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 transition-all"
           >
-            <span className="text-sm leading-none font-black">＋</span>
+            <span className="text-sm font-black leading-none">＋</span>
             <span>{t(lang, "add")}</span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
-            className="flex-shrink-0 w-8 h-8 bg-stone-100 text-stone-500 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-stone-200 active:scale-95 transition-all duration-150"
+            className="w-8 h-8 bg-stone-100 rounded-xl border border-stone-200 flex items-center justify-center text-sm hover:bg-stone-200 active:scale-95 transition-all"
             title="AIコンシェルジュに相談"
           >
-            <span className="text-sm">🤖</span>
+            🤖
           </button>
         </div>
       </div>
@@ -795,46 +682,17 @@ function ProductCard({
   );
 }
 
-// ─── 深層アップセル：コンボトーストメッセージ ──────────────────
-
-const COMBO_TOASTS: Record<Lang, { spice: string; size: string; default: string[] }> = {
-  ja: {
-    spice:   "🌶️ その辛さ、冷えたビールと最高の組み合わせ！",
-    size:    "💪 ボリューム満点！お供のドリンクはいかが？",
-    default: ["✨ その組み合わせ、シェフのお墨付き！", "👨‍🍳 最高のカスタマイズです！", "🎯 絶妙な選択！"],
-  },
-  en: {
-    spice:   "🌶️ Bold! A cold draft beer pairs perfectly!",
-    size:    "💪 Great size! Add a drink to complete the meal?",
-    default: ["✨ Chef-approved combo!", "👨‍🍳 Excellent customization!", "🎯 Great choice!"],
-  },
-  zh: {
-    spice:   "🌶️ 辣味绝了！来杯冰饮搭配最完美！",
-    size:    "💪 分量十足！加杯饮料更完美！",
-    default: ["✨ 主厨认可的搭配！", "👨‍🍳 绝妙组合！", "🎯 好选择！"],
-  },
-  ko: {
-    spice:   "🌶️ 매운맛! 차가운 맥주와 환상의 조합!",
-    size:    "💪 든든한 양! 음료 한 잔 추가하시겠어요?",
-    default: ["✨ 셰프 인정 조합!", "👨‍🍳 완벽한 커스터마이징!", "🎯 훌륭한 선택!"],
-  },
-};
-
-function getComboToast(lang: Lang, groupName: string, itemName: string): string {
-  const msgs = COMBO_TOASTS[lang] ?? COMBO_TOASTS.ja;
-  const lower = `${groupName} ${itemName}`.toLowerCase();
-  if (lower.includes("辛") || lower.includes("spic") || lower.includes("매운")) return msgs.spice;
-  if (lower.includes("量") || lower.includes("大盛") || lower.includes("size") || lower.includes("분량")) return msgs.size;
-  return msgs.default[Math.floor(Math.random() * msgs.default.length)];
-}
-
 // ─── 商品詳細モーダル ──────────────────────────────────────────
 
-function ProductDetailModal({
-  item, categoryColor, lang, onClose, onAddToCart,
-}: {
+const COMBO_TOASTS: Record<Lang, string[]> = {
+  ja: ["✨ その組み合わせ、シェフのお墨付き！", "👨‍🍳 最高のカスタマイズです！", "🎯 絶妙な選択！"],
+  en: ["✨ Chef-approved combo!", "👨‍🍳 Excellent customization!", "🎯 Great choice!"],
+  zh: ["✨ 主厨认可的搭配！", "👨‍🍳 绝妙组合！", "🎯 好选择！"],
+  ko: ["✨ 셰프 인정 조합!", "👨‍🍳 완벽한 커스터마이징!", "🎯 훌륭한 선택!"],
+};
+
+function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
   item: MenuItem;
-  categoryColor: string;
   lang: Lang;
   onClose: () => void;
   onAddToCart: (qty: number, servingTime: ServingTime, opts: OptionSelection[]) => void;
@@ -853,7 +711,6 @@ function ProductDetailModal({
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
-  // serving time options をコンポーネント内で構築（lang対応）
   const servingTimeOptions = [
     { value: "before" as ServingTime, label: t(lang, "servingBefore"), icon: "🥗" },
     { value: "with"   as ServingTime, label: t(lang, "servingWith"),   icon: "🍽️" },
@@ -861,11 +718,10 @@ function ProductDetailModal({
   ];
 
   function handleOptionChange(groupId: string, groupName: string, itemId: string, itemName: string, price: number) {
-    setSelectedOptions((prev) =>
-      prev.map((o) => o.groupId === groupId ? { groupId, groupName, itemId, itemName, price } : o)
-    );
+    setSelectedOptions(prev => prev.map(o => o.groupId === groupId ? { groupId, groupName, itemId, itemName, price } : o));
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setComboToast(getComboToast(lang, groupName, itemName));
+    const msgs = COMBO_TOASTS[lang] ?? COMBO_TOASTS.ja;
+    setComboToast(msgs[Math.floor(Math.random() * msgs.length)]);
     toastTimerRef.current = setTimeout(() => setComboToast(null), 2500);
   }
 
@@ -875,49 +731,40 @@ function ProductDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-t-3xl max-h-[88vh] overflow-y-auto shadow-2xl">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
-          aria-label="閉じる"
+          className="absolute top-4 right-4 z-10 w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors"
         >
           ✕
         </button>
 
-        {/* シズル動画 / 画像 / 絵文字エリア */}
         {item.videoUrl ? (
-          <VideoBackground
-            videoUrl={item.videoUrl}
-            fallbackGradient={categoryColor}
-            emoji={item.emoji}
-            height="h-56"
-            overlayOpacity={0.40}
-          />
+          <VideoBackground videoUrl={item.videoUrl} fallbackGradient="bg-stone-100" emoji={item.emoji} height="h-56" overlayOpacity={0.35} />
         ) : item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <div className="h-52 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
           </div>
         ) : (
-          <div className={`h-36 flex items-center justify-center bg-gradient-to-br ${categoryColor}`}>
-            <span className="text-8xl drop-shadow-md">{item.emoji ?? "🍽️"}</span>
+          <div className="h-36 flex items-center justify-center bg-stone-100">
+            <span className="text-7xl">{item.emoji ?? "🍽️"}</span>
           </div>
         )}
 
         <div className="p-5 flex flex-col gap-5">
-          {/* 商品名・価格 */}
           <div>
-            <h2 className="text-lg font-black text-slate-800 leading-tight">{item.name}</h2>
+            <h2 className="text-lg font-black text-stone-800 leading-tight">{localName(item, lang)}</h2>
             <p className="text-2xl font-black text-stone-900 mt-1">{formatPrice(unitPrice)}</p>
             {optionDelta !== 0 && (
-              <p className="text-xs text-slate-500 mt-0.5">({t(lang, "basePrice")}: {formatPrice(item.price)})</p>
+              <p className="text-xs text-stone-500 mt-0.5">({t(lang, "basePrice")}: {formatPrice(item.price)})</p>
             )}
           </div>
 
           {/* 提供タイミング */}
           <div>
-            <p className="text-sm font-bold text-slate-700 mb-2">{t(lang, "servingTimeLabel")}</p>
+            <p className="text-sm font-bold text-stone-700 mb-2">{t(lang, "servingTimeLabel")}</p>
             <div className="flex gap-2">
               {servingTimeOptions.map((opt) => (
                 <button
@@ -925,8 +772,8 @@ function ProductDetailModal({
                   onClick={() => setServingTime(opt.value)}
                   className={["flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all",
                     servingTime === opt.value
-                      ? "border-amber-500 bg-amber-50 text-amber-800"
-                      : "border-stone-200 text-stone-500 hover:border-amber-300",
+                      ? "border-stone-800 bg-stone-50 text-stone-900"
+                      : "border-stone-200 text-stone-500 hover:border-stone-400",
                   ].join(" ")}
                 >
                   <span className="text-lg">{opt.icon}</span>
@@ -941,13 +788,13 @@ function ProductDetailModal({
             const selected = selectedOptions.find((o) => o.groupId === group.id);
             return (
               <div key={group.id}>
-                <p className="text-sm font-bold text-slate-700 mb-2">{group.name}</p>
+                <p className="text-sm font-bold text-stone-700 mb-2">{group.name}</p>
                 <div className="flex flex-col gap-1.5">
                   {group.items.map((optItem) => (
                     <label
                       key={optItem.id}
                       className={["flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
-                        selected?.itemId === optItem.id ? "border-amber-500 bg-amber-50" : "border-stone-200 hover:border-amber-300",
+                        selected?.itemId === optItem.id ? "border-stone-800 bg-stone-50" : "border-stone-200 hover:border-stone-400",
                       ].join(" ")}
                     >
                       <input
@@ -956,9 +803,9 @@ function ProductDetailModal({
                         value={optItem.id}
                         checked={selected?.itemId === optItem.id}
                         onChange={() => handleOptionChange(group.id, group.name, optItem.id, optItem.name, optItem.price)}
-                        className="accent-amber-600"
+                        className="accent-stone-800"
                       />
-                      <span className="flex-1 text-sm font-medium text-slate-700">{optItem.name}</span>
+                      <span className="flex-1 text-sm font-medium text-stone-700">{optItem.name}</span>
                       {optItem.price !== 0 && (
                         <span className={["text-xs font-semibold", optItem.price > 0 ? "text-rose-500" : "text-emerald-600"].join(" ")}>
                           {optItem.price > 0 ? `+${formatPrice(optItem.price)}` : formatPrice(optItem.price)}
@@ -971,21 +818,21 @@ function ProductDetailModal({
             );
           })}
 
-          {/* 数量セレクター */}
+          {/* 数量 */}
           <div>
-            <p className="text-sm font-bold text-slate-700 mb-2">{t(lang, "qty")}</p>
+            <p className="text-sm font-bold text-stone-700 mb-2">{t(lang, "qty")}</p>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
-                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-all"
+                className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-xl font-bold text-stone-600 hover:bg-stone-200 disabled:opacity-30 transition-all"
               >
                 −
               </button>
-              <span className="text-2xl font-black text-slate-800 w-8 text-center">{quantity}</span>
+              <span className="text-2xl font-black text-stone-800 w-8 text-center">{quantity}</span>
               <button
-                onClick={() => setQuantity((q) => q + 1)}
-                className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl font-bold text-amber-700 hover:bg-amber-200 transition-all"
+                onClick={() => setQuantity(q => q + 1)}
+                className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-xl font-bold text-stone-600 hover:bg-stone-200 transition-all"
               >
                 ＋
               </button>
@@ -993,17 +840,15 @@ function ProductDetailModal({
             </div>
           </div>
 
-          {/* コンボ褒めトースト */}
           {comboToast && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-700 text-sm font-semibold">
               {comboToast}
             </div>
           )}
 
-          {/* カートに追加 */}
           <button
             onClick={() => onAddToCart(quantity, servingTime, selectedOptions)}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+            className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
           >
             {t(lang, "addToCart")} — {formatPrice(total)}
           </button>
@@ -1015,13 +860,10 @@ function ProductDetailModal({
 
 // ─── カートタブ ────────────────────────────────────────────────
 
-function CartTab({
-  cart, cartTotal, lang, getCategoryColor, onRemove, onIncrement, onDecrement, onSwitchMenu, onOrderSent,
-}: {
+function CartTab({ cart, cartTotal, lang, onRemove, onIncrement, onDecrement, onSwitchMenu, onOrderSent }: {
   cart: CartItem[];
   cartTotal: number;
   lang: Lang;
-  getCategoryColor: (id: string) => string;
   onRemove: (id: string) => void;
   onIncrement: (id: string) => void;
   onDecrement: (id: string) => void;
@@ -1030,15 +872,15 @@ function CartTab({
 }) {
   if (cart.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 px-6">
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-stone-400 px-6">
         <span className="text-6xl">🛒</span>
         <div className="text-center">
-          <p className="text-lg font-bold text-slate-600">{t(lang, "cartEmpty")}</p>
+          <p className="text-lg font-bold text-stone-600">{t(lang, "cartEmpty")}</p>
           <p className="text-sm mt-1">{t(lang, "cartEmptySub")}</p>
         </div>
         <button
           onClick={onSwitchMenu}
-          className="mt-2 px-6 py-3 bg-stone-800 text-white font-bold rounded-2xl text-sm shadow-sm hover:bg-stone-900 transition-colors"
+          className="mt-2 px-6 py-3 bg-stone-900 text-white font-bold rounded-2xl text-sm hover:bg-stone-800 transition-colors"
         >
           {t(lang, "viewMenu")}
         </button>
@@ -1055,18 +897,15 @@ function CartTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        <h2 className="text-base font-black text-slate-800">{t(lang, "cartTitle")}</h2>
-
+        <h2 className="text-base font-black text-stone-800">{t(lang, "cartTitle")}</h2>
         {cart.map((cartItem) => {
           const optionDelta = cartItem.selectedOptions.reduce((s, o) => s + o.price, 0);
           const unitPrice   = cartItem.menuItem.price + optionDelta;
           const subtotal    = unitPrice * cartItem.quantity;
-          const color       = getCategoryColor(cartItem.menuItem.category);
 
           return (
-            <div key={cartItem.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/60 flex items-start gap-3 p-3">
-              {/* 絵文字 or 画像 */}
-              <div className={`w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center ${cartItem.menuItem.imageUrl ? "bg-slate-100" : `bg-gradient-to-br ${color}`}`}>
+            <div key={cartItem.id} className="bg-white rounded-2xl border border-stone-200 flex items-start gap-3 p-3">
+              <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-stone-100">
                 {cartItem.menuItem.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={cartItem.menuItem.imageUrl} alt={cartItem.menuItem.name} className="w-full h-full object-cover" />
@@ -1076,61 +915,43 @@ function CartTab({
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-800 text-sm leading-tight line-clamp-2">
-                  {cartItem.menuItem.name}
-                </p>
+                <p className="font-bold text-stone-800 text-sm leading-tight line-clamp-2">{localName(cartItem.menuItem, lang)}</p>
                 {cartItem.selectedOptions.length > 0 && (
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {cartItem.selectedOptions.map((o) => o.itemName).join(" · ")}
-                  </p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">{cartItem.selectedOptions.map(o => o.itemName).join(" · ")}</p>
                 )}
-                <p className="text-[11px] text-stone-400 font-medium mt-0.5">
-                  {servingLabel[cartItem.servingTime]}
-                </p>
-
-                {/* 数量コントロール + 小計 */}
+                <p className="text-[11px] text-stone-400 font-medium mt-0.5">{servingLabel[cartItem.servingTime]}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     onClick={() => onDecrement(cartItem.id)}
-                    className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-sm hover:bg-slate-200 active:scale-90 transition-all"
-                  >
-                    −
-                  </button>
-                  <span className="text-sm font-black text-slate-800 w-5 text-center">
-                    {cartItem.quantity}
-                  </span>
+                    className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-black text-sm hover:bg-stone-200 active:scale-90 transition-all"
+                  >−</button>
+                  <span className="text-sm font-black text-stone-800 w-5 text-center">{cartItem.quantity}</span>
                   <button
                     onClick={() => onIncrement(cartItem.id)}
-                    className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-black text-sm hover:bg-amber-200 active:scale-90 transition-all"
-                  >
-                    ＋
-                  </button>
+                    className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center text-stone-700 font-black text-sm hover:bg-stone-300 active:scale-90 transition-all"
+                  >＋</button>
                   <span className="ml-auto text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
                 </div>
               </div>
 
-              {/* 削除ボタン */}
               <button
                 onClick={() => onRemove(cartItem.id)}
-                className="w-7 h-7 flex-shrink-0 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:bg-rose-100 hover:text-rose-500 transition-colors text-sm"
-                aria-label="削除"
-              >
-                ✕
-              </button>
+                className="w-7 h-7 flex-shrink-0 bg-stone-100 rounded-full flex items-center justify-center text-stone-400 hover:bg-red-50 hover:text-red-400 transition-colors text-sm"
+              >✕</button>
             </div>
           );
         })}
       </div>
 
-      <div className="flex-shrink-0 bg-white border-t border-slate-200 p-4 flex flex-col gap-3">
+      <div className="flex-shrink-0 bg-white border-t border-stone-200 p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-slate-600">{t(lang, "total")}</span>
+          <span className="text-sm font-bold text-stone-600">{t(lang, "total")}</span>
           <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
         </div>
-        <p className="text-[11px] text-slate-400">{t(lang, "taxNote")}</p>
+        <p className="text-[11px] text-stone-400">{t(lang, "taxNote")}</p>
         <button
           onClick={onOrderSent}
-          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+          className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
         >
           {t(lang, "sendOrder")}
         </button>
@@ -1141,9 +962,7 @@ function CartTab({
 
 // ─── AIタブ ───────────────────────────────────────────────────
 
-function AiTab({
-  lang, messages, input, isTyping, bottomRef, onInputChange, onSubmit,
-}: {
+function AiTab({ lang, messages, input, isTyping, bottomRef, onInputChange, onSubmit }: {
   lang: Lang;
   messages: ChatMessage[];
   input: string;
@@ -1156,26 +975,25 @@ function AiTab({
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
-          {messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)}
+          {messages.map(msg => <ChatBubble key={msg.id} message={msg} />)}
           {isTyping && <TypingDots />}
           <div ref={bottomRef} />
         </div>
       </div>
-      <div className="flex-shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+      <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3">
         <form onSubmit={onSubmit} className="max-w-2xl mx-auto flex gap-2 items-end">
           <input
             type="text"
             value={input}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={e => onInputChange(e.target.value)}
             placeholder={isTyping ? t(lang, "sending") : t(lang, "chatPlaceholder")}
             disabled={isTyping}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent disabled:opacity-50 transition-all"
+            className="flex-1 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent disabled:opacity-50 transition-all"
           />
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
-            className="w-11 h-11 bg-gradient-to-br from-stone-700 to-stone-900 rounded-xl flex items-center justify-center text-white shadow-[0_2px_12px_rgba(0,0,0,0.2)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
-            aria-label="送信"
+            className="w-11 h-11 bg-stone-900 rounded-xl flex items-center justify-center text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
           >
             <SendIcon />
           </button>
@@ -1187,13 +1005,10 @@ function AiTab({
 
 // ─── チェックアウトタブ ─────────────────────────────────────────
 
-function CheckoutTab({
-  cart, cartTotal, lang, categoryColorMap, called, onCall,
-}: {
+function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
   cart: CartItem[];
   cartTotal: number;
   lang: Lang;
-  categoryColorMap: (id: string) => string;
   called: boolean;
   onCall: () => void;
 }) {
@@ -1202,11 +1017,11 @@ function CheckoutTab({
       <div className="h-full flex flex-col items-center justify-center gap-5 px-6">
         <span className="text-7xl animate-bounce">🙏</span>
         <div className="text-center">
-          <p className="text-xl font-black text-slate-800">{t(lang, "staffComing")}</p>
-          <p className="text-sm text-slate-500 mt-2">{t(lang, "pleaseWait")}</p>
+          <p className="text-xl font-black text-stone-800">{t(lang, "staffComing")}</p>
+          <p className="text-sm text-stone-500 mt-2">{t(lang, "pleaseWait")}</p>
         </div>
-        <div className="mt-4 w-full max-w-sm bg-amber-50 border border-amber-200 rounded-2xl p-4">
-          <p className="text-sm text-amber-700 font-medium text-center">{t(lang, "paymentNote")}</p>
+        <div className="mt-4 w-full max-w-sm bg-stone-50 border border-stone-200 rounded-2xl p-4">
+          <p className="text-sm text-stone-600 font-medium text-center">{t(lang, "paymentNote")}</p>
         </div>
       </div>
     );
@@ -1215,23 +1030,19 @@ function CheckoutTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        <h2 className="text-base font-black text-slate-800">{t(lang, "checkoutTitle")}</h2>
-
+        <h2 className="text-base font-black text-stone-800">{t(lang, "checkoutTitle")}</h2>
         {cart.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
+          <div className="flex flex-col items-center justify-center py-16 text-stone-400 gap-2">
             <span className="text-5xl">🛒</span>
             <p className="text-sm font-medium">{t(lang, "noCartItems")}</p>
           </div>
         ) : (
           cart.map((cartItem) => {
             const optionDelta = cartItem.selectedOptions.reduce((s, o) => s + o.price, 0);
-            const unitPrice   = cartItem.menuItem.price + optionDelta;
-            const subtotal    = unitPrice * cartItem.quantity;
-            const color       = categoryColorMap(cartItem.menuItem.category);
-
+            const subtotal    = (cartItem.menuItem.price + optionDelta) * cartItem.quantity;
             return (
-              <div key={cartItem.id} className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 flex items-center gap-3 p-3">
-                <div className={`w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center ${cartItem.menuItem.imageUrl ? "bg-slate-100" : `bg-gradient-to-br ${color}`}`}>
+              <div key={cartItem.id} className="bg-white rounded-xl border border-stone-200 flex items-center gap-3 p-3">
+                <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-stone-100">
                   {cartItem.menuItem.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cartItem.menuItem.imageUrl} alt={cartItem.menuItem.name} className="w-full h-full object-cover" />
@@ -1240,8 +1051,8 @@ function CheckoutTab({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800 leading-tight line-clamp-1">{cartItem.menuItem.name}</p>
-                  <p className="text-xs text-slate-500">×{cartItem.quantity}</p>
+                  <p className="text-sm font-bold text-stone-800 line-clamp-1">{localName(cartItem.menuItem, lang)}</p>
+                  <p className="text-xs text-stone-500">×{cartItem.quantity}</p>
                 </div>
                 <span className="text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
               </div>
@@ -1250,19 +1061,19 @@ function CheckoutTab({
         )}
       </div>
 
-      <div className="flex-shrink-0 bg-white border-t border-slate-200 p-4 flex flex-col gap-3">
+      <div className="flex-shrink-0 bg-white border-t border-stone-200 p-4 flex flex-col gap-3">
         {cart.length > 0 && (
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-slate-600">{t(lang, "totalAmount")}</span>
+            <span className="text-sm font-bold text-stone-600">{t(lang, "totalAmount")}</span>
             <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
           </div>
         )}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-          <p className="text-xs text-amber-700 font-medium text-center">{t(lang, "paymentNote")}</p>
+        <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
+          <p className="text-xs text-stone-600 font-medium text-center">{t(lang, "paymentNote")}</p>
         </div>
         <button
           onClick={onCall}
-          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-4 rounded-2xl text-base shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_28px_rgba(245,158,11,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+          className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
         >
           {t(lang, "callStaff")}
         </button>
@@ -1276,13 +1087,13 @@ function CheckoutTab({
 function SuccessModal({ message, onClose }: { message: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full flex flex-col items-center gap-4 text-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full flex flex-col items-center gap-4 text-center border border-stone-200">
         <span className="text-6xl animate-bounce">🙏</span>
-        <p className="text-base font-bold text-slate-800 leading-relaxed">{message}</p>
+        <p className="text-base font-bold text-stone-800 leading-relaxed">{message}</p>
         <button
           onClick={onClose}
-          className="mt-2 w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 rounded-2xl shadow-sm hover:shadow-md transition-all"
+          className="mt-2 w-full bg-stone-900 text-white font-bold py-3 rounded-2xl hover:bg-stone-800 transition-all"
         >
           OK
         </button>
@@ -1298,14 +1109,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center mr-2 flex-shrink-0 mt-1 shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
           <span className="text-white text-xs font-bold">AI</span>
         </div>
       )}
       <div className={["max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
         isUser
-          ? "bg-gradient-to-br from-stone-800 to-stone-900 text-white rounded-tr-sm shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-          : "bg-white text-slate-800 rounded-tl-sm shadow-[0_2px_12px_rgb(0,0,0,0.07)] ring-1 ring-black/[0.04]",
+          ? "bg-stone-900 text-white rounded-tr-sm"
+          : "bg-white text-stone-800 rounded-tl-sm border border-stone-200",
       ].join(" ")}>
         {message.text}
       </div>
@@ -1313,15 +1124,13 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-// ─── タイピングインジケーター ───────────────────────────────────
-
 function TypingDots() {
   return (
     <div className="flex justify-start">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center mr-2 flex-shrink-0 shadow-sm">
+      <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center mr-2 flex-shrink-0">
         <span className="text-white text-xs font-bold">AI</span>
       </div>
-      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-[0_2px_12px_rgb(0,0,0,0.07)] ring-1 ring-black/[0.04] flex items-center gap-1">
+      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-stone-200 flex items-center gap-1">
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:0ms]" />
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:150ms]" />
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:300ms]" />
@@ -1329,8 +1138,6 @@ function TypingDots() {
     </div>
   );
 }
-
-// ─── 送信アイコン ──────────────────────────────────────────────
 
 function SendIcon() {
   return (
@@ -1342,9 +1149,7 @@ function SendIcon() {
 
 // ─── アップセルバナー ───────────────────────────────────────────
 
-function UpsellBanner({
-  suggestion, loading, lang, onDismiss, onCta,
-}: {
+function UpsellBanner({ suggestion, loading, lang, onDismiss, onCta }: {
   suggestion: UpsellSuggestion | null;
   loading: boolean;
   lang: Lang;
@@ -1352,28 +1157,26 @@ function UpsellBanner({
   onCta: (targetItemName: string) => void;
 }) {
   return (
-    <div className="mx-3 mb-2 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] bg-amber-50 border border-amber-200 animate-[slideUp_0.35s_cubic-bezier(0.34,1.56,0.64,1)]">
+    <div className="mx-3 mb-2 rounded-2xl bg-white border border-stone-200 shadow-sm">
       {loading ? (
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="w-5 h-5 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin flex-shrink-0" />
-          <p className="text-amber-800 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
+          <div className="w-5 h-5 border-2 border-stone-300 border-t-stone-700 rounded-full animate-spin flex-shrink-0" />
+          <p className="text-stone-600 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
         </div>
       ) : suggestion ? (
         <div className="relative">
           <div className="flex items-center justify-between px-4 pt-3 pb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-base">✨</span>
-              <span className="text-amber-700 text-[11px] font-bold tracking-widest uppercase">{t(lang, "upsellTitle")}</span>
-              <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+              <span className="text-stone-600 text-[11px] font-bold tracking-widest uppercase">{t(lang, "upsellTitle")}</span>
+              <span className="bg-stone-100 text-stone-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-stone-200">
                 {suggestion.scarcityText}
               </span>
             </div>
             <button
               onClick={onDismiss}
-              className="w-7 h-7 rounded-full bg-amber-100 hover:bg-amber-200 flex items-center justify-center text-amber-600 text-xs transition-colors"
-            >
-              ✕
-            </button>
+              className="w-7 h-7 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 text-xs transition-colors"
+            >✕</button>
           </div>
           <div className="px-4 pb-3 flex items-end gap-3">
             <div className="flex-1 min-w-0">
@@ -1381,12 +1184,11 @@ function UpsellBanner({
                 <span className="text-2xl">{suggestion.targetItemEmoji}</span>
                 <span className="text-stone-900 font-black text-base truncate">{suggestion.targetItemName}</span>
               </div>
-              <p className="text-amber-800 text-xs leading-relaxed truncate">{suggestion.pairingText}</p>
-              <p className="text-amber-700/80 text-[10px] mt-0.5 line-clamp-1 italic">✨ {suggestion.sizzleText}</p>
+              <p className="text-stone-600 text-xs leading-relaxed truncate">{suggestion.pairingText}</p>
             </div>
             <button
               onClick={() => onCta(suggestion.targetItemName)}
-              className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-amber-600 text-white font-black text-sm shadow-md shadow-amber-900/20 hover:bg-amber-700 active:scale-95 transition-all"
+              className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-stone-900 text-white font-black text-sm hover:bg-stone-800 active:scale-95 transition-all"
             >
               {suggestion.ctaText} →
             </button>
