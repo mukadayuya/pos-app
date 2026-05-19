@@ -64,6 +64,20 @@ function localName(item: MenuItem, lang: Lang): string {
   return item.name;
 }
 
+function localCategoryName(cat: { name: string; name_en?: string; name_zh?: string; name_ko?: string }, lang: Lang): string {
+  if (lang === "en") return cat.name_en ?? cat.name;
+  if (lang === "zh") return cat.name_zh ?? cat.name;
+  if (lang === "ko") return cat.name_ko ?? cat.name;
+  return cat.name;
+}
+
+function localDescription(item: MenuItem, lang: Lang): string | undefined {
+  if (lang === "en") return item.description_en ?? item.description;
+  if (lang === "zh") return item.description_zh ?? item.description;
+  if (lang === "ko") return item.description_ko ?? item.description;
+  return item.description;
+}
+
 // ─── Error Boundary ─────────────────────────────────────────────
 
 class OrderErrorBoundary extends Component<
@@ -82,13 +96,13 @@ class OrderErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-white flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm p-8 max-w-sm w-full text-center space-y-4">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 max-w-sm w-full text-center space-y-4">
             <span className="text-5xl">⚠️</span>
-            <h2 className="text-lg font-black text-stone-800">読み込みエラー</h2>
-            <p className="text-stone-500 text-sm">メニューの取得に失敗しました。</p>
+            <h2 className="text-lg font-black text-gray-700">読み込みエラー</h2>
+            <p className="text-gray-400 text-sm">メニューの取得に失敗しました。</p>
             <button
               onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-              className="w-full bg-stone-900 text-white font-bold py-3 rounded-2xl hover:bg-stone-800 transition-colors"
+              className="w-full bg-gray-200 text-white font-bold py-3 rounded-2xl hover:bg-gray-300 transition-colors"
             >
               再試行
             </button>
@@ -109,7 +123,7 @@ export default function CustomerOrderPage() {
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-stone-300 border-t-stone-800 rounded-full animate-spin" />
-            <p className="text-stone-400 text-sm">読み込み中...</p>
+            <p className="text-gray-300 text-sm">読み込み中...</p>
           </div>
         </div>
       }>
@@ -345,14 +359,14 @@ function CustomerOrderInner() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-stone-200 border-t-stone-800 rounded-full animate-spin" />
-          <p className="text-stone-400 text-sm">{t(lang, "loadingMenu")}</p>
+          <div className="w-12 h-12 border-4 border-gray-100 border-t-stone-800 rounded-full animate-spin" />
+          <p className="text-gray-300 text-sm">{t(lang, "loadingMenu")}</p>
           {loadSlow && (
             <div className="flex flex-col items-center gap-2 mt-2">
-              <p className="text-stone-400 text-xs">{t(lang, "loadingSlow")}</p>
+              <p className="text-gray-300 text-xs">{t(lang, "loadingSlow")}</p>
               <button
                 onClick={() => { setMenuItems(staticMenuItems); setCategories([]); setLoading(false); }}
-                className="px-5 py-2.5 bg-stone-900 text-white text-sm font-bold rounded-xl shadow hover:bg-stone-800 transition-colors"
+                className="px-5 py-2.5 bg-gray-200 text-white text-sm font-bold rounded-xl shadow hover:bg-gray-300 transition-colors"
               >
                 {t(lang, "startOffline")}
               </button>
@@ -364,19 +378,19 @@ function CustomerOrderInner() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-stone-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-white">
       {/* ── ヘッダー ── */}
-      <header className="h-14 flex-shrink-0 bg-stone-900 flex items-center justify-between px-4 shadow-sm z-20">
+      <header className="h-14 flex-shrink-0 bg-white border-b border-gray-100 flex items-center justify-between px-4 z-20">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center">
-            <span className="text-white text-xs font-black tracking-tight">FL</span>
+          <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
+            <span className="text-gray-600 text-xs font-black tracking-tight">FL</span>
           </div>
           <div className="leading-none">
-            <p className="text-white font-black text-base tracking-tight">FLOWS</p>
+            <p className="text-gray-800 font-black text-base tracking-tight">FLOWS</p>
             {isTable && tableParam ? (
-              <p className="text-stone-400 text-[11px] font-medium">{tableParam}{t(lang, "tableLabel")}</p>
+              <p className="text-gray-400 text-[11px] font-medium">{tableParam}{t(lang, "tableLabel")}</p>
             ) : (
-              <p className="text-stone-500 text-[10px] font-medium tracking-widest uppercase">
+              <p className="text-gray-400 text-[10px] font-medium tracking-widest uppercase">
                 {isTable ? "Table Order" : "Mobile Order"}
               </p>
             )}
@@ -390,7 +404,7 @@ function CustomerOrderInner() {
               onClick={() => setLang(l.code)}
               className={[
                 "w-8 h-8 rounded-full text-base flex items-center justify-center transition-all",
-                lang === l.code ? "bg-white shadow-md scale-110" : "bg-white/10 hover:bg-white/20",
+                lang === l.code ? "bg-gray-100 shadow-sm scale-110" : "hover:bg-gray-50",
               ].join(" ")}
               title={l.label}
             >
@@ -486,7 +500,7 @@ function CustomerOrderInner() {
       )}
 
       {/* ── ボトムタブバー ── */}
-      <nav className="h-16 flex-shrink-0 bg-white border-t border-stone-200 flex z-20">
+      <nav className="h-16 flex-shrink-0 bg-white border-t border-gray-100 flex z-20">
         <TabButton icon="🍽️" label={t(lang, "tabMenu")}  active={activeTab === "menu"}     onClick={() => setActiveTab("menu")} />
         <TabButton icon="🛒" label={t(lang, "tabCart")}  active={activeTab === "cart"}     onClick={() => setActiveTab("cart")} badge={cartCount > 0 ? cartCount : undefined} />
         <TabButton icon="💬" label={t(lang, "tabAi")}    active={activeTab === "ai"}       onClick={() => setActiveTab("ai")} />
@@ -516,16 +530,16 @@ function TabButton({ icon, label, active, badge, onClick }: {
 }) {
   return (
     <button onClick={onClick} className="flex-1 flex flex-col items-center justify-center gap-0.5 relative pt-1">
-      <span className={["absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full transition-all duration-200", active ? "bg-stone-900" : "bg-transparent"].join(" ")} />
+      <span className={["absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full transition-all duration-200", active ? "bg-gray-400" : "bg-transparent"].join(" ")} />
       <span className="relative">
         <span className="text-xl leading-none">{icon}</span>
         {badge !== undefined && (
-          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-stone-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] bg-gray-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {badge}
           </span>
         )}
       </span>
-      <span className={["text-[10px] font-semibold leading-none transition-colors duration-200", active ? "text-stone-900" : "text-stone-400"].join(" ")}>
+      <span className={["text-[10px] font-semibold leading-none transition-colors duration-200", active ? "text-gray-700" : "text-gray-400"].join(" ")}>
         {label}
       </span>
     </button>
@@ -561,12 +575,12 @@ function MenuTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* 横スクロールカテゴリーピル */}
-      <div className="flex-shrink-0 bg-white border-b border-stone-200 px-3 py-3 overflow-x-auto scrollbar-hide">
+      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-3 py-3 overflow-x-auto scrollbar-hide">
         <div className="flex gap-2 min-w-max">
           <button
             onClick={() => onCategoryChange("all")}
-            className={["px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
-              activeCategoryId === "all" ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200",
+            className={["px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+              activeCategoryId === "all" ? "bg-gray-200 text-gray-700" : "bg-gray-50 text-gray-400 hover:bg-gray-100",
             ].join(" ")}
           >
             {t(lang, "allItems")}
@@ -575,11 +589,11 @@ function MenuTab({
             <button
               key={cat.id}
               onClick={() => onCategoryChange(cat.id)}
-              className={["px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
-                activeCategoryId === cat.id ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200",
+              className={["px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                activeCategoryId === cat.id ? "bg-gray-200 text-gray-700" : "bg-gray-50 text-gray-400 hover:bg-gray-100",
               ].join(" ")}
             >
-              {cat.name}
+              {localCategoryName(cat, lang)}
             </button>
           ))}
         </div>
@@ -599,7 +613,7 @@ function MenuTab({
             />
           ))}
           {items.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-stone-400 gap-2">
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-300 gap-2">
               <span className="text-5xl">🍽️</span>
               <p className="text-sm font-medium">{t(lang, "noItems")}</p>
             </div>
@@ -610,13 +624,13 @@ function MenuTab({
 
       {/* スティッキーカートバー */}
       {cartCount > 0 && (
-        <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-2.5 flex items-center justify-between">
-          <span className="text-sm font-bold text-stone-600">
+        <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
+          <span className="text-sm font-bold text-gray-500">
             {cartCount}{lang === "ja" ? "点" : lang === "zh" ? "件" : lang === "ko" ? "개" : " item(s)"}
           </span>
           <button
             onClick={onGoToCart}
-            className="flex items-center gap-2 bg-stone-900 text-white font-bold px-5 py-2 rounded-xl text-sm active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-gray-200 text-gray-600 font-bold px-5 py-2 rounded-xl text-sm active:scale-95 transition-all"
           >
             {t(lang, "cartBarSee")} {formatPrice(cartTotal)} →
           </button>
@@ -636,11 +650,11 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
   onAiConsult: () => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-200/80 flex flex-col active:scale-[0.97] transition-transform">
+    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 flex flex-col active:scale-[0.97] transition-transform">
       {/* ビジュアルエリア */}
       <button
         onClick={onClick}
-        className="w-full aspect-[4/3] overflow-hidden flex items-center justify-center relative bg-stone-100"
+        className="w-full aspect-[4/3] overflow-hidden flex items-center justify-center relative bg-gray-50"
       >
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -649,7 +663,7 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
           <span className="text-5xl drop-shadow-sm select-none">{item.emoji ?? "🍽️"}</span>
         )}
         {cartQty > 0 && (
-          <span className="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] bg-stone-900 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white">
+          <span className="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] bg-gray-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white">
             {cartQty}
           </span>
         )}
@@ -658,20 +672,20 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
       {/* テキスト・アクション */}
       <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1.5">
         <button onClick={onClick} className="text-left">
-          <p className="font-semibold text-stone-800 text-xs leading-snug line-clamp-2">{localName(item, lang)}</p>
-          <p className="text-stone-900 font-bold text-sm mt-0.5">{formatPrice(item.price)}</p>
+          <p className="font-medium text-gray-700 text-xs leading-snug line-clamp-2">{localName(item, lang)}</p>
+          <p className="text-gray-700 font-bold text-sm mt-0.5">{formatPrice(item.price)}</p>
         </button>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onClick}
-            className="flex-1 bg-stone-900 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 transition-all"
+            className="flex-1 bg-gray-100 text-gray-600 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 transition-all hover:bg-gray-200"
           >
             <span className="text-sm font-black leading-none">＋</span>
             <span>{t(lang, "add")}</span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
-            className="w-8 h-8 bg-stone-100 rounded-xl border border-stone-200 flex items-center justify-center text-sm hover:bg-stone-200 active:scale-95 transition-all"
+            className="w-8 h-8 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center text-sm hover:bg-gray-100 active:scale-95 transition-all"
             title="AIコンシェルジュに相談"
           >
             🤖
@@ -735,36 +749,39 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
       <div className="relative bg-white rounded-t-3xl max-h-[88vh] overflow-y-auto shadow-2xl">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors"
+          className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
         >
           ✕
         </button>
 
         {item.videoUrl ? (
-          <VideoBackground videoUrl={item.videoUrl} fallbackGradient="bg-stone-100" emoji={item.emoji} height="h-56" overlayOpacity={0.35} />
+          <VideoBackground videoUrl={item.videoUrl} fallbackGradient="bg-gray-50" emoji={item.emoji} height="h-56" overlayOpacity={0.35} />
         ) : item.imageUrl ? (
           <div className="h-52 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
           </div>
         ) : (
-          <div className="h-36 flex items-center justify-center bg-stone-100">
+          <div className="h-36 flex items-center justify-center bg-gray-50">
             <span className="text-7xl">{item.emoji ?? "🍽️"}</span>
           </div>
         )}
 
         <div className="p-5 flex flex-col gap-5">
           <div>
-            <h2 className="text-lg font-black text-stone-800 leading-tight">{localName(item, lang)}</h2>
-            <p className="text-2xl font-black text-stone-900 mt-1">{formatPrice(unitPrice)}</p>
+            <h2 className="text-lg font-black text-gray-700 leading-tight">{localName(item, lang)}</h2>
+            <p className="text-2xl font-black text-gray-700 mt-1">{formatPrice(unitPrice)}</p>
             {optionDelta !== 0 && (
-              <p className="text-xs text-stone-500 mt-0.5">({t(lang, "basePrice")}: {formatPrice(item.price)})</p>
+              <p className="text-xs text-gray-400 mt-0.5">({t(lang, "basePrice")}: {formatPrice(item.price)})</p>
+            )}
+            {localDescription(item, lang) && (
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">{localDescription(item, lang)}</p>
             )}
           </div>
 
           {/* 提供タイミング */}
           <div>
-            <p className="text-sm font-bold text-stone-700 mb-2">{t(lang, "servingTimeLabel")}</p>
+            <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "servingTimeLabel")}</p>
             <div className="flex gap-2">
               {servingTimeOptions.map((opt) => (
                 <button
@@ -772,8 +789,8 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
                   onClick={() => setServingTime(opt.value)}
                   className={["flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all",
                     servingTime === opt.value
-                      ? "border-stone-800 bg-stone-50 text-stone-900"
-                      : "border-stone-200 text-stone-500 hover:border-stone-400",
+                      ? "border-gray-400 bg-gray-50 text-gray-700"
+                      : "border-gray-100 text-gray-400 hover:border-stone-400",
                   ].join(" ")}
                 >
                   <span className="text-lg">{opt.icon}</span>
@@ -788,13 +805,13 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
             const selected = selectedOptions.find((o) => o.groupId === group.id);
             return (
               <div key={group.id}>
-                <p className="text-sm font-bold text-stone-700 mb-2">{group.name}</p>
+                <p className="text-sm font-bold text-gray-600 mb-2">{group.name}</p>
                 <div className="flex flex-col gap-1.5">
                   {group.items.map((optItem) => (
                     <label
                       key={optItem.id}
                       className={["flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
-                        selected?.itemId === optItem.id ? "border-stone-800 bg-stone-50" : "border-stone-200 hover:border-stone-400",
+                        selected?.itemId === optItem.id ? "border-gray-400 bg-gray-50" : "border-gray-100 hover:border-gray-200",
                       ].join(" ")}
                     >
                       <input
@@ -803,11 +820,11 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
                         value={optItem.id}
                         checked={selected?.itemId === optItem.id}
                         onChange={() => handleOptionChange(group.id, group.name, optItem.id, optItem.name, optItem.price)}
-                        className="accent-stone-800"
+                        className="accent-gray-500"
                       />
-                      <span className="flex-1 text-sm font-medium text-stone-700">{optItem.name}</span>
+                      <span className="flex-1 text-sm font-medium text-gray-600">{optItem.name}</span>
                       {optItem.price !== 0 && (
-                        <span className={["text-xs font-semibold", optItem.price > 0 ? "text-rose-500" : "text-emerald-600"].join(" ")}>
+                        <span className={["text-xs font-semibold", optItem.price > 0 ? "text-gray-500" : "text-gray-400"].join(" ")}>
                           {optItem.price > 0 ? `+${formatPrice(optItem.price)}` : formatPrice(optItem.price)}
                         </span>
                       )}
@@ -820,35 +837,35 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
 
           {/* 数量 */}
           <div>
-            <p className="text-sm font-bold text-stone-700 mb-2">{t(lang, "qty")}</p>
+            <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "qty")}</p>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
-                className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-xl font-bold text-stone-600 hover:bg-stone-200 disabled:opacity-30 transition-all"
+                className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl font-bold text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all"
               >
                 −
               </button>
-              <span className="text-2xl font-black text-stone-800 w-8 text-center">{quantity}</span>
+              <span className="text-2xl font-black text-gray-700 w-8 text-center">{quantity}</span>
               <button
                 onClick={() => setQuantity(q => q + 1)}
-                className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-xl font-bold text-stone-600 hover:bg-stone-200 transition-all"
+                className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl font-bold text-gray-500 hover:bg-gray-100 transition-all"
               >
                 ＋
               </button>
-              <span className="ml-auto text-xl font-black text-stone-900">{formatPrice(total)}</span>
+              <span className="ml-auto text-xl font-black text-gray-700">{formatPrice(total)}</span>
             </div>
           </div>
 
           {comboToast && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-700 text-sm font-semibold">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-600 text-sm font-semibold">
               {comboToast}
             </div>
           )}
 
           <button
             onClick={() => onAddToCart(quantity, servingTime, selectedOptions)}
-            className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
+            className="w-full bg-gray-200 text-gray-600 font-black py-4 rounded-2xl text-base hover:bg-gray-300 active:scale-[0.98] transition-all"
           >
             {t(lang, "addToCart")} — {formatPrice(total)}
           </button>
@@ -872,15 +889,15 @@ function CartTab({ cart, cartTotal, lang, onRemove, onIncrement, onDecrement, on
 }) {
   if (cart.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 text-stone-400 px-6">
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-gray-300 px-6">
         <span className="text-6xl">🛒</span>
         <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">{t(lang, "cartEmpty")}</p>
+          <p className="text-lg font-bold text-gray-500">{t(lang, "cartEmpty")}</p>
           <p className="text-sm mt-1">{t(lang, "cartEmptySub")}</p>
         </div>
         <button
           onClick={onSwitchMenu}
-          className="mt-2 px-6 py-3 bg-stone-900 text-white font-bold rounded-2xl text-sm hover:bg-stone-800 transition-colors"
+          className="mt-2 px-6 py-3 bg-gray-200 text-gray-600 font-bold rounded-2xl text-sm hover:bg-gray-300 transition-colors"
         >
           {t(lang, "viewMenu")}
         </button>
@@ -897,15 +914,15 @@ function CartTab({ cart, cartTotal, lang, onRemove, onIncrement, onDecrement, on
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        <h2 className="text-base font-black text-stone-800">{t(lang, "cartTitle")}</h2>
+        <h2 className="text-base font-black text-gray-700">{t(lang, "cartTitle")}</h2>
         {cart.map((cartItem) => {
           const optionDelta = cartItem.selectedOptions.reduce((s, o) => s + o.price, 0);
           const unitPrice   = cartItem.menuItem.price + optionDelta;
           const subtotal    = unitPrice * cartItem.quantity;
 
           return (
-            <div key={cartItem.id} className="bg-white rounded-2xl border border-stone-200 flex items-start gap-3 p-3">
-              <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-stone-100">
+            <div key={cartItem.id} className="bg-white rounded-2xl border border-gray-100 flex items-start gap-3 p-3">
+              <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-gray-50">
                 {cartItem.menuItem.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={cartItem.menuItem.imageUrl} alt={cartItem.menuItem.name} className="w-full h-full object-cover" />
@@ -915,43 +932,43 @@ function CartTab({ cart, cartTotal, lang, onRemove, onIncrement, onDecrement, on
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-stone-800 text-sm leading-tight line-clamp-2">{localName(cartItem.menuItem, lang)}</p>
+                <p className="font-bold text-gray-700 text-sm leading-tight line-clamp-2">{localName(cartItem.menuItem, lang)}</p>
                 {cartItem.selectedOptions.length > 0 && (
-                  <p className="text-[11px] text-stone-500 mt-0.5">{cartItem.selectedOptions.map(o => o.itemName).join(" · ")}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{cartItem.selectedOptions.map(o => o.itemName).join(" · ")}</p>
                 )}
-                <p className="text-[11px] text-stone-400 font-medium mt-0.5">{servingLabel[cartItem.servingTime]}</p>
+                <p className="text-[11px] text-gray-300 font-medium mt-0.5">{servingLabel[cartItem.servingTime]}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     onClick={() => onDecrement(cartItem.id)}
-                    className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-black text-sm hover:bg-stone-200 active:scale-90 transition-all"
+                    className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 font-black text-sm hover:bg-gray-100 active:scale-90 transition-all"
                   >−</button>
-                  <span className="text-sm font-black text-stone-800 w-5 text-center">{cartItem.quantity}</span>
+                  <span className="text-sm font-black text-gray-700 w-5 text-center">{cartItem.quantity}</span>
                   <button
                     onClick={() => onIncrement(cartItem.id)}
-                    className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center text-stone-700 font-black text-sm hover:bg-stone-300 active:scale-90 transition-all"
+                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-black text-sm hover:bg-stone-300 active:scale-90 transition-all"
                   >＋</button>
-                  <span className="ml-auto text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
+                  <span className="ml-auto text-sm font-black text-gray-700">{formatPrice(subtotal)}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => onRemove(cartItem.id)}
-                className="w-7 h-7 flex-shrink-0 bg-stone-100 rounded-full flex items-center justify-center text-stone-400 hover:bg-red-50 hover:text-red-400 transition-colors text-sm"
+                className="w-7 h-7 flex-shrink-0 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-400 transition-colors text-sm"
               >✕</button>
             </div>
           );
         })}
       </div>
 
-      <div className="flex-shrink-0 bg-white border-t border-stone-200 p-4 flex flex-col gap-3">
+      <div className="flex-shrink-0 bg-white border-t border-gray-100 p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-stone-600">{t(lang, "total")}</span>
-          <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
+          <span className="text-sm font-bold text-gray-500">{t(lang, "total")}</span>
+          <span className="text-2xl font-black text-gray-700">{formatPrice(cartTotal)}</span>
         </div>
-        <p className="text-[11px] text-stone-400">{t(lang, "taxNote")}</p>
+        <p className="text-[11px] text-gray-300">{t(lang, "taxNote")}</p>
         <button
           onClick={onOrderSent}
-          className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
+          className="w-full bg-gray-200 text-gray-600 font-black py-4 rounded-2xl text-base hover:bg-gray-300 active:scale-[0.98] transition-all"
         >
           {t(lang, "sendOrder")}
         </button>
@@ -980,7 +997,7 @@ function AiTab({ lang, messages, input, isTyping, bottomRef, onInputChange, onSu
           <div ref={bottomRef} />
         </div>
       </div>
-      <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3">
+      <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 py-3">
         <form onSubmit={onSubmit} className="max-w-2xl mx-auto flex gap-2 items-end">
           <input
             type="text"
@@ -988,12 +1005,12 @@ function AiTab({ lang, messages, input, isTyping, bottomRef, onInputChange, onSu
             onChange={e => onInputChange(e.target.value)}
             placeholder={isTyping ? t(lang, "sending") : t(lang, "chatPlaceholder")}
             disabled={isTyping}
-            className="flex-1 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent disabled:opacity-50 transition-all"
+            className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent disabled:opacity-50 transition-all"
           />
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
-            className="w-11 h-11 bg-stone-900 rounded-xl flex items-center justify-center text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
+            className="w-11 h-11 bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all"
           >
             <SendIcon />
           </button>
@@ -1017,11 +1034,11 @@ function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
       <div className="h-full flex flex-col items-center justify-center gap-5 px-6">
         <span className="text-7xl animate-bounce">🙏</span>
         <div className="text-center">
-          <p className="text-xl font-black text-stone-800">{t(lang, "staffComing")}</p>
-          <p className="text-sm text-stone-500 mt-2">{t(lang, "pleaseWait")}</p>
+          <p className="text-xl font-black text-gray-700">{t(lang, "staffComing")}</p>
+          <p className="text-sm text-gray-400 mt-2">{t(lang, "pleaseWait")}</p>
         </div>
-        <div className="mt-4 w-full max-w-sm bg-stone-50 border border-stone-200 rounded-2xl p-4">
-          <p className="text-sm text-stone-600 font-medium text-center">{t(lang, "paymentNote")}</p>
+        <div className="mt-4 w-full max-w-sm bg-gray-50 border border-gray-100 rounded-2xl p-4">
+          <p className="text-sm text-gray-500 font-medium text-center">{t(lang, "paymentNote")}</p>
         </div>
       </div>
     );
@@ -1030,9 +1047,9 @@ function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        <h2 className="text-base font-black text-stone-800">{t(lang, "checkoutTitle")}</h2>
+        <h2 className="text-base font-black text-gray-700">{t(lang, "checkoutTitle")}</h2>
         {cart.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-stone-400 gap-2">
+          <div className="flex flex-col items-center justify-center py-16 text-gray-300 gap-2">
             <span className="text-5xl">🛒</span>
             <p className="text-sm font-medium">{t(lang, "noCartItems")}</p>
           </div>
@@ -1041,8 +1058,8 @@ function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
             const optionDelta = cartItem.selectedOptions.reduce((s, o) => s + o.price, 0);
             const subtotal    = (cartItem.menuItem.price + optionDelta) * cartItem.quantity;
             return (
-              <div key={cartItem.id} className="bg-white rounded-xl border border-stone-200 flex items-center gap-3 p-3">
-                <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-stone-100">
+              <div key={cartItem.id} className="bg-white rounded-xl border border-gray-100 flex items-center gap-3 p-3">
+                <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-gray-50">
                   {cartItem.menuItem.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cartItem.menuItem.imageUrl} alt={cartItem.menuItem.name} className="w-full h-full object-cover" />
@@ -1051,29 +1068,29 @@ function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-stone-800 line-clamp-1">{localName(cartItem.menuItem, lang)}</p>
-                  <p className="text-xs text-stone-500">×{cartItem.quantity}</p>
+                  <p className="text-sm font-bold text-gray-700 line-clamp-1">{localName(cartItem.menuItem, lang)}</p>
+                  <p className="text-xs text-gray-400">×{cartItem.quantity}</p>
                 </div>
-                <span className="text-sm font-black text-stone-900">{formatPrice(subtotal)}</span>
+                <span className="text-sm font-black text-gray-700">{formatPrice(subtotal)}</span>
               </div>
             );
           })
         )}
       </div>
 
-      <div className="flex-shrink-0 bg-white border-t border-stone-200 p-4 flex flex-col gap-3">
+      <div className="flex-shrink-0 bg-white border-t border-gray-100 p-4 flex flex-col gap-3">
         {cart.length > 0 && (
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-stone-600">{t(lang, "totalAmount")}</span>
-            <span className="text-2xl font-black text-stone-900">{formatPrice(cartTotal)}</span>
+            <span className="text-sm font-bold text-gray-500">{t(lang, "totalAmount")}</span>
+            <span className="text-2xl font-black text-gray-700">{formatPrice(cartTotal)}</span>
           </div>
         )}
-        <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
-          <p className="text-xs text-stone-600 font-medium text-center">{t(lang, "paymentNote")}</p>
+        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+          <p className="text-xs text-gray-500 font-medium text-center">{t(lang, "paymentNote")}</p>
         </div>
         <button
           onClick={onCall}
-          className="w-full bg-stone-900 text-white font-black py-4 rounded-2xl text-base hover:bg-stone-800 active:scale-[0.98] transition-all"
+          className="w-full bg-gray-200 text-gray-600 font-black py-4 rounded-2xl text-base hover:bg-gray-300 active:scale-[0.98] transition-all"
         >
           {t(lang, "callStaff")}
         </button>
@@ -1088,12 +1105,12 @@ function SuccessModal({ message, onClose }: { message: string; onClose: () => vo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full flex flex-col items-center gap-4 text-center border border-stone-200">
+      <div className="relative bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full flex flex-col items-center gap-4 text-center border border-gray-100">
         <span className="text-6xl animate-bounce">🙏</span>
-        <p className="text-base font-bold text-stone-800 leading-relaxed">{message}</p>
+        <p className="text-base font-bold text-gray-700 leading-relaxed">{message}</p>
         <button
           onClick={onClose}
-          className="mt-2 w-full bg-stone-900 text-white font-bold py-3 rounded-2xl hover:bg-stone-800 transition-all"
+          className="mt-2 w-full bg-gray-200 text-white font-bold py-3 rounded-2xl hover:bg-gray-300 transition-all"
         >
           OK
         </button>
@@ -1109,14 +1126,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
           <span className="text-white text-xs font-bold">AI</span>
         </div>
       )}
       <div className={["max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
         isUser
-          ? "bg-stone-900 text-white rounded-tr-sm"
-          : "bg-white text-stone-800 rounded-tl-sm border border-stone-200",
+          ? "bg-gray-200 text-gray-700 rounded-tr-sm"
+          : "bg-white text-gray-700 rounded-tl-sm border border-gray-100",
       ].join(" ")}>
         {message.text}
       </div>
@@ -1127,10 +1144,10 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 function TypingDots() {
   return (
     <div className="flex justify-start">
-      <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center mr-2 flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2 flex-shrink-0">
         <span className="text-white text-xs font-bold">AI</span>
       </div>
-      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-stone-200 flex items-center gap-1">
+      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-gray-100 flex items-center gap-1">
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:0ms]" />
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:150ms]" />
         <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce [animation-delay:300ms]" />
@@ -1157,38 +1174,38 @@ function UpsellBanner({ suggestion, loading, lang, onDismiss, onCta }: {
   onCta: (targetItemName: string) => void;
 }) {
   return (
-    <div className="mx-3 mb-2 rounded-2xl bg-white border border-stone-200 shadow-sm">
+    <div className="mx-3 mb-2 rounded-2xl bg-white border border-gray-100 shadow-sm">
       {loading ? (
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="w-5 h-5 border-2 border-stone-300 border-t-stone-700 rounded-full animate-spin flex-shrink-0" />
-          <p className="text-stone-600 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
+          <p className="text-gray-500 text-sm font-medium">{t(lang, "upsellAnalyzing")}</p>
         </div>
       ) : suggestion ? (
         <div className="relative">
           <div className="flex items-center justify-between px-4 pt-3 pb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-base">✨</span>
-              <span className="text-stone-600 text-[11px] font-bold tracking-widest uppercase">{t(lang, "upsellTitle")}</span>
-              <span className="bg-stone-100 text-stone-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-stone-200">
+              <span className="text-gray-500 text-[11px] font-bold tracking-widest uppercase">{t(lang, "upsellTitle")}</span>
+              <span className="bg-gray-50 text-gray-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-gray-100">
                 {suggestion.scarcityText}
               </span>
             </div>
             <button
               onClick={onDismiss}
-              className="w-7 h-7 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 text-xs transition-colors"
+              className="w-7 h-7 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 text-xs transition-colors"
             >✕</button>
           </div>
           <div className="px-4 pb-3 flex items-end gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-2xl">{suggestion.targetItemEmoji}</span>
-                <span className="text-stone-900 font-black text-base truncate">{suggestion.targetItemName}</span>
+                <span className="text-gray-700 font-black text-base truncate">{suggestion.targetItemName}</span>
               </div>
-              <p className="text-stone-600 text-xs leading-relaxed truncate">{suggestion.pairingText}</p>
+              <p className="text-gray-500 text-xs leading-relaxed truncate">{suggestion.pairingText}</p>
             </div>
             <button
               onClick={() => onCta(suggestion.targetItemName)}
-              className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-stone-900 text-white font-black text-sm hover:bg-stone-800 active:scale-95 transition-all"
+              className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-gray-200 text-gray-600 font-black text-sm hover:bg-gray-300 active:scale-95 transition-all"
             >
               {suggestion.ctaText} →
             </button>

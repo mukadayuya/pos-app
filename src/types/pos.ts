@@ -38,6 +38,10 @@ export interface MenuItem {
   name_en?: string;
   name_zh?: string;
   name_ko?: string;
+  description?: string;
+  description_en?: string;
+  description_zh?: string;
+  description_ko?: string;
   price: number;
   category: Category;
   emoji?: string;

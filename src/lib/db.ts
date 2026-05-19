@@ -470,6 +470,9 @@ export async function fetchAllSalesForExport(): Promise<SaleExportRow[]> {
 export interface CategoryRecord {
   id: string;  // 必ず UUID v4 形式
   name: string;
+  name_en?: string;
+  name_zh?: string;
+  name_ko?: string;
   display_order: number;
 }
 
@@ -541,7 +544,7 @@ export async function fetchCategories(): Promise<CategoryRecord[]> {
 
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, display_order")
+    .select("id, name, name_en, name_zh, name_ko, display_order")
     .eq("store_id", STORE_ID)
     .order("display_order", { ascending: true });
 
@@ -649,6 +652,10 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     name_en:            (item.name_en as string | null | undefined) || undefined,
     name_zh:            (item.name_zh as string | null | undefined) || undefined,
     name_ko:            (item.name_ko as string | null | undefined) || undefined,
+    description:        (item.description as string | null | undefined) || undefined,
+    description_en:     (item.description_en as string | null | undefined) || undefined,
+    description_zh:     (item.description_zh as string | null | undefined) || undefined,
+    description_ko:     (item.description_ko as string | null | undefined) || undefined,
     price:              item.price as number,
     category:           item.category as string,
     emoji:              (item.emoji as string | null | undefined) || undefined,
@@ -662,7 +669,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
   {
     const { data, error } = await supabase
       .from("menus")
-      .select("id, name, name_en, name_zh, name_ko, price, category, emoji, image_url, tax_rate, options, is_takeout_available")
+      .select("id, name, name_en, name_zh, name_ko, description, description_en, description_zh, description_ko, price, category, emoji, image_url, tax_rate, options, is_takeout_available")
       .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (!error) return (data ?? []).map(toItem);
