@@ -534,12 +534,15 @@ function isTableMissingError(error: { code?: string; message?: string }): boolea
   );
 }
 
+const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID ?? "tetsu-bo";
+
 export async function fetchCategories(): Promise<CategoryRecord[]> {
   if (!supabase) return lsLoad();
 
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, display_order")
+    .eq("store_id", STORE_ID)
     .order("display_order", { ascending: true });
 
   if (error) {
@@ -583,7 +586,7 @@ export async function saveCategory(
 
   const { data, error } = await supabase
     .from("categories")
-    .insert({ name: cat.name, display_order: cat.display_order })
+    .insert({ name: cat.name, display_order: cat.display_order, store_id: STORE_ID })
     .select("id, name, display_order")
     .single();
 
@@ -660,6 +663,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const { data, error } = await supabase
       .from("menus")
       .select("id, name, name_en, name_zh, name_ko, price, category, emoji, image_url, tax_rate, options, is_takeout_available")
+      .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (!error) return (data ?? []).map(toItem);
     if (isTableMissingError(error)) return [];
@@ -671,6 +675,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const { data, error } = await supabase
       .from("menus")
       .select("id, name, price, category, emoji, image_url, tax_rate, options, is_takeout_available")
+      .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (!error) return (data ?? []).map(toItem);
     if (isTableMissingError(error)) return [];
@@ -682,6 +687,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const { data, error } = await supabase
       .from("menus")
       .select("id, name, price, category, emoji, image_url, tax_rate")
+      .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (!error) return (data ?? []).map(toItem);
     if (isTableMissingError(error)) return [];
@@ -693,6 +699,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const { data, error } = await supabase
       .from("menus")
       .select("id, name, price, category, emoji, image_url")
+      .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (!error) return (data ?? []).map(toItem);
     if (isTableMissingError(error)) return [];
@@ -704,6 +711,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const { data, error } = await supabase
       .from("menus")
       .select("id, name, price, category, emoji")
+      .eq("store_id", STORE_ID)
       .order("created_at", { ascending: true });
     if (error) { if (isTableMissingError(error)) return []; throw error; }
     return (data ?? []).map(toItem);
@@ -716,7 +724,7 @@ export async function saveMenuItem(item: MenuItem): Promise<void> {
   assertUUID("category", item.category);
   assertUUID("id", item.id);
 
-  const base = { id: item.id, name: item.name, price: item.price, category: item.category, emoji: item.emoji ?? null };
+  const base = { id: item.id, name: item.name, price: item.price, category: item.category, emoji: item.emoji ?? null, store_id: STORE_ID };
   const { error } = await supabase.from("menus").insert({
     ...base,
     tax_rate: item.taxRate,
