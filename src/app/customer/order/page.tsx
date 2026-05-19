@@ -670,12 +670,12 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
       </button>
 
       {/* テキスト・アクション */}
-      <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1.5">
-        <button onClick={onClick} className="text-left">
+      <div className="px-2.5 pt-2 pb-2.5 flex flex-col flex-1">
+        <button onClick={onClick} className="text-left flex-1">
           <p className="font-medium text-gray-700 text-xs leading-snug line-clamp-2">{localName(item, lang)}</p>
           <p className="text-gray-700 font-bold text-sm mt-0.5">{formatPrice(item.price)}</p>
         </button>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 mt-2">
           <button
             onClick={onClick}
             className="flex-1 bg-gray-100 text-gray-600 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 transition-all hover:bg-gray-200"
