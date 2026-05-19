@@ -281,9 +281,9 @@ function CustomerOrderInner() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          cartItems: cart.map(c => ({ name: c.menuItem.name, emoji: c.menuItem.emoji, category: c.menuItem.category, price: c.menuItem.price })),
+          cartItems: cart.map(c => ({ name: localName(c.menuItem, lang), emoji: c.menuItem.emoji, category: c.menuItem.category, price: c.menuItem.price })),
           lang,
-          allMenuItems: menuItems.slice(0, 30).map(m => ({ name: m.name, emoji: m.emoji, category: m.category, price: m.price })),
+          allMenuItems: menuItems.slice(0, 30).map(m => ({ name: localName(m, lang), emoji: m.emoji, category: m.category, price: m.price })),
         }),
       })
         .then(r => r.ok ? r.json() : Promise.reject())

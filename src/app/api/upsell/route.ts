@@ -212,6 +212,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<UpsellRespons
     if (!jsonMatch) throw new Error("No JSON in response");
     const suggestion = JSON.parse(jsonMatch[0]) as UpsellSuggestion;
 
+    // 非日本語指定なのに日本語（ひらがな/カタカナ）が含まれていたらフォールバック
+    const hasJapanesKana = (s: string) => /[぀-ヿ]/.test(s);
+    if (body.lang !== "ja") {
+      const probe = [suggestion.pairingText, suggestion.scarcityText, suggestion.ctaText].join("");
+      if (hasJapanesKana(probe)) {
+        return NextResponse.json({ ok: true, suggestion: fallbackSuggestion(body.lang) });
+      }
+    }
+
     return NextResponse.json({ ok: true, suggestion });
   } catch {
     return NextResponse.json({
