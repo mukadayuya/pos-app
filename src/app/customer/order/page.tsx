@@ -801,7 +801,7 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
           </div>
 
           {/* オプション */}
-          {item.options?.optionGroups.map((group) => {
+          {item.options?.optionGroups?.map((group) => {
             const selected = selectedOptions.find((o) => o.groupId === group.id);
             return (
               <div key={group.id}>

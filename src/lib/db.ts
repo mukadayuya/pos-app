@@ -661,7 +661,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     emoji:              (item.emoji as string | null | undefined) || undefined,
     imageUrl:           (item.image_url as string | null | undefined) || undefined,
     taxRate:            ((item.tax_rate as number) ?? 0.10) as TaxRate,
-    options:            item.options as MenuItemOptions | undefined,
+    options:            (Array.isArray(item.options) ? undefined : item.options as MenuItemOptions | undefined),
     isTakeoutAvailable: (item.is_takeout_available as boolean | undefined) !== false,
   });
 
