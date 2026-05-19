@@ -297,7 +297,7 @@ function CustomerOrderInner() {
         .finally(() => { clearTimeout(timeoutId); setUpsellLoading(false); });
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart]);
+  }, [cart, lang]);
 
   useEffect(() => {
     return () => {
@@ -322,14 +322,14 @@ function CustomerOrderInner() {
         .map((m) => ({ role: m.role === "user" ? "user" : "model", content: m.text }));
 
       const menuContext = cart.length > 0
-        ? cart.map((c) => `${c.menuItem.emoji ?? ""} ${c.menuItem.name} ×${c.quantity}`).join(", ")
+        ? cart.map((c) => `${c.menuItem.emoji ?? ""} ${localName(c.menuItem, lang)} ×${c.quantity}`).join(", ")
         : undefined;
 
       try {
         const res = await fetch("/api/gemini", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "chat", message: text, menuContext, conversationHistory: history }),
+          body: JSON.stringify({ action: "chat", message: text, menuContext, conversationHistory: history, lang }),
         });
         const data = await res.json() as { ok: boolean; result?: string; error?: string };
         const aiText = data.ok && data.result ? data.result : data.error ?? t(lang, "aiError");
@@ -351,7 +351,7 @@ function CustomerOrderInner() {
   }
 
   function handleAiConsult(item: MenuItem) {
-    pendingAiMessage.current = `この料理について教えてください: ${item.name}（${formatPrice(item.price)}）`;
+    pendingAiMessage.current = `${t(lang, "aiConsultPrompt")}: ${localName(item, lang)} (${formatPrice(item.price)})`;
     setActiveTab("ai");
   }
 

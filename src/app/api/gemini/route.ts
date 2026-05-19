@@ -61,6 +61,7 @@ type RequestBody =
       itemContext?: string;
       conversationHistory?: ConversationTurn[];
       model?: string;
+      lang?: "ja" | "en" | "zh" | "ko";
     };
 
 type SuccessResponse = { ok: true; result: string };
@@ -236,9 +237,16 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
     // ── chat ──────────────────────────────────────────────────
     if (body.action === "chat") {
+      const langNames: Record<string, string> = {
+        ja: "Japanese", en: "English", zh: "Simplified Chinese", ko: "Korean",
+      };
+      const replyLang = body.lang ? langNames[body.lang] ?? "Japanese" : null;
+      const langInstruction = replyLang
+        ? `IMPORTANT: Always reply in ${replyLang}, regardless of the language of the customer's message.`
+        : "Detect the customer's language from their message and reply in that same language.";
       const systemPrompt = [
         "You are a friendly restaurant concierge for FLOWS, a Japanese restaurant.",
-        "Help customers in their own language (detect the language from their message and reply in that same language).",
+        langInstruction,
         "Answer questions about menu items, ingredients, allergens, and dining experience.",
         "Be warm, concise, and helpful.",
         body.menuContext ? `Customer's cart: ${body.menuContext}` : "",

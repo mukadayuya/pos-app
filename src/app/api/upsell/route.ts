@@ -116,23 +116,25 @@ function buildPrompt(cartItems: CartItemInput[], lang: string, allMenu: CartItem
 
   return `You are a smart restaurant upsell AI for FLOWS restaurant in Japan.
 
+CRITICAL: All text fields in your JSON response MUST be written in ${langName}. Do not use any other language.
+
 A customer has these items in their cart:
 ${cartList}
 
 Available menu items: ${menuList || "various dishes"}
 
-Your task: Generate ONE compelling upsell suggestion in ${langName}.
+Your task: Generate ONE compelling upsell suggestion. ALL text must be in ${langName}.
 - Suggest a complementary item (drink, side dish, or dessert) that pairs perfectly with the cart items
 - Make it feel natural and beneficial, not pushy
 
 Return ONLY valid JSON in this exact format (no markdown, no explanation):
 {
-  "targetItemName": "<item name to suggest, max 10 chars>",
+  "targetItemName": "<item name to suggest in ${langName}, max 15 chars>",
   "targetItemEmoji": "<1 emoji for the item>",
-  "pairingText": "<why this item pairs perfectly, max 40 chars, in ${langName}>",
-  "sizzleText": "<1 evocative sentence about the taste, aroma, or chef's craft — make it mouth-watering, max 40 chars, in ${langName}>",
-  "scarcityText": "<urgency hook like 'Tonight only' or 'Chef's special', max 15 chars, in ${langName}>",
-  "ctaText": "<call to action button text, max 8 chars, in ${langName}>"
+  "pairingText": "<why this item pairs perfectly in ${langName}, max 40 chars>",
+  "sizzleText": "<1 evocative sentence about the taste or aroma in ${langName}, max 40 chars>",
+  "scarcityText": "<urgency hook in ${langName} like 'Tonight only', max 15 chars>",
+  "ctaText": "<call to action button text in ${langName}, max 8 chars>"
 }`;
 }
 
