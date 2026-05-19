@@ -685,10 +685,10 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
-            className="w-8 h-8 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center text-sm hover:bg-gray-100 active:scale-95 transition-all"
+            className="w-8 h-8 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all"
             title="AIコンシェルジュに相談"
           >
-            🤖
+            <span className="text-[10px] font-black text-gray-400 tracking-tight">AI</span>
           </button>
         </div>
       </div>
