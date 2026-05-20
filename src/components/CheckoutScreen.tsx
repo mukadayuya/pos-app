@@ -267,7 +267,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
       <div className="flex flex-1 overflow-hidden bg-slate-50">
 
         {/* ── 左：注文内容＋支払い方法 ─────────────────── */}
-        <div className="w-[30%] flex flex-col bg-white border-r border-slate-200">
+        <div className="w-1/3 flex flex-col bg-white border-r border-slate-200">
           {/* 支払い方法 */}
           <div className="p-4 border-b border-slate-100 flex-shrink-0">
             <p className="text-slate-700 text-base font-black mb-3">支払い方法</p>
@@ -368,7 +368,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         </div>
 
         {/* ── 中央：金額サマリー ────────────────────────── */}
-        <div className="w-[30%] min-w-0 flex flex-col items-stretch justify-center bg-indigo-200 border-r border-indigo-300 px-4 py-6 gap-4 overflow-hidden">
+        <div className="w-1/3 min-w-0 flex flex-col items-stretch justify-center bg-indigo-200 border-r border-indigo-300 px-4 py-6 gap-4 overflow-hidden">
 
           {/* 合計金額 */}
           <div className="text-center bg-slate-900 rounded-2xl px-4 py-4">
@@ -442,7 +442,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         </div>
 
         {/* ── 右：テンキー ─────────────────────────────── */}
-        <div className="flex-1 bg-slate-50 p-4 flex flex-col gap-3">
+        <div className="w-1/3 bg-slate-50 p-4 flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3 flex-1">
             {NUMPAD_KEYS.map((key) => (
               <button
