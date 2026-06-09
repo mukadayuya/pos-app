@@ -6,6 +6,8 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { fetchDefaultStoreId } from "@/lib/adminDb";
 import { fetchPeriodSummary, fetchTodayHourlySales, HourlySales } from "@/lib/db";
 
+const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+
 type SettingsTab    = "store" | "settlement" | "hardware";
 type SettlementSub  = "inspect" | "cashcount" | "close";
 
@@ -52,9 +54,9 @@ export default function SettingsPage() {
   const [settleSub, setSettleSub]       = useState<SettlementSub>("inspect");
 
   // Store settings
-  const [storeName, setStoreName]       = useState("Kitchen Kazu");
-  const [storeAddress, setStoreAddress] = useState("");
-  const [storeTel, setStoreTel]         = useState("");
+  const [storeName, setStoreName]       = useState(IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu");
+  const [storeAddress, setStoreAddress] = useState(IS_BRONCO ? "東京都大田区田園調布1-21-5" : "");
+  const [storeTel, setStoreTel]         = useState(IS_BRONCO ? "03-3722-3694" : "");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [logoDataUrl, setLogoDataUrl]   = useState<string | null>(null);
   const [saved, setSaved]               = useState(false);
@@ -76,9 +78,9 @@ export default function SettingsPage() {
   const [hourlyData, setHourlyData]         = useState<HourlySales[]>([]);
 
   useEffect(() => {
-    setStoreName(localStorage.getItem("store_name")       || "Kitchen Kazu");
-    setStoreAddress(localStorage.getItem("store_address") || "");
-    setStoreTel(localStorage.getItem("store_tel")         || "");
+    setStoreName(localStorage.getItem("store_name")       || (IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu"));
+    setStoreAddress(localStorage.getItem("store_address") || (IS_BRONCO ? "東京都大田区田園調布1-21-5" : ""));
+    setStoreTel(localStorage.getItem("store_tel")         || (IS_BRONCO ? "03-3722-3694" : ""));
     setInvoiceNumber(localStorage.getItem("invoice_number") || "");
     setLogoDataUrl(localStorage.getItem("receipt_logo")   || null);
   }, []);
@@ -161,7 +163,7 @@ export default function SettingsPage() {
             </div>
             <div className="leading-none">
               <p className="text-sm font-bold leading-tight">設定・点検・精算</p>
-              <p className="text-[11px] text-violet-300 mt-0.5">Kitchen Kazu · FLOWS</p>
+              <p className="text-[11px] text-violet-300 mt-0.5">{storeName} · FLOWS</p>
             </div>
           </div>
           <Link href="/register"
@@ -196,7 +198,7 @@ export default function SettingsPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
               <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">店舗情報（レシート表示）</h2>
               {[
-                { label: "店舗名",       value: storeName,      set: setStoreName,      placeholder: "Kitchen Kazu" },
+                { label: "店舗名",       value: storeName,      set: setStoreName,      placeholder: IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu" },
                 { label: "住所",         value: storeAddress,   set: setStoreAddress,   placeholder: "例：岐阜県高山市○○町1-2-3" },
                 { label: "電話番号",     value: storeTel,       set: setStoreTel,       placeholder: "例：0577-00-0000" },
                 { label: "インボイス登録番号", value: invoiceNumber, set: setInvoiceNumber, placeholder: "例：T1234567890123" },

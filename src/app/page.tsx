@@ -10,20 +10,24 @@ const THREE_DAYS_MS       = 3 * 24 * 60 * 60 * 1000;
 
 type TileStyle = "primary" | "accent" | "card" | "disabled";
 
-const tiles: {
+const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+
+const allTiles: {
   label: string; icon: string; href: string;
-  style: TileStyle; iconBg?: string;
+  style: TileStyle; iconBg?: string; broncoHidden?: boolean;
 }[] = [
   { label: "レジ",                    icon: "🧾", href: "/register",           style: "primary"  },
-  { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent"   },
+  { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent",                        broncoHidden: true },
   { label: "売上データ",               icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
   { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
   { label: "点検 / 精算",             icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
   { label: "入出金管理",               icon: "💴", href: "#",                    style: "disabled"  },
-  { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50" },
-  { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100" },
-  { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50"  },
+  { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50",  broncoHidden: true },
+  { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100", broncoHidden: true },
+  { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  broncoHidden: true },
 ];
+
+const tiles = allTiles.filter(t => !IS_BRONCO || !t.broncoHidden);
 
 function checkBannerVisible(): boolean {
   if (typeof window === "undefined") return false;
@@ -100,8 +104,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* 受給チャンス バナー */}
-      {showBanner && (
+      {/* 受給チャンス バナー（broncoは非表示） */}
+      {showBanner && !IS_BRONCO && (
         <SubsidyNotificationBanner
           onOpen={() => setShowWizard(true)}
           onClose={handleBannerClose}
@@ -110,15 +114,29 @@ export default function HomePage() {
 
       {/* メインタイルグリッド */}
       <main className="flex-1 flex items-center justify-center p-10">
-        <div className="grid grid-cols-3 gap-5 w-full max-w-xl">
-          {tiles.map((tile) => {
-            const tileEl = <Tile key={tile.label} {...tile} />;
-            if (tile.style === "disabled" || tile.href === "#") {
-              return <div key={tile.label}>{tileEl}</div>;
-            }
-            return <Link key={tile.label} href={tile.href}>{tileEl}</Link>;
-          })}
-        </div>
+        {IS_BRONCO ? (
+          <div className="grid grid-cols-3 grid-rows-2 gap-5 w-full max-w-xl">
+            {tiles.map((tile) => {
+              const tall = tile.href === "/register";
+              const tileEl = <Tile key={tile.label} {...tile} tall={tall} />;
+              const cls = tall ? "row-span-2" : "";
+              if (tile.style === "disabled" || tile.href === "#") {
+                return <div key={tile.label} className={cls}>{tileEl}</div>;
+              }
+              return <Link key={tile.label} href={tile.href} className={cls}>{tileEl}</Link>;
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-5 w-full max-w-xl">
+            {tiles.map((tile) => {
+              const tileEl = <Tile key={tile.label} {...tile} />;
+              if (tile.style === "disabled" || tile.href === "#") {
+                return <div key={tile.label}>{tileEl}</div>;
+              }
+              return <Link key={tile.label} href={tile.href}>{tileEl}</Link>;
+            })}
+          </div>
+        )}
       </main>
 
       <footer className="text-center py-4 text-slate-300 text-xs font-medium tracking-wide">
@@ -129,15 +147,17 @@ export default function HomePage() {
 }
 
 function Tile({
-  label, icon, style, iconBg,
+  label, icon, style, iconBg, tall = false,
 }: {
-  label: string; icon: string; style: TileStyle; iconBg?: string;
+  label: string; icon: string; style: TileStyle; iconBg?: string; tall?: boolean;
 }) {
+  const sizeClass = tall ? "h-full" : "aspect-square";
+
   if (style === "primary") {
     return (
-      <div className="bg-indigo-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+      <div className={`bg-indigo-600 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 ${sizeClass}
         shadow-[0_4px_24px_rgba(99,102,241,0.38)] hover:shadow-[0_8px_36px_rgba(99,102,241,0.5)]
-        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer">
+        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer`}>
         <span className="text-5xl leading-none">{icon}</span>
         <span className="text-white text-base font-bold tracking-tight">{label}</span>
       </div>
@@ -146,9 +166,9 @@ function Tile({
 
   if (style === "accent") {
     return (
-      <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+      <div className={`bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 ${sizeClass}
         shadow-[0_4px_24px_rgba(251,191,36,0.4)] hover:shadow-[0_8px_36px_rgba(251,191,36,0.55)]
-        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer">
+        hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer`}>
         <span className="text-5xl leading-none">{icon}</span>
         <span className="text-white text-base font-bold tracking-tight text-center leading-snug">{label}</span>
       </div>
@@ -157,8 +177,8 @@ function Tile({
 
   if (style === "disabled") {
     return (
-      <div className="relative bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
-        ring-1 ring-black/[0.04] shadow-[0_2px_12px_rgb(0,0,0,0.04)] opacity-50 cursor-not-allowed">
+      <div className={`relative bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 ${sizeClass}
+        ring-1 ring-black/[0.04] shadow-[0_2px_12px_rgb(0,0,0,0.04)] opacity-50 cursor-not-allowed`}>
         <div className={`w-14 h-14 ${iconBg ?? "bg-slate-50"} rounded-2xl flex items-center justify-center`}>
           <span className="text-3xl leading-none">{icon}</span>
         </div>
@@ -171,10 +191,10 @@ function Tile({
   }
 
   return (
-    <div className="bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 aspect-square
+    <div className={`bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 ${sizeClass}
       ring-1 ring-black/[0.04] shadow-[0_2px_12px_rgb(0,0,0,0.06)]
       hover:shadow-[0_8px_32px_rgb(0,0,0,0.10)] hover:-translate-y-0.5
-      active:scale-95 transition-all duration-200 cursor-pointer">
+      active:scale-95 transition-all duration-200 cursor-pointer`}>
       <div className={`w-14 h-14 ${iconBg ?? "bg-slate-50"} rounded-2xl flex items-center justify-center shadow-sm`}>
         <span className="text-3xl leading-none">{icon}</span>
       </div>
