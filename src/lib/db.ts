@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { supabase } from "./supabase";
 import { SalesRecord, MenuItem, MenuItemOptions, TaxRate, OptionGroup, PaymentEntry, OrderDiscount } from "@/types/pos";
 
@@ -11,9 +12,50 @@ function derivePaymentMethod(payments: PaymentEntry[]): string {
   return payments[0].method;
 }
 
+// ─── リトライユーティリティ ────────────────────────────────────
+
+function isTransientError(err: unknown): boolean {
+  // fetchレベルのネットワーク断
+  if (err instanceof TypeError) return true;
+  if (err && typeof err === "object") {
+    const e = err as { code?: string; status?: number; message?: string };
+    // スキーマ・権限エラーはリトライ不可
+    if (["42703", "42P01", "PGRST116", "42501"].includes(e.code ?? "")) return false;
+    if (e.status === 401 || e.status === 403) return false;
+    // サーバー側エラー（5xx）はリトライ対象
+    if (typeof e.status === "number" && e.status >= 500) return true;
+    const msg = (e.message ?? "").toLowerCase();
+    if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("timeout")) return true;
+  }
+  return false;
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+  delaysMs = [1000, 3000],
+): Promise<T> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isLast = i === attempts - 1;
+      const isTransient = isTransientError(err);
+      if (isLast || !isTransient) {
+        Sentry.captureException(err, { extra: { attempt: i + 1, isTransient } });
+        throw err;
+      }
+      await new Promise<void>(r => setTimeout(r, delaysMs[Math.min(i, delaysMs.length - 1)]));
+    }
+  }
+  // unreachable
+  throw new Error("withRetry: unreachable");
+}
+
 // ─── 売上保存 ──────────────────────────────────────────────────
-export async function saveSaleRecord(record: SalesRecord): Promise<void> {
-  if (!supabase) throw new Error("Supabase not configured");
+
+async function saveSaleRecordOnce(record: SalesRecord): Promise<void> {
+  const sb = supabase!;
 
   const basePayload = {
     id: record.id,
@@ -35,8 +77,9 @@ export async function saveSaleRecord(record: SalesRecord): Promise<void> {
   const discountAmount = Math.max(0, record.subtotal + record.tax - record.total);
 
   // 拡張カラム付きで保存を試みる
-  const { error } = await supabase.from("sales").insert({
+  const { error } = await sb.from("sales").insert({
     ...basePayload,
+    store_id:        STORE_ID,
     male_count:      record.maleCount   ?? 0,
     female_count:    record.femaleCount ?? 0,
     staff_name:      record.staff       ?? null,
@@ -50,18 +93,24 @@ export async function saveSaleRecord(record: SalesRecord): Promise<void> {
   });
 
   if (error) {
-    // カラムが未作成の場合は基本カラムのみで再試行
+    // カラムが未作成の場合は基本カラムのみで再試行（スキーマ互換フォールバック）
     const colMissing =
       error.code === "42703" ||
       error.message?.toLowerCase().includes("column") ||
       error.message?.toLowerCase().includes("does not exist");
     if (colMissing) {
-      const { error: e2 } = await supabase.from("sales").insert(basePayload);
+      const { error: e2 } = await sb.from("sales").insert(basePayload);
       if (e2) throw e2;
     } else {
       throw error;
     }
   }
+}
+
+export async function saveSaleRecord(record: SalesRecord): Promise<void> {
+  if (!supabase) throw new Error("Supabase not configured");
+  // ネットワーク断・5xx は最大3回自動リトライ（1s → 3s 待機）
+  await withRetry(() => saveSaleRecordOnce(record));
 }
 
 // ─── 売上集計 ──────────────────────────────────────────────────
@@ -106,6 +155,7 @@ export async function fetchTodaySummary(): Promise<TodaySummary> {
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount")
+    .eq("store_id", STORE_ID)
     .gte("created_at", todayStart.toISOString());
   if (error) throw error;
 
@@ -124,6 +174,7 @@ export async function fetchDailySummaries(): Promise<DailySummary[]> {
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount, created_at")
+    .eq("store_id", STORE_ID)
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false })
     .limit(1000);
@@ -156,6 +207,7 @@ export async function fetchMonthlySummaries(): Promise<MonthlySummary[]> {
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount, created_at")
+    .eq("store_id", STORE_ID)
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true })
     .limit(5000);
@@ -185,6 +237,7 @@ export async function fetchYearlySummaries(): Promise<YearlySummary[]> {
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount, created_at")
+    .eq("store_id", STORE_ID)
     .order("created_at", { ascending: true })
     .limit(10000);
   if (error) throw error;
@@ -243,6 +296,7 @@ export async function fetchTodayHourlySales(): Promise<HourlySales[]> {
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount, created_at")
+    .eq("store_id", STORE_ID)
     .gte("created_at", from.toISOString());
   if (error) throw error;
   const map = new Map<number, { total: number; count: number }>();
@@ -271,6 +325,7 @@ export async function fetchPeriodSummary(
   const { data, error } = await supabase
     .from("sales")
     .select("total_amount")
+    .eq("store_id", STORE_ID)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString());
   if (error) throw error;
@@ -323,6 +378,7 @@ export async function fetchSalesDetail(
   const { data, error } = await supabase
     .from("sales")
     .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax, item_discount_total")
+    .eq("store_id", STORE_ID)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
     .order("created_at", { ascending: false })
@@ -336,7 +392,8 @@ export async function fetchSalesDetail(
     if (colMissing) {
       const { data: data2, error: err2 } = await supabase
         .from("sales")
-        .select("id, total_amount, items, created_at")
+        .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax")
+        .eq("store_id", STORE_ID)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
         .order("created_at", { ascending: false })
@@ -375,9 +432,27 @@ export async function fetchYearlySummary(
   year: number,
 ): Promise<YearlySummaryMonth[]> {
   if (!supabase) throw new Error("Supabase not configured");
-  const { data, error } = await supabase.rpc("get_yearly_summary", { p_year: year });
+  const from = new Date(`${year}-01-01T00:00:00.000Z`);
+  const to   = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+  const { data, error } = await supabase
+    .from("sales")
+    .select("total_amount, created_at, male_count, female_count, tax8, tax10")
+    .eq("store_id", STORE_ID)
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString());
   if (error) throw error;
-  return (data ?? []) as YearlySummaryMonth[];
+  const months: YearlySummaryMonth[] = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1, total_rev: 0, cnt: 0, guests: 0, rev_10: 0, rev_8: 0,
+  }));
+  for (const row of data ?? []) {
+    const m = new Date(row.created_at).getMonth(); // 0-indexed
+    months[m].total_rev += row.total_amount ?? 0;
+    months[m].cnt       += 1;
+    months[m].guests    += (row.male_count ?? 0) + (row.female_count ?? 0);
+    months[m].rev_10    += row.tax10 ?? 0;
+    months[m].rev_8     += row.tax8  ?? 0;
+  }
+  return months;
 }
 
 export async function fetchMonthOrdersForAnalysis(
@@ -390,6 +465,7 @@ export async function fetchMonthOrdersForAnalysis(
   const { data, error } = await supabase
     .from("sales")
     .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax, item_discount_total")
+    .eq("store_id", STORE_ID)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
     .order("created_at", { ascending: false })
@@ -399,7 +475,8 @@ export async function fetchMonthOrdersForAnalysis(
     if (colMissing) {
       const { data: d2, error: e2 } = await supabase
         .from("sales")
-        .select("id, total_amount, items, created_at")
+        .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax")
+        .eq("store_id", STORE_ID)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
         .order("created_at", { ascending: false })
@@ -422,6 +499,7 @@ export async function fetchYearOrders(
   const { data, error } = await supabase
     .from("sales")
     .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax, item_discount_total")
+    .eq("store_id", STORE_ID)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
     .order("created_at", { ascending: true })
@@ -434,7 +512,8 @@ export async function fetchYearOrders(
     if (colMissing) {
       const { data: d2, error: e2 } = await supabase
         .from("sales")
-        .select("id, total_amount, items, created_at")
+        .select("id, total_amount, items, created_at, male_count, female_count, staff_name, payment_method, discount_amount, discount, tax8, tax10, tax")
+        .eq("store_id", STORE_ID)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
         .order("created_at", { ascending: true })
@@ -460,6 +539,7 @@ export async function fetchAllSalesForExport(): Promise<SaleExportRow[]> {
   const { data, error } = await supabase
     .from("sales")
     .select("id, total_amount, created_at")
+    .eq("store_id", STORE_ID)
     .order("created_at", { ascending: false });
   if (error) throw error;
 
@@ -537,7 +617,11 @@ function isTableMissingError(error: { code?: string; message?: string }): boolea
   );
 }
 
-const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID ?? "tetsu-bo";
+const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID === "bronco"
+  ? "d61afc6a-ca9b-4641-a99b-1294985ade8e"
+  : process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc"
+  ? "6f0842d5-7fe6-4278-818c-86e8a8731130"
+  : (process.env.NEXT_PUBLIC_STORE_ID ?? "tetsu-bo");
 
 export async function fetchCategories(): Promise<CategoryRecord[]> {
   if (!supabase) return lsLoad();

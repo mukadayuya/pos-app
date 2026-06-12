@@ -26,6 +26,10 @@ import {
   YearlySummaryMonth,
 } from "@/lib/db";
 
+const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+const STORE_DISPLAY_NAME = IS_BRONCO ? "ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : "Kitchen Kazu";
+
 // ─── Types ────────────────────────────────────────────────────
 type MainTab = "today" | "orders" | "category" | "items" | "gender" | "staff" | "hourly" | "yearly";
 interface PeriodData { total: number; count: number; avgSpend: number }
@@ -1022,7 +1026,7 @@ export default function SalesDataPage() {
             </div>
             <div className="leading-none">
               <p className="text-sm font-bold leading-tight">売上管理</p>
-              <p className="text-[11px] text-violet-300 mt-0.5">Kitchen Kazu · FLOWS</p>
+              <p className="text-[11px] text-violet-300 mt-0.5">{STORE_DISPLAY_NAME} · FLOWS</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1135,7 +1139,7 @@ export default function SalesDataPage() {
               ⚙️ 設定・精算
             </Link>
             <a
-              href={`mailto:?subject=${encodeURIComponent("【売上報告書】Kitchen Kazu")}&body=${encodeURIComponent("税理士の先生\n\nお世話になっております。\nKitchen Kazuの売上報告書をお送りします。\n\nよろしくお願いいたします。")}`}
+              href={`mailto:?subject=${encodeURIComponent("【売上報告書】" + STORE_DISPLAY_NAME)}&body=${encodeURIComponent("税理士の先生\n\nお世話になっております。\n" + STORE_DISPLAY_NAME + "の売上報告書をお送りします。\n\nよろしくお願いいたします。")}`}
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-violet-300 hover:text-white hover:bg-violet-800 text-xs font-semibold transition-all"
             >
               ✉️ 税理士へ送信

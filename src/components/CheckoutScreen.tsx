@@ -37,7 +37,10 @@ const NUMPAD_KEYS = ["7","8","9","4","5","6","1","2","3","C","0","⌫"] as const
 function printReceipt(record: SalesRecord) {
   const dateStr = record.createdAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
   const logoDataUrl = typeof window !== "undefined" ? localStorage.getItem("receipt_logo") : null;
-  const storeName   = typeof window !== "undefined" ? (localStorage.getItem("store_name") || "Kitchen Kazu") : "Kitchen Kazu";
+  const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+  const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+  const defaultStoreName = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : "Kitchen Kazu";
+  const storeName   = typeof window !== "undefined" ? (localStorage.getItem("store_name") || defaultStoreName) : defaultStoreName;
 
   const itemDiscountTotalForReceipt = record.itemDiscountTotal ?? 0;
 

@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, FormEvent, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { MenuItem, OptionSelection } from "@/types/pos";
 import { fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
-import { menuItems as staticMenuItems } from "@/data/menu";
+import { menuItems as staticMenuItems, staticCategories, DEFAULT_RICE_OPTION_GROUPS } from "@/data/menu";
+import { menuNameTranslations } from "@/data/menuTranslations";
+import { tokyoGyozaMenuItems, tokyoGyozaCategories } from "@/data/tokyoGyozaMenu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { type Lang, t } from "@/lib/i18n";
 import type { UpsellSuggestion } from "@/app/api/upsell/route";
 import VideoBackground from "@/components/VideoBackground";
 import { addKdsOrder } from "@/lib/kdsStore";
 import { recordOrder } from "@/lib/toppingAnalytics";
+
+// ─── 店舗設定 ──────────────────────────────────────────────────
+const IS_REGISTER_CHECKOUT = process.env.NEXT_PUBLIC_STORE_ID === "kitchen-wa";
+const IS_TOKYO_GYOZA = process.env.NEXT_PUBLIC_STORE_ID === "tokyo-gyoza-ro";
 
 // ─── 型定義 ────────────────────────────────────────────────────
 
@@ -39,12 +45,23 @@ type ChatMessage = {
 
 // ─── 定数 ────────────────────────────────────────────────────────
 
-const LANGUAGES: { code: Lang; flag: string; label: string }[] = [
-  { code: "ja", flag: "🇯🇵", label: "日本語" },
-  { code: "en", flag: "🇺🇸", label: "English" },
-  { code: "zh", flag: "🇨🇳", label: "中文" },
-  { code: "ko", flag: "🇰🇷", label: "한국어" },
-];
+const LANGUAGES: { code: Lang; flag: string; label: string }[] = IS_TOKYO_GYOZA
+  ? [
+      { code: "ja", flag: "🇯🇵", label: "日本語" },
+      { code: "en", flag: "🇺🇸", label: "English" },
+      { code: "zh", flag: "🇨🇳", label: "中文" },
+      { code: "ko", flag: "🇰🇷", label: "한국어" },
+      { code: "th", flag: "🇹🇭", label: "ภาษาไทย" },
+    ]
+  : [
+      { code: "ja", flag: "🇯🇵", label: "日本語" },
+      { code: "en", flag: "🇺🇸", label: "English" },
+      { code: "zh", flag: "🇨🇳", label: "中文" },
+      { code: "ko", flag: "🇰🇷", label: "한국어" },
+      { code: "es", flag: "🇪🇸", label: "Español" },
+      { code: "hi", flag: "🇮🇳", label: "हिन्दी" },
+      { code: "bn", flag: "🇧🇩", label: "বাংলা" },
+    ];
 
 // ─── ユーティリティ ────────────────────────────────────────────────
 
@@ -58,16 +75,76 @@ function formatPrice(n: number): string {
 }
 
 function localName(item: MenuItem, lang: Lang): string {
-  if (lang === "en") return item.name_en ?? item.name;
+  if (lang === "en") return menuNameTranslations[item.id]?.en ?? item.name_en ?? item.name;
   if (lang === "zh") return item.name_zh ?? item.name;
   if (lang === "ko") return item.name_ko ?? item.name;
+  if (lang === "es") return menuNameTranslations[item.id]?.es ?? item.name_en ?? item.name;
+  if (lang === "hi") return menuNameTranslations[item.id]?.hi ?? item.name_en ?? item.name;
+  if (lang === "bn") return menuNameTranslations[item.id]?.bn ?? item.name_en ?? item.name;
+  if (lang === "th") return menuNameTranslations[item.id]?.th ?? item.name_en ?? item.name;
   return item.name;
 }
+
+const CATEGORY_TRANSLATIONS: Record<string, { es: string; hi: string }> = {
+  "広島お好み焼き": { es: "Okonomiyaki de Hiroshima", hi: "हिरोशिमा ओकोनोमियाकी" },
+  "大阪お好み焼き": { es: "Okonomiyaki de Osaka",     hi: "ओसाका ओकोनोमियाकी" },
+  "焼きそば・焼きうどん": { es: "Yakisoba y Yaki-udon", hi: "याकिसोबा और याकी-उडोन" },
+  "鉄板焼き":       { es: "Teppanyaki",               hi: "तेप्पान्याकी" },
+  "牛すじ料理":     { es: "Platos de tendón",         hi: "बीफ टेंडन डिश" },
+  "おつまみ":       { es: "Aperitivos",               hi: "स्नैक्स" },
+  "サラダ":         { es: "Ensaladas",                hi: "सलाद" },
+  "ごはんもの":     { es: "Platos de arroz",          hi: "चावल की डिश" },
+  "デザート":       { es: "Postres",                  hi: "मिठाई" },
+  "トッピング":     { es: "Extras",                   hi: "टॉपिंग" },
+  "ランチ":         { es: "Almuerzo",                 hi: "लंच" },
+  // 焼鳥居酒屋ABC
+  "焼鳥":           { es: "Yakitori",                 hi: "याकितोरी" },
+  "揚げ物":         { es: "Frituras",                 hi: "तले हुए व्यंजन" },
+  "一品料理":       { es: "A la carta",               hi: "एकल व्यंजन" },
+  "野菜・サラダ":   { es: "Ensaladas",                hi: "सलाद" },
+  "ご飯・〆":       { es: "Arroz y platos finales",   hi: "चावल और समापन" },
+  "甘味":           { es: "Postres",                  hi: "मिठाई" },
+  "ドリンク":       { es: "Bebidas",                  hi: "ड्रिंक्स" },
+};
+
+const CATEGORY_TH: Record<string, string> = {
+  "餃子":     "เกี๊ยว",
+  "一品料理": "อาหารเดี่ยว",
+  "ラーメン": "ราเมน",
+  "セット":   "เซ็ต",
+  "ドリンク": "เครื่องดื่ม",
+};
+
+const CATEGORY_BN: Record<string, string> = {
+  "広島お好み焼き": "হিরোশিমা ওকোনোমিয়াকি",
+  "大阪お好み焼き": "ওসাকা ওকোনোমিয়াকি",
+  "焼きそば・焼きうどん": "ইয়াকিসোবা ও ইয়াকি-উডন",
+  "鉄板焼き":       "তেপ্পানইয়াকি",
+  "牛すじ料理":     "বিফ টেন্ডন ডিশ",
+  "おつまみ":       "স্ন্যাকস",
+  "サラダ":         "সালাদ",
+  "ごはんもの":     "ভাতের ডিশ",
+  "デザート":       "ডেজার্ট",
+  "トッピング":     "টপিং",
+  "ランチ":         "লাঞ্চ",
+  // 焼鳥居酒屋ABC
+  "焼鳥":           "ইয়াকিতোরি",
+  "揚げ物":         "ভাজা খাবার",
+  "一品料理":       "একক পদ",
+  "野菜・サラダ":   "সালাদ",
+  "ご飯・〆":       "ভাত ও শেষ পদ",
+  "甘味":           "মিষ্টি",
+  "ドリンク":       "ড্রিংকস",
+};
 
 function localCategoryName(cat: { name: string; name_en?: string; name_zh?: string; name_ko?: string }, lang: Lang): string {
   if (lang === "en") return cat.name_en ?? cat.name;
   if (lang === "zh") return cat.name_zh ?? cat.name;
   if (lang === "ko") return cat.name_ko ?? cat.name;
+  if (lang === "es") return CATEGORY_TRANSLATIONS[cat.name]?.es ?? cat.name_en ?? cat.name;
+  if (lang === "hi") return CATEGORY_TRANSLATIONS[cat.name]?.hi ?? cat.name_en ?? cat.name;
+  if (lang === "bn") return CATEGORY_BN[cat.name] ?? cat.name_en ?? cat.name;
+  if (lang === "th") return CATEGORY_TH[cat.name] ?? cat.name_en ?? cat.name;
   return cat.name;
 }
 
@@ -75,6 +152,8 @@ function localDescription(item: MenuItem, lang: Lang): string | undefined {
   if (lang === "en") return item.description_en ?? item.description;
   if (lang === "zh") return item.description_zh ?? item.description;
   if (lang === "ko") return item.description_ko ?? item.description;
+  if (lang === "th") return item.description_th ?? item.description_en ?? item.description;
+  if (lang === "es" || lang === "hi" || lang === "bn") return item.description_en ?? item.description;
   return item.description;
 }
 
@@ -136,6 +215,10 @@ export default function CustomerOrderPage() {
 // ─── 内部コンポーネント ─────────────────────────────────────────────
 
 function CustomerOrderInner() {
+  const router = useRouter();
+  useEffect(() => { if (IS_REGISTER_CHECKOUT) router.replace("/register"); }, [router]);
+  if (IS_REGISTER_CHECKOUT) return null;
+
   const searchParams = useSearchParams();
   const roleParam  = searchParams.get("role");
   const tableParam = searchParams.get("table");
@@ -158,6 +241,7 @@ function CustomerOrderInner() {
       return [];
     }
   });
+  const [sentCart, setSentCart] = useState<CartItem[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
   const [detailItem, setDetailItem]         = useState<MenuItem | null>(null);
@@ -181,7 +265,10 @@ function CustomerOrderInner() {
       try {
         let items: MenuItem[];
         let cats: CategoryRecord[];
-        if (isSupabaseConfigured) {
+        if (IS_TOKYO_GYOZA) {
+          items = tokyoGyozaMenuItems;
+          cats  = tokyoGyozaCategories;
+        } else if (isSupabaseConfigured) {
           const timeout = new Promise<never>((_, r) =>
             setTimeout(() => r(new Error("fetch timeout")), 5000)
           );
@@ -189,16 +276,16 @@ function CustomerOrderInner() {
             Promise.all([fetchMenuItems(), fetchCategories()]),
             timeout,
           ]);
-          if (items.length === 0) items = staticMenuItems;
+          if (items.length === 0) { items = staticMenuItems; cats = staticCategories; }
         } else {
           items = staticMenuItems;
-          cats  = [];
+          cats  = staticCategories;
         }
         setMenuItems(items);
         setCategories(cats);
       } catch {
         setMenuItems(staticMenuItems);
-        setCategories([]);
+        setCategories(staticCategories);
       } finally {
         clearTimeout(slowTimer);
         setLoading(false);
@@ -235,6 +322,9 @@ function CustomerOrderInner() {
       ? menuItems
       : menuItems.filter((m) => m.category === activeCategoryId);
 
+  const toppingCategoryId = categories.find(c => c.name === "トッピング")?.id ?? null;
+  const toppingItems = toppingCategoryId ? menuItems.filter(i => i.category === toppingCategoryId) : [];
+
   const getCategoryName = useCallback(
     (id: string): string => {
       const cat = categories.find((c) => c.id === id);
@@ -264,10 +354,15 @@ function CustomerOrderInner() {
   }
 
   const prevCartLengthRef = useRef(0);
+  const prevLangRef = useRef<Lang>(lang);
   useEffect(() => {
     const added = cart.length > prevCartLengthRef.current;
+    const langChanged = lang !== prevLangRef.current;
     prevCartLengthRef.current = cart.length;
-    if (!added) return;
+    prevLangRef.current = lang;
+    if (!added && !langChanged) return;
+    if (cart.length === 0) return;
+    if (menuItems.length === 0) return; // メニュー未ロード時は発火しない
     setUpsellBanner(null);
     if (upsellDismissRef.current) clearTimeout(upsellDismissRef.current);
     if (cart.length > 6) return;
@@ -283,7 +378,10 @@ function CustomerOrderInner() {
         body: JSON.stringify({
           cartItems: cart.map(c => ({ name: localName(c.menuItem, lang), emoji: c.menuItem.emoji, category: c.menuItem.category, price: c.menuItem.price })),
           lang,
-          allMenuItems: menuItems.slice(0, 30).map(m => ({ name: localName(m, lang), emoji: m.emoji, category: m.category, price: m.price })),
+          allMenuItems: (menuItems.filter(m => m.category === "drink").length > 0
+            ? menuItems.filter(m => m.category === "drink")
+            : menuItems.slice(0, 30)
+          ).map(m => ({ name: localName(m, lang), emoji: m.emoji, category: m.category, price: m.price })),
         }),
       })
         .then(r => r.ok ? r.json() : Promise.reject())
@@ -297,7 +395,7 @@ function CustomerOrderInner() {
         .finally(() => { clearTimeout(timeoutId); setUpsellLoading(false); });
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart, lang]);
+  }, [cart, lang, menuItems]);
 
   useEffect(() => {
     return () => {
@@ -365,7 +463,7 @@ function CustomerOrderInner() {
             <div className="flex flex-col items-center gap-2 mt-2">
               <p className="text-gray-300 text-xs">{t(lang, "loadingSlow")}</p>
               <button
-                onClick={() => { setMenuItems(staticMenuItems); setCategories([]); setLoading(false); }}
+                onClick={() => { setMenuItems(staticMenuItems); setCategories(staticCategories); setLoading(false); }}
                 className="px-5 py-2.5 bg-gray-200 text-white text-sm font-bold rounded-xl shadow hover:bg-gray-300 transition-colors"
               >
                 {t(lang, "startOffline")}
@@ -391,19 +489,19 @@ function CustomerOrderInner() {
               <p className="text-gray-400 text-[11px] font-medium">{tableParam}{t(lang, "tableLabel")}</p>
             ) : (
               <p className="text-gray-400 text-[10px] font-medium tracking-widest uppercase">
-                {isTable ? "Table Order" : "Mobile Order"}
+                {isTable ? t(lang, "tableOrderTitle") : t(lang, "mobileOrderTitle")}
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
               onClick={() => setLang(l.code)}
               className={[
-                "w-8 h-8 rounded-full text-base flex items-center justify-center transition-all",
+                "w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all",
                 lang === l.code ? "bg-gray-100 shadow-sm scale-110" : "hover:bg-gray-50",
               ].join(" ")}
               title={l.label}
@@ -453,6 +551,7 @@ function CustomerOrderInner() {
                 lang, createdAt: Date.now(), status: "new",
               });
               recordOrder(cart.map(c => c.menuItem.name));
+              setSentCart([...cart]);
               setCart([]);
               localStorage.removeItem("flows_cart_v1");
               setCheckoutCalled(false);
@@ -472,15 +571,20 @@ function CustomerOrderInner() {
             onSubmit={handleChatSubmit}
           />
         )}
-        {activeTab === "checkout" && (
-          <CheckoutTab
-            cart={cart}
-            cartTotal={cartTotal}
-            lang={lang}
-            called={checkoutCalled}
-            onCall={() => setCheckoutCalled(true)}
-          />
-        )}
+        {activeTab === "checkout" && (() => {
+          const displayCart  = cart.length > 0 ? cart : sentCart;
+          const displayTotal = displayCart.reduce((s, c) => s + calcItemTotal(c), 0);
+          return (
+            <CheckoutTab
+              cart={displayCart}
+              cartTotal={displayTotal}
+              lang={lang}
+              called={checkoutCalled}
+              isRegister={IS_REGISTER_CHECKOUT}
+              onCall={() => setCheckoutCalled(true)}
+            />
+          );
+        })()}
       </main>
 
       {/* ── アップセルバナー ── */}
@@ -511,13 +615,14 @@ function CustomerOrderInner() {
         <ProductDetailModal
           item={detailItem}
           lang={lang}
+          toppingItems={toppingItems}
           onClose={() => setDetailItem(null)}
           onAddToCart={(qty, servingTime, opts) => { addToCart(detailItem, qty, servingTime, opts); setDetailItem(null); }}
         />
       )}
 
       {orderSentModal && (
-        <SuccessModal message={t(lang, "orderSuccess")} onClose={() => setOrderSentModal(false)} />
+        <SuccessModal message={t(lang, IS_REGISTER_CHECKOUT ? "orderSuccessRegister" : "orderSuccess")} onClose={() => setOrderSentModal(false)} />
       )}
     </div>
   );
@@ -685,10 +790,10 @@ function ProductCard({ item, cartQty, lang, onClick, onAiConsult }: {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAiConsult(); }}
-            className="w-8 h-8 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all"
+            className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
             title="AIコンシェルジュに相談"
           >
-            <span className="text-[10px] font-black text-gray-400 tracking-tight">AI</span>
+            <span className="text-[10px] font-black text-gray-600 tracking-tight">AI</span>
           </button>
         </div>
       </div>
@@ -703,23 +808,40 @@ const COMBO_TOASTS: Record<Lang, string[]> = {
   en: ["✨ Chef-approved combo!", "👨‍🍳 Excellent customization!", "🎯 Great choice!"],
   zh: ["✨ 主厨认可的搭配！", "👨‍🍳 绝妙组合！", "🎯 好选择！"],
   ko: ["✨ 셰프 인정 조합!", "👨‍🍳 완벽한 커스터마이징!", "🎯 훌륭한 선택!"],
+  es: ["✨ ¡Combinación aprobada por el chef!", "👨‍🍳 ¡Excelente elección!", "🎯 ¡Perfecto!"],
+  hi: ["✨ शेफ की पसंद!", "👨‍🍳 बेहतरीन चुनाव!", "🎯 परफेक्ट कॉम्बो!"],
+  bn: ["✨ শেফের পছন্দ!", "👨‍🍳 চমৎকার সমন্বয়!", "🎯 দারুণ পছন্দ!"],
+  th: ["✨ เมนูแนะนำจากเชฟ!", "👨‍🍳 การเลือกที่ยอดเยี่ยม!", "🎯 ดีมาก!"],
 };
 
-function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
+function ProductDetailModal({ item, lang, toppingItems, onClose, onAddToCart }: {
   item: MenuItem;
   lang: Lang;
+  toppingItems: MenuItem[];
   onClose: () => void;
   onAddToCart: (qty: number, servingTime: ServingTime, opts: OptionSelection[]) => void;
 }) {
   const [quantity, setQuantity]     = useState(1);
   const [servingTime, setServingTime] = useState<ServingTime>("with");
-  const [selectedOptions, setSelectedOptions] = useState<OptionSelection[]>(() => {
-    if (!item.options?.optionGroups) return [];
-    return item.options.optionGroups.map((g) => ({
+  const optionGroups = IS_REGISTER_CHECKOUT
+    ? (item.options?.optionGroups ?? (item.category !== "drink" ? DEFAULT_RICE_OPTION_GROUPS : []))
+    : (item.options?.optionGroups ?? []);
+  const [selectedOptions, setSelectedOptions] = useState<OptionSelection[]>(() =>
+    optionGroups.map((g) => ({
       groupId: g.id, groupName: g.name,
       itemId: g.items[0].id, itemName: g.items[0].name, price: g.items[0].price,
-    }));
-  });
+    }))
+  );
+  const [selectedToppings, setSelectedToppings] = useState<Set<string>>(new Set());
+  const showToppings = toppingItems.length > 0 && !toppingItems.some(t => t.id === item.id);
+
+  function toggleTopping(id: string) {
+    setSelectedToppings(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   const [comboToast, setComboToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -739,9 +861,10 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
     toastTimerRef.current = setTimeout(() => setComboToast(null), 2500);
   }
 
-  const optionDelta = selectedOptions.reduce((s, o) => s + o.price, 0);
-  const unitPrice   = item.price + optionDelta;
-  const total       = unitPrice * quantity;
+  const optionDelta  = selectedOptions.reduce((s, o) => s + o.price, 0);
+  const toppingDelta = toppingItems.filter(t => selectedToppings.has(t.id)).reduce((s, t) => s + t.price, 0);
+  const unitPrice    = item.price + optionDelta + toppingDelta;
+  const total        = unitPrice * quantity;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -779,29 +902,31 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
             )}
           </div>
 
-          {/* 提供タイミング */}
-          <div>
-            <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "servingTimeLabel")}</p>
-            <div className="flex gap-2">
-              {servingTimeOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setServingTime(opt.value)}
-                  className={["flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all",
-                    servingTime === opt.value
-                      ? "border-gray-400 bg-gray-50 text-gray-700"
-                      : "border-gray-100 text-gray-400 hover:border-stone-400",
-                  ].join(" ")}
-                >
-                  <span className="text-lg">{opt.icon}</span>
-                  {opt.label}
-                </button>
-              ))}
+          {/* 提供タイミング（全店舗で非表示） */}
+          {false && (
+            <div>
+              <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "servingTimeLabel")}</p>
+              <div className="flex gap-2">
+                {servingTimeOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setServingTime(opt.value)}
+                    className={["flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all",
+                      servingTime === opt.value
+                        ? "border-gray-400 bg-gray-50 text-gray-700"
+                        : "border-gray-100 text-gray-400 hover:border-stone-400",
+                    ].join(" ")}
+                  >
+                    <span className="text-lg">{opt.icon}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* オプション */}
-          {item.options?.optionGroups?.map((group) => {
+          {optionGroups.map((group) => {
             const selected = selectedOptions.find((o) => o.groupId === group.id);
             return (
               <div key={group.id}>
@@ -835,6 +960,33 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
             );
           })}
 
+          {/* トッピング */}
+          {showToppings && (
+            <div>
+              <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "toppings")}</p>
+              <div className="flex flex-col gap-1.5">
+                {toppingItems.map((topping) => (
+                  <label
+                    key={topping.id}
+                    className={["flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                      selectedToppings.has(topping.id) ? "border-gray-400 bg-gray-50" : "border-gray-100 hover:border-gray-200",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedToppings.has(topping.id)}
+                      onChange={() => toggleTopping(topping.id)}
+                      className="accent-gray-500 w-4 h-4"
+                    />
+                    <span className="text-lg">{topping.emoji ?? "🍢"}</span>
+                    <span className="flex-1 text-sm font-medium text-gray-600">{localName(topping, lang)}</span>
+                    <span className="text-xs font-semibold text-gray-500">+{formatPrice(topping.price)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 数量 */}
           <div>
             <p className="text-sm font-bold text-gray-600 mb-2">{t(lang, "qty")}</p>
@@ -864,7 +1016,12 @@ function ProductDetailModal({ item, lang, onClose, onAddToCart }: {
           )}
 
           <button
-            onClick={() => onAddToCart(quantity, servingTime, selectedOptions)}
+            onClick={() => {
+              const toppingOpts: OptionSelection[] = toppingItems
+                .filter(t => selectedToppings.has(t.id))
+                .map(tp => ({ groupId: `topping-${tp.id}`, groupName: t(lang, "toppings"), itemId: tp.id, itemName: localName(tp, lang), price: tp.price }));
+              onAddToCart(quantity, servingTime, [...selectedOptions, ...toppingOpts]);
+            }}
             className="w-full bg-gray-200 text-gray-600 font-black py-4 rounded-2xl text-base hover:bg-gray-300 active:scale-[0.98] transition-all"
           >
             {t(lang, "addToCart")} — {formatPrice(total)}
@@ -1022,23 +1179,29 @@ function AiTab({ lang, messages, input, isTyping, bottomRef, onInputChange, onSu
 
 // ─── チェックアウトタブ ─────────────────────────────────────────
 
-function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
+function CheckoutTab({ cart, cartTotal, lang, called, isRegister, onCall }: {
   cart: CartItem[];
   cartTotal: number;
   lang: Lang;
   called: boolean;
+  isRegister: boolean;
   onCall: () => void;
 }) {
+  const keyStaffComing  = isRegister ? "staffComingRegister"  : "staffComing";
+  const keyPleaseWait   = isRegister ? "pleaseWaitRegister"   : "pleaseWait";
+  const keyPaymentNote  = isRegister ? "paymentNoteRegister"  : "paymentNote";
+  const keyCallStaff    = isRegister ? "callStaffRegister"    : "callStaff";
+
   if (called) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-5 px-6">
         <span className="text-7xl animate-bounce">🙏</span>
         <div className="text-center">
-          <p className="text-xl font-black text-gray-700">{t(lang, "staffComing")}</p>
-          <p className="text-sm text-gray-400 mt-2">{t(lang, "pleaseWait")}</p>
+          <p className="text-xl font-black text-gray-700">{t(lang, keyStaffComing)}</p>
+          <p className="text-sm text-gray-400 mt-2">{t(lang, keyPleaseWait)}</p>
         </div>
         <div className="mt-4 w-full max-w-sm bg-gray-50 border border-gray-100 rounded-2xl p-4">
-          <p className="text-sm text-gray-500 font-medium text-center">{t(lang, "paymentNote")}</p>
+          <p className="text-sm text-gray-500 font-medium text-center">{t(lang, keyPaymentNote)}</p>
         </div>
       </div>
     );
@@ -1086,13 +1249,13 @@ function CheckoutTab({ cart, cartTotal, lang, called, onCall }: {
           </div>
         )}
         <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-          <p className="text-xs text-gray-500 font-medium text-center">{t(lang, "paymentNote")}</p>
+          <p className="text-xs text-gray-500 font-medium text-center">{t(lang, keyPaymentNote)}</p>
         </div>
         <button
           onClick={onCall}
           className="w-full bg-gray-200 text-gray-600 font-black py-4 rounded-2xl text-base hover:bg-gray-300 active:scale-[0.98] transition-all"
         >
-          {t(lang, "callStaff")}
+          {t(lang, keyCallStaff)}
         </button>
       </div>
     </div>

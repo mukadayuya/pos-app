@@ -7,6 +7,10 @@ import { fetchDefaultStoreId } from "@/lib/adminDb";
 import { fetchPeriodSummary, fetchTodayHourlySales, HourlySales } from "@/lib/db";
 
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+const DEFAULT_STORE_NAME    = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : "Kitchen Kazu";
+const DEFAULT_STORE_ADDRESS = IS_BRONCO ? "東京都大田区田園調布1-21-5" : IS_ABC ? "東京都新宿区西新宿1-2-3 ABCビル1F" : "";
+const DEFAULT_STORE_TEL     = IS_BRONCO ? "03-3722-3694" : IS_ABC ? "03-1234-5678" : "";
 
 type SettingsTab    = "store" | "settlement" | "hardware";
 type SettlementSub  = "inspect" | "cashcount" | "close";
@@ -54,9 +58,9 @@ export default function SettingsPage() {
   const [settleSub, setSettleSub]       = useState<SettlementSub>("inspect");
 
   // Store settings
-  const [storeName, setStoreName]       = useState(IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu");
-  const [storeAddress, setStoreAddress] = useState(IS_BRONCO ? "東京都大田区田園調布1-21-5" : "");
-  const [storeTel, setStoreTel]         = useState(IS_BRONCO ? "03-3722-3694" : "");
+  const [storeName, setStoreName]       = useState(DEFAULT_STORE_NAME);
+  const [storeAddress, setStoreAddress] = useState(DEFAULT_STORE_ADDRESS);
+  const [storeTel, setStoreTel]         = useState(DEFAULT_STORE_TEL);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [logoDataUrl, setLogoDataUrl]   = useState<string | null>(null);
   const [saved, setSaved]               = useState(false);
@@ -78,9 +82,9 @@ export default function SettingsPage() {
   const [hourlyData, setHourlyData]         = useState<HourlySales[]>([]);
 
   useEffect(() => {
-    setStoreName(localStorage.getItem("store_name")       || (IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu"));
-    setStoreAddress(localStorage.getItem("store_address") || (IS_BRONCO ? "東京都大田区田園調布1-21-5" : ""));
-    setStoreTel(localStorage.getItem("store_tel")         || (IS_BRONCO ? "03-3722-3694" : ""));
+    setStoreName(localStorage.getItem("store_name")       || DEFAULT_STORE_NAME);
+    setStoreAddress(localStorage.getItem("store_address") || DEFAULT_STORE_ADDRESS);
+    setStoreTel(localStorage.getItem("store_tel")         || DEFAULT_STORE_TEL);
     setInvoiceNumber(localStorage.getItem("invoice_number") || "");
     setLogoDataUrl(localStorage.getItem("receipt_logo")   || null);
   }, []);
@@ -198,9 +202,9 @@ export default function SettingsPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
               <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">店舗情報（レシート表示）</h2>
               {[
-                { label: "店舗名",       value: storeName,      set: setStoreName,      placeholder: IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : "Kitchen Kazu" },
-                { label: "住所",         value: storeAddress,   set: setStoreAddress,   placeholder: "例：岐阜県高山市○○町1-2-3" },
-                { label: "電話番号",     value: storeTel,       set: setStoreTel,       placeholder: "例：0577-00-0000" },
+                { label: "店舗名",       value: storeName,      set: setStoreName,      placeholder: DEFAULT_STORE_NAME },
+                { label: "住所",         value: storeAddress,   set: setStoreAddress,   placeholder: DEFAULT_STORE_ADDRESS || "例：岐阜県高山市○○町1-2-3" },
+                { label: "電話番号",     value: storeTel,       set: setStoreTel,       placeholder: DEFAULT_STORE_TEL || "例：0577-00-0000" },
                 { label: "インボイス登録番号", value: invoiceNumber, set: setInvoiceNumber, placeholder: "例：T1234567890123" },
               ].map(({ label, value, set, placeholder }) => (
                 <div key={label}>
@@ -490,7 +494,7 @@ export default function SettingsPage() {
         )}
 
         <div className="mt-8 text-center text-slate-300 text-xs">
-          Kitchen Kazu POS v2.0 · Powered by FLOWS
+          {IS_BRONCO ? "ブロンコ POS · Powered by FLOWS" : IS_ABC ? "焼鳥居酒屋ABC POS · Powered by FLOWS" : "Kitchen Kazu POS v2.0 · Powered by FLOWS"}
         </div>
       </div>
     </div>

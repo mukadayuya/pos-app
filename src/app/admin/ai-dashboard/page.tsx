@@ -17,10 +17,10 @@ function useCountUp(target: number, duration = 1400): number {
       const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
       setValue(Math.round(target * eased));
-      if (progress < 1) rafRef.current = window.requestAnimationFrame(step);
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
     }
-    rafRef.current = window.requestAnimationFrame(step);
-    return () => { if (rafRef.current) window.cancelAnimationFrame(rafRef.current); };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [target, duration]);
   return value;
 }

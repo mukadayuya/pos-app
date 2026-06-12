@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { MenuItem, OrderItem, OrderOptions, SalesRecord, ServiceTab, OrderDiscount, HoldEntry, TaxRate } from "@/types/pos";
 import { menuItems as defaultMenuItems } from "@/data/menu";
+import { broncoMenuItems, broncoCategories } from "@/data/broncoMenu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { saveSaleRecord, fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
 import { toTakeoutMenuItem } from "@/lib/menuTransform";
@@ -27,7 +28,11 @@ const MAX_HOLDS = 20;
 
 type SidePanel = "salesHistory" | null;
 
-const STAFF_LIST = ["沖", "向田", "スタッフA"];
+const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+const STAFF_LIST = IS_BRONCO ? ["畠野", "向田", "スタッフA"]
+  : IS_ABC ? ["佐藤", "山田", "スタッフA"]
+  : ["沖", "向田", "スタッフA"];
 
 // Supabase 未設定 / テーブル未作成時のフォールバックカテゴリー
 // テイクアウトは CategoryBar 内の専用ボタンで独立管理するため除外
@@ -270,6 +275,11 @@ function RegisterPageInner() {
   }, []);
 
   useEffect(() => {
+    if (IS_BRONCO) {
+      setCategories(broncoCategories);
+      setActiveCategoryId(broncoCategories[0].id);
+      return;
+    }
     fetchCategories()
       .then(cats => {
         // テイクアウトは CategoryBar に独立ボタンとして固定表示するため
@@ -286,6 +296,10 @@ function RegisterPageInner() {
   }, []);
 
   useEffect(() => {
+    if (IS_BRONCO) {
+      setMenuItems(broncoMenuItems);
+      return;
+    }
     if (!isSupabaseConfigured) return;
     fetchMenuItems()
       .then(items => { if (items.length > 0) setMenuItems(items); })
@@ -643,9 +657,12 @@ function RegisterPageInner() {
           <div className="fixed top-0 inset-x-0 z-[60] bg-red-600 text-white px-4 py-3 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-2">
               <span className="text-base">⚠️</span>
-              <p className="text-sm font-bold">
-                保存エラー{saveError.attempt > 1 ? `（${saveError.attempt}回目）` : ""}
-              </p>
+              <div>
+                <p className="text-sm font-bold">
+                  保存エラー{saveError.attempt > 1 ? `（手動リトライ${saveError.attempt}回目）` : "（自動リトライ済）"}
+                </p>
+                <p className="text-[10px] text-red-200">通信を確認して再試行してください</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -765,7 +782,7 @@ function RegisterPageInner() {
             <span className="text-lg">⚠️</span>
             <div>
               <p className="text-sm font-bold">
-                データの保存に失敗しました{saveError.attempt > 1 ? `（${saveError.attempt}回目）` : ""}
+                データの保存に失敗しました{saveError.attempt > 1 ? `（手動リトライ${saveError.attempt}回目）` : "（自動リトライ3回済）"}
               </p>
               <p className="text-xs text-red-200">ネットワーク接続を確認し、再試行してください</p>
             </div>
@@ -842,17 +859,21 @@ function RegisterPageInner() {
             )}
           </button>
 
-          <Link href="/employees"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all duration-200 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
-            <span>✨</span>
-            <span>受給チャンス</span>
-          </Link>
+          {!IS_BRONCO && (
+            <Link href="/employees"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all duration-200 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
+              <span>✨</span>
+              <span>受給チャンス</span>
+            </Link>
+          )}
 
-          <Link href="/admin/ai-dashboard"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-violet-700 text-white hover:from-violet-500 hover:to-violet-600 transition-all duration-200 shadow-[0_2px_8px_rgba(139,92,246,0.35)]">
-            <span>📈</span>
-            <span>AI成果</span>
-          </Link>
+          {!IS_BRONCO && (
+            <Link href="/admin/ai-dashboard"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-violet-700 text-white hover:from-violet-500 hover:to-violet-600 transition-all duration-200 shadow-[0_2px_8px_rgba(139,92,246,0.35)]">
+              <span>📈</span>
+              <span>AI成果</span>
+            </Link>
+          )}
 
           <Link href="/sales-data"
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-white ring-1 ring-black/[0.07] text-slate-600 hover:bg-slate-50 transition-all duration-200 shadow-sm">

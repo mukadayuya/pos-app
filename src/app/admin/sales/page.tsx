@@ -224,7 +224,7 @@ export default function AdminSalesPage() {
             <span className="text-2xl">📊</span>
             <div>
               <h1 className="text-lg font-bold leading-tight">売上管理ダッシュボード</h1>
-              <p className="text-xs text-indigo-300">Kitchen Kazu</p>
+              <p className="text-xs text-indigo-300">{process.env.NEXT_PUBLIC_STORE_ID === "bronco" ? "ブロンコ" : process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc" ? "焼鳥居酒屋ABC" : "Kitchen Kazu"}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
