@@ -14,6 +14,9 @@ import {
   OptionTemplate,
   fetchOptionTemplates, saveOptionTemplate, updateOptionTemplate, deleteOptionTemplate, seedDefaultOptionTemplates,
 } from "@/lib/db";
+import { broncoMenuItems, broncoCategories } from "@/data/broncoMenu";
+
+const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 
 type PageTab = "items" | "categories" | "options" | "display";
 
@@ -1216,6 +1219,12 @@ export default function ProductManagementPage() {
     setLoading(true);
     setError(null);
     try {
+      if (IS_BRONCO) {
+        setItems(broncoMenuItems);
+        setCategories(broncoCategories);
+        setLoading(false);
+        return;
+      }
       const [menuData, catData, tmplRaw, emojiSettingsData] = await Promise.all([
         fetchMenuItems(),
         fetchCategories(),
@@ -1343,11 +1352,13 @@ export default function ProductManagementPage() {
           <h1 className="text-lg font-bold">商品管理</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/employees"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all active:scale-95 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
-            <span>🏅</span>
-            <span>補助金診断</span>
-          </Link>
+          {process.env.NEXT_PUBLIC_STORE_ID !== "bronco" && (
+            <Link href="/employees"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all active:scale-95 shadow-[0_2px_8px_rgba(251,191,36,0.35)]">
+              <span>🏅</span>
+              <span>補助金診断</span>
+            </Link>
+          )}
           {pageTab === "items" && (
             <button onClick={openAddModal}
               className="flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all active:scale-95">

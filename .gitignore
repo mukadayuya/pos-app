@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# iCloud破損からの復旧用に退避した旧.git（復旧確認後に削除可）
+/.git.broken-20260613/
