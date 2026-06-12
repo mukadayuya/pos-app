@@ -25,7 +25,7 @@ interface CartItemInput {
 
 interface UpsellRequestBody {
   cartItems: CartItemInput[];
-  lang: "ja" | "en" | "zh" | "ko";
+  lang: "ja" | "en" | "zh" | "ko" | "es" | "hi" | "bn" | "th";
   allMenuItems?: CartItemInput[]; // 全メニュー（提案候補）
 }
 
@@ -46,6 +46,7 @@ type UpsellResponse =
 
 const LANG_NAME: Record<string, string> = {
   ja: "Japanese", en: "English", zh: "Simplified Chinese", ko: "Korean",
+  es: "Spanish", hi: "Hindi", bn: "Bengali", th: "Thai",
 };
 
 // ── OpenRouterモデルカスケード ─────────────────────────────────
@@ -96,7 +97,7 @@ async function callWithCascade(prompt: string): Promise<string> {
 
 type GeminiContent = { parts: Array<{ text: string }>; role: string };
 async function callGeminiFallback(prompt: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -111,7 +112,10 @@ async function callGeminiFallback(prompt: string): Promise<string> {
 
 function buildPrompt(cartItems: CartItemInput[], lang: string, allMenu: CartItemInput[]): string {
   const cartList = cartItems.map(i => `- ${i.emoji ?? ""} ${i.name} (${i.category})`).join("\n");
-  const menuList = allMenu.slice(0, 20).map(i => `${i.emoji ?? ""} ${i.name}`).join(", ");
+  const drinkList = allMenu.filter(i => i.category === "drink");
+  const menuList = (drinkList.length > 0 ? drinkList : allMenu.slice(0, 20))
+    .map(i => `${i.emoji ?? ""} ${i.name} (¥${i.price})`).join(", ");
+  const drinkOnly = drinkList.length > 0;
   const langName = LANG_NAME[lang] ?? "Japanese";
 
   return `You are a smart restaurant upsell AI for FLOWS restaurant in Japan.
@@ -121,10 +125,10 @@ CRITICAL: All text fields in your JSON response MUST be written in ${langName}. 
 A customer has these items in their cart:
 ${cartList}
 
-Available menu items: ${menuList || "various dishes"}
+${drinkOnly ? "Available drinks to suggest:" : "Available menu items:"} ${menuList || "various drinks"}
 
 Your task: Generate ONE compelling upsell suggestion. ALL text must be in ${langName}.
-- Suggest a complementary item (drink, side dish, or dessert) that pairs perfectly with the cart items
+- ${drinkOnly ? "You MUST suggest one of the drinks listed above. Do NOT invent drinks not on the list." : "Suggest a complementary drink that pairs perfectly with the cart items"}
 - Make it feel natural and beneficial, not pushy
 
 Return ONLY valid JSON in this exact format (no markdown, no explanation):
@@ -174,6 +178,38 @@ function fallbackSuggestion(lang: string): UpsellSuggestion {
       scarcityText: "오늘만 특별",
       ctaText: "추가",
     },
+    es: {
+      targetItemName: "Bebida especial",
+      targetItemEmoji: "🍷",
+      pairingText: "El maridaje perfecto para su plato",
+      sizzleText: "Aroma rico y final suave, la copa perfecta",
+      scarcityText: "Solo hoy",
+      ctaText: "Agregar",
+    },
+    hi: {
+      targetItemName: "आज का विशेष पेय",
+      targetItemEmoji: "🍷",
+      pairingText: "आपके भोजन के साथ परफेक्ट",
+      sizzleText: "समृद्ध सुगंध और मखमली स्वाद",
+      scarcityText: "आज ही",
+      ctaText: "जोड़ें",
+    },
+    bn: {
+      targetItemName: "আজকের বিশেষ পানীয়",
+      targetItemEmoji: "🍷",
+      pairingText: "আপনার খাবারের সাথে পারফেক্ট",
+      sizzleText: "সমৃদ্ধ সুগন্ধ ও মখমলি স্বাদ",
+      scarcityText: "আজকেই",
+      ctaText: "যোগ করুন",
+    },
+    th: {
+      targetItemName: "เครื่องดื่มแนะนำ",
+      targetItemEmoji: "🍺",
+      pairingText: "เข้ากันได้ดีกับอาหาร",
+      sizzleText: "รสชาติสดชื่น เติมความอร่อย",
+      scarcityText: "วันนี้เท่านั้น",
+      ctaText: "เพิ่ม",
+    },
   };
   return suggestions[lang] ?? suggestions.ja;
 }
@@ -192,7 +228,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<UpsellRespons
     return NextResponse.json({ ok: false, error: "Cart is empty" }, { status: 400 });
   }
 
-  const prompt = buildPrompt(body.cartItems, body.lang, body.allMenuItems ?? []);
+  const allMenuItems = body.allMenuItems ?? [];
+  const drinkListEarly = allMenuItems.filter(i => i.category === "drink");
+  if (allMenuItems.length > 0 && drinkListEarly.length === 0) {
+    return NextResponse.json({ ok: true, suggestion: fallbackSuggestion(body.lang) });
+  }
+
+  function makeFallbackWithDrink(lang: string): UpsellSuggestion {
+    const fb = fallbackSuggestion(lang);
+    if (drinkListEarly.length > 0) {
+      const pick = drinkListEarly[Math.floor(Math.random() * drinkListEarly.length)];
+      fb.targetItemName  = pick.name;
+      fb.targetItemEmoji = pick.emoji ?? "🍺";
+    }
+    return fb;
+  }
+
+  const prompt = buildPrompt(body.cartItems, body.lang, allMenuItems);
 
   let rawText = "";
   try {
@@ -201,10 +253,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<UpsellRespons
     } else if (GEMINI_API_KEY) {
       rawText = await callGeminiFallback(prompt);
     } else {
-      return NextResponse.json({
-        ok: true,
-        suggestion: fallbackSuggestion(body.lang),
-      });
+      return NextResponse.json({ ok: true, suggestion: makeFallbackWithDrink(body.lang) });
     }
 
     // JSON抽出（マークダウンコードブロック対応）
@@ -212,20 +261,36 @@ export async function POST(req: NextRequest): Promise<NextResponse<UpsellRespons
     if (!jsonMatch) throw new Error("No JSON in response");
     const suggestion = JSON.parse(jsonMatch[0]) as UpsellSuggestion;
 
+    // ドリンクリストがある場合、AIが作った名前をリスト内の品名に強制置換
+    const drinkList = (body.allMenuItems ?? []).filter(i => i.category === "drink");
+    if (drinkList.length > 0) {
+      const matched = drinkList.find(d =>
+        d.name.toLowerCase().includes(suggestion.targetItemName.toLowerCase()) ||
+        suggestion.targetItemName.toLowerCase().includes(d.name.toLowerCase())
+      );
+      if (!matched) {
+        // リスト外の名前 → ランダムに正規ドリンクを選んで名前・絵文字を上書き
+        const pick = drinkList[Math.floor(Math.random() * drinkList.length)];
+        suggestion.targetItemName  = pick.name;
+        suggestion.targetItemEmoji = pick.emoji ?? "🍺";
+      } else {
+        // 部分一致した場合も正規名に統一
+        suggestion.targetItemName  = matched.name;
+        suggestion.targetItemEmoji = matched.emoji ?? suggestion.targetItemEmoji;
+      }
+    }
+
     // 非日本語指定なのに日本語（ひらがな/カタカナ）が含まれていたらフォールバック
     const hasJapanesKana = (s: string) => /[぀-ヿ]/.test(s);
     if (body.lang !== "ja") {
       const probe = [suggestion.pairingText, suggestion.scarcityText, suggestion.ctaText].join("");
       if (hasJapanesKana(probe)) {
-        return NextResponse.json({ ok: true, suggestion: fallbackSuggestion(body.lang) });
+        return NextResponse.json({ ok: true, suggestion: makeFallbackWithDrink(body.lang) });
       }
     }
 
     return NextResponse.json({ ok: true, suggestion });
   } catch {
-    return NextResponse.json({
-      ok: true,
-      suggestion: fallbackSuggestion(body.lang),
-    });
+    return NextResponse.json({ ok: true, suggestion: makeFallbackWithDrink(body.lang) });
   }
 }

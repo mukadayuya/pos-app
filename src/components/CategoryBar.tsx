@@ -31,7 +31,7 @@ export default function CategoryBar({
   onManualInputSelect,
 }: CategoryBarProps) {
   return (
-    <nav className="w-[76px] flex-shrink-0 bg-white/80 backdrop-blur-xl border-r border-slate-100 flex flex-col py-4 gap-1.5 px-2.5">
+    <nav className="w-[76px] flex-shrink-0 bg-white/80 backdrop-blur-xl border-r border-slate-100 flex flex-col py-4 gap-1.5 px-2.5 overflow-y-auto overscroll-contain">
       {/* 通常カテゴリー */}
       {categories.map(cat => {
         const { icon } = KNOWN_STYLES[cat.name] ?? DEFAULT_STYLE;

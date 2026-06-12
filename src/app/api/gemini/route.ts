@@ -61,7 +61,7 @@ type RequestBody =
       itemContext?: string;
       conversationHistory?: ConversationTurn[];
       model?: string;
-      lang?: "ja" | "en" | "zh" | "ko";
+      lang?: "ja" | "en" | "zh" | "ko" | "es" | "hi" | "bn" | "th";
     };
 
 type SuccessResponse = { ok: true; result: string };
@@ -144,13 +144,16 @@ type GeminiApiResponse = {
   error?: { message: string };
 };
 
-async function callGeminiFallback(
+const GEMINI_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"] as const;
+
+async function callGeminiModel(
+  model: string,
   systemPrompt: string,
   contents: GeminiContent[],
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 7000);
 
   const noMarkdownInstruction =
     "\n\nIMPORTANT: Reply in plain conversational text only. " +
@@ -162,33 +165,42 @@ async function callGeminiFallback(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemPrompt + noMarkdownInstruction }],
-        },
+        system_instruction: { parts: [{ text: systemPrompt + noMarkdownInstruction }] },
         contents,
-        generationConfig: {
-          maxOutputTokens: 512,
-          temperature: 0.7,
-        },
+        generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
       }),
       signal: controller.signal,
     });
 
     const data = (await res.json()) as GeminiApiResponse;
-
-    if (!res.ok || data.error) {
-      throw new Error("AIサービスに接続できませんでした");
-    }
+    if (!res.ok || data.error) throw new EndpointError(`Gemini ${model}: ${data.error?.message ?? res.status}`);
 
     const text = data.candidates[0]?.content?.parts[0]?.text;
-    if (!text) throw new Error("応答が空でした");
+    if (!text) throw new EndpointError(`Gemini ${model}: empty response`);
     return stripMarkdown(text);
   } catch (e) {
-    if ((e as Error).name === "AbortError") throw new Error("接続がタイムアウトしました");
+    if ((e as Error).name === "AbortError") throw new EndpointError(`Gemini ${model}: timeout`);
     throw e;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function callGeminiFallback(
+  systemPrompt: string,
+  contents: GeminiContent[],
+): Promise<string> {
+  let lastErr: Error = new Error("Gemini unavailable");
+  for (const model of GEMINI_MODELS) {
+    try {
+      return await callGeminiModel(model, systemPrompt, contents);
+    } catch (e) {
+      lastErr = e as Error;
+      if (e instanceof EndpointError) continue;
+      throw e;
+    }
+  }
+  throw new Error("AIサービスに接続できませんでした: " + lastErr.message);
 }
 
 // ── POST ハンドラ ─────────────────────────────────────────────
@@ -220,6 +232,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     if (body.action === "translate") {
       const langNames: Record<string, string> = {
         en: "English", zh: "Chinese (Simplified)", ko: "Korean", ja: "Japanese",
+        es: "Spanish", hi: "Hindi", bn: "Bengali",
       };
       const targetName = langNames[body.targetLang] ?? body.targetLang;
       const prompt = `Translate the following text to ${targetName}. Output only the translated text, nothing else.\n\nText: ${body.text}`;
@@ -239,6 +252,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     if (body.action === "chat") {
       const langNames: Record<string, string> = {
         ja: "Japanese", en: "English", zh: "Simplified Chinese", ko: "Korean",
+        es: "Spanish", hi: "Hindi", bn: "Bengali", th: "Thai",
       };
       const replyLang = body.lang ? langNames[body.lang] ?? "Japanese" : null;
       const langInstruction = replyLang

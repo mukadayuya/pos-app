@@ -42,6 +42,7 @@ export interface MenuItem {
   description_en?: string;
   description_zh?: string;
   description_ko?: string;
+  description_th?: string;
   price: number;
   category: Category;
   emoji?: string;

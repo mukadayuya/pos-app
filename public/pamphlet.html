@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FLOWS POS — 飲食店向けクラウドPOSレジ</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: #f5f5f0;
+      color: #1a1a1a;
+    }
+
+    /* ── A4 ページ ── */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      background: #fff;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.10);
+      overflow: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 52px 48px 44px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      bottom: -40px; left: 60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+    }
+    .hero-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 18px;
+    }
+    .hero-title {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .hero-title span { color: #aaa; }
+    .hero-sub {
+      font-size: 15px;
+      color: #bbb;
+      margin-top: 16px;
+      line-height: 1.7;
+      max-width: 400px;
+    }
+    .hero-badge {
+      display: inline-block;
+      margin-top: 24px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #ccc;
+    }
+
+    /* ── PAIN ── */
+    .pain {
+      background: #f8f7f4;
+      padding: 36px 48px;
+      border-bottom: 1px solid #ebebeb;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 16px;
+    }
+    .pain-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #222;
+      margin-bottom: 20px;
+    }
+    .pain-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .pain-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .pain-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .pain-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 36px 48px;
+    }
+    .features-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #222;
+      margin-bottom: 24px;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .feature-card {
+      border: 1px solid #ebebeb;
+      border-radius: 14px;
+      padding: 18px 16px;
+      background: #fff;
+    }
+    .feature-icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .feature-name {
+      font-size: 13px;
+      font-weight: 900;
+      color: #222;
+      margin-bottom: 5px;
+    }
+    .feature-desc {
+      font-size: 11px;
+      color: #777;
+      line-height: 1.65;
+    }
+
+    /* ── INBOUND ── */
+    .inbound {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 36px 48px;
+      margin: 0 0;
+    }
+    .inbound-title {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .inbound-sub {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .lang-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .lang-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .lang-flag { font-size: 24px; margin-bottom: 6px; }
+    .lang-name { font-size: 11px; font-weight: 700; color: #ddd; }
+    .lang-note { font-size: 10px; color: #777; margin-top: 2px; }
+
+    /* ── FLOW ── */
+    .flow {
+      padding: 36px 48px;
+      background: #f8f7f4;
+    }
+    .flow-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #222;
+      margin-bottom: 24px;
+    }
+    .flow-steps {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      position: relative;
+    }
+    .flow-step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 16px;
+      right: -10px;
+      font-size: 16px;
+      color: #ccc;
+      font-weight: 900;
+    }
+    .flow-num {
+      width: 36px;
+      height: 36px;
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      margin: 0 auto 10px;
+    }
+    .flow-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .flow-desc {
+      font-size: 10px;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    /* ── PRICE ── */
+    .price {
+      padding: 36px 48px 28px;
+    }
+    .price-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #222;
+      margin-bottom: 20px;
+    }
+    .price-box {
+      border: 2px solid #1a1a1a;
+      border-radius: 16px;
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .price-left { flex: 1; }
+    .price-plan {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #999;
+      margin-bottom: 6px;
+    }
+    .price-amount {
+      font-size: 32px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+    }
+    .price-amount span { font-size: 14px; font-weight: 500; color: #666; }
+    .price-note {
+      font-size: 10px;
+      color: #888;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .price-includes {
+      flex: 1;
+    }
+    .price-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #444;
+      font-weight: 500;
+      margin-bottom: 7px;
+    }
+    .price-item::before {
+      content: "✓";
+      font-weight: 900;
+      color: #1a1a1a;
+      font-size: 12px;
+    }
+
+    /* ── CTA ── */
+    .cta {
+      background: #1a1a1a;
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .cta-text { color: #fff; }
+    .cta-title {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+    .cta-sub {
+      font-size: 11px;
+      color: #888;
+      line-height: 1.6;
+    }
+    .cta-contact {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 24px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .cta-email-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    .cta-email {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .cta-demo-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #999;
+      margin-top: 10px;
+      margin-bottom: 3px;
+    }
+    .cta-demo {
+      font-size: 10px;
+      color: #555;
+      word-break: break-all;
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; box-shadow: none; width: 100%; min-height: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-label">Cloud POS System for Restaurants</p>
+    <h1 class="hero-title">飲食店の注文を、<br><span>もっとスマートに。</span></h1>
+    <p class="hero-sub">スタッフ不要のモバイルオーダーと<br>4カ国語対応で、売上と体験を同時に底上げ。</p>
+    <div class="hero-badge">FLOWS POS — クラウド型 POSレジシステム</div>
+  </div>
+
+  <!-- PAIN -->
+  <div class="pain">
+    <p class="section-label">Problem</p>
+    <h2 class="pain-title">こんなお悩み、ありませんか？</h2>
+    <div class="pain-grid">
+      <div class="pain-item">
+        <span class="pain-icon">😓</span>
+        <p class="pain-text">ホールスタッフが注文受付・レジ・料理提供を同時にこなして手が回らない</p>
+      </div>
+      <div class="pain-item">
+        <span class="pain-icon">🌏</span>
+        <p class="pain-text">外国人客が増えてきたが、言葉の壁で注文ミスや機会損失が起きている</p>
+      </div>
+      <div class="pain-item">
+        <span class="pain-icon">📋</span>
+        <p class="pain-text">紙の注文票・手書き伝票で集計に時間がかかり、売上分析ができていない</p>
+      </div>
+      <div class="pain-item">
+        <span class="pain-icon">💸</span>
+        <p class="pain-text">高額なPOSレジを導入したが、使いこなせず月額コストだけが重くなっている</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="features">
+    <p class="section-label">Features</p>
+    <h2 class="features-title">FLOWS POSでできること</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <p class="feature-name">モバイルオーダー</p>
+        <p class="feature-desc">QRコードを読むだけでお客様のスマホがメニューに。注文はキッチンに直通。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <p class="feature-name">4カ国語対応</p>
+        <p class="feature-desc">日本語・英語・中国語・韓国語を自動切替。インバウンド客も安心して注文。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👨‍🍳</div>
+        <p class="feature-name">キッチンモニター</p>
+        <p class="feature-desc">注文が入るとキッチン画面にリアルタイム表示。口頭伝達ミスをゼロに。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✨</div>
+        <p class="feature-name">AI自動アップセル</p>
+        <p class="feature-desc">カート内容を分析し、相性の良い一品を自動提案。客単価アップを支援。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <p class="feature-name">売上データ管理</p>
+        <p class="feature-desc">日別・商品別の売上を自動集計。経営判断に必要なデータをいつでも確認。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☁️</div>
+        <p class="feature-name">クラウド完全対応</p>
+        <p class="feature-desc">専用端末不要。スマホ・タブレット・PCのブラウザだけで動作。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INBOUND -->
+  <div class="inbound">
+    <p class="section-label" style="color:#666;">Multilingual</p>
+    <h2 class="inbound-title">インバウンド需要を逃さない</h2>
+    <p class="inbound-sub">訪日外国人客がスマホの言語ボタンを押すだけで、メニュー全品が自国語に切り替わります。<br>注文ミス・コミュニケーションストレスを解消し、リピーターへとつなげます。</p>
+    <div class="lang-grid">
+      <div class="lang-card">
+        <div class="lang-flag">🇯🇵</div>
+        <div class="lang-name">日本語</div>
+        <div class="lang-note">デフォルト</div>
+      </div>
+      <div class="lang-card">
+        <div class="lang-flag">🇺🇸</div>
+        <div class="lang-name">English</div>
+        <div class="lang-note">英語</div>
+      </div>
+      <div class="lang-card">
+        <div class="lang-flag">🇨🇳</div>
+        <div class="lang-name">中文</div>
+        <div class="lang-note">中国語</div>
+      </div>
+      <div class="lang-card">
+        <div class="lang-flag">🇰🇷</div>
+        <div class="lang-name">한국어</div>
+        <div class="lang-note">韓国語</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOW -->
+  <div class="flow">
+    <p class="section-label">How it works</p>
+    <h2 class="flow-title">導入から運用まで、最短1週間</h2>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <p class="flow-label">ヒアリング</p>
+        <p class="flow-desc">店舗規模・メニュー数・<br>課題をお聞きします</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <p class="flow-label">メニュー設定</p>
+        <p class="flow-desc">商品・写真・価格を<br>システムに登録</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <p class="flow-label">テスト運用</p>
+        <p class="flow-desc">実際の店舗で<br>動作確認・スタッフ研修</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <p class="flow-label">本番稼働</p>
+        <p class="flow-desc">QRコードを設置して<br>即日スタート</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <p class="flow-label">継続サポート</p>
+        <p class="flow-desc">メニュー変更・<br>機能追加を随時対応</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICE -->
+  <div class="price">
+    <p class="section-label">Pricing</p>
+    <h2 class="price-title">シンプルな料金体系</h2>
+    <div class="price-box">
+      <div class="price-left">
+        <p class="price-plan">STANDARD PLAN</p>
+        <p class="price-amount">要相談 <span>/ 月</span></p>
+        <p class="price-note">店舗規模・必要機能に応じてご提案。<br>初期費用・端末購入は不要です。</p>
+      </div>
+      <div class="price-includes">
+        <div class="price-item">モバイルオーダー（席数・注文数無制限）</div>
+        <div class="price-item">4カ国語対応メニュー</div>
+        <div class="price-item">キッチンモニター</div>
+        <div class="price-item">AI自動アップセル機能</div>
+        <div class="price-item">売上データ管理・エクスポート</div>
+        <div class="price-item">メニュー更新・サポート込み</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="cta-text">
+      <p class="cta-title">まずは無料デモをご覧ください</p>
+      <p class="cta-sub">実際に動いているシステムをスマホで体験できます。<br>導入前のご質問・お見積りもお気軽にどうぞ。</p>
+    </div>
+    <div class="cta-contact">
+      <p class="cta-email-label">EMAIL</p>
+      <p class="cta-email">mukadayuya@gmail.com</p>
+      <p class="cta-demo-label">DEMO URL</p>
+      <p class="cta-demo">pos-app-one-rose.vercel.app<br>/customer/order?role=mobile</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
