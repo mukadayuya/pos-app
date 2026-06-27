@@ -42,3 +42,11 @@ next-env.d.ts
 
 # iCloud破損からの復旧用に退避した旧.git（復旧確認後に削除可）
 /.git.broken-20260613/
+
+# iCloud同期除外用 .nosync ディレクトリ
+/node_modules.nosync/
+/.next.nosync/
+
+# iCloud破損からの復旧で退避した旧ディレクトリ
+/node_modules.broken/
+/.next.broken/
