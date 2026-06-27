@@ -3,10 +3,11 @@
 import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { MenuItem, OrderItem, OrderOptions, SalesRecord, ServiceTab, OrderDiscount, HoldEntry, TaxRate } from "@/types/pos";
-import { menuItems as defaultMenuItems } from "@/data/menu";
 import { broncoMenuItems, broncoCategories } from "@/data/broncoMenu";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { saveSaleRecord, fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
+import { enqueueUnsentSale, flushUnsentSales } from "@/lib/unsentSalesQueue";
+import { buildDraft, persistDraftOrder, fetchDraftOrder, clearDraftOrder } from "@/lib/draftOrderSync";
 import { toTakeoutMenuItem } from "@/lib/menuTransform";
 import { fetchIsTakeoutEnabled } from "@/lib/storeSettings";
 import CategoryBar from "@/components/CategoryBar";
@@ -194,7 +195,7 @@ function RegisterPageInner() {
   const [isTakeout, setIsTakeout]           = useState<boolean>(false);
   const [isTakeoutEnabled, setIsTakeoutEnabled] = useState<boolean>(true);
   const [settingsReady, setSettingsReady]   = useState<boolean>(false);
-  const [menuItems, setMenuItems]           = useState<MenuItem[]>(defaultMenuItems);
+  const [menuItems, setMenuItems]           = useState<MenuItem[]>([]);
   const [orderItems, setOrderItems]     = useState<OrderItem[]>(() => {
     if (typeof window === "undefined") return [];
     try { return JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || "[]"); } catch { return []; }
@@ -224,6 +225,7 @@ function RegisterPageInner() {
   const [isManualInput, setIsManualInput]       = useState(false);
   const [editingItemKey, setEditingItemKey]     = useState<string | null>(null);
   const [saveError, setSaveError]               = useState<{ record: SalesRecord; attempt: number } | null>(null);
+  const [unsentCount, setUnsentCount]           = useState(0);
   // mobile role: which panel is active in the bottom tab bar
   const [mobileTab, setMobileTab]               = useState<"menu" | "order">("menu");
 
@@ -310,6 +312,31 @@ function RegisterPageInner() {
   useEffect(() => {
     try { localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orderItems)); } catch { /* ignore */ }
   }, [orderItems]);
+
+  // 進行中注文をクラウドへ退避（5秒デバウンス）。キャッシュクリア・端末故障対策
+  const orderItemsRef = useRef(orderItems);
+  useEffect(() => { orderItemsRef.current = orderItems; }, [orderItems]);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const t = setTimeout(() => {
+      if (orderItems.length === 0) return;
+      persistDraftOrder(buildDraft(orderItems, maleCount, femaleCount, discount));
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [orderItems, maleCount, femaleCount, discount]);
+
+  // localStorage が空（キャッシュクリア等）のときだけクラウドの退避注文を復元
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    fetchDraftOrder().then(draft => {
+      if (!draft || draft.items.length === 0) return;
+      if (orderItemsRef.current.length > 0) return; // 端末内に注文あり → 復元不要
+      setOrderItems(draft.items);
+      setMaleCount(draft.maleCount ?? 0);
+      setFemaleCount(draft.femaleCount ?? 0);
+      setDiscount(draft.discount ?? null);
+    });
+  }, []);
   useEffect(() => {
     try { localStorage.setItem(MALE_COUNT_KEY, String(maleCount)); } catch { /* ignore */ }
   }, [maleCount]);
@@ -391,6 +418,8 @@ function RegisterPageInner() {
     if (isSupabaseConfigured) {
       saveSaleRecord(record).catch(err => {
         console.error("saveSaleRecord failed:", err);
+        // 売上を失わないよう端末内キューへ退避し、通信回復時に自動再送する
+        setUnsentCount(enqueueUnsentSale(record));
         setSaveError({ record, attempt: 1 });
       });
     }
@@ -400,11 +429,25 @@ function RegisterPageInner() {
     if (!saveError) return;
     const { record, attempt } = saveError;
     setSaveError(null);
-    saveSaleRecord(record).catch(err => {
-      console.error("saveSaleRecord retry failed:", err);
-      setSaveError({ record, attempt: attempt + 1 });
+    flushUnsentSales(saveSaleRecord).then(({ remaining }) => {
+      setUnsentCount(remaining);
+      if (remaining > 0) setSaveError({ record, attempt: attempt + 1 });
     });
   }, [saveError]);
+
+  // 未送信キューの自動再送（マウント時・通信回復時）
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const flush = () => {
+      flushUnsentSales(saveSaleRecord).then(({ sent, remaining }) => {
+        setUnsentCount(remaining);
+        if (sent > 0 && remaining === 0) setSaveError(null);
+      });
+    };
+    flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, []);
 
   const handleCheckoutDone = useCallback(() => {
     setOrderItems([]);
@@ -412,6 +455,7 @@ function RegisterPageInner() {
     setFemaleCount(0);
     setDiscount(null);
     setShowCheckout(false);
+    clearDraftOrder();
     try {
       localStorage.removeItem(ORDER_STORAGE_KEY);
       localStorage.removeItem(MALE_COUNT_KEY);
@@ -661,7 +705,7 @@ function RegisterPageInner() {
                 <p className="text-sm font-bold">
                   保存エラー{saveError.attempt > 1 ? `（手動リトライ${saveError.attempt}回目）` : "（自動リトライ済）"}
                 </p>
-                <p className="text-[10px] text-red-200">通信を確認して再試行してください</p>
+                <p className="text-[10px] text-red-200">売上{unsentCount > 0 ? `${unsentCount}件を` : "は"}端末内に退避済み・通信回復後に自動再送します</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -784,7 +828,7 @@ function RegisterPageInner() {
               <p className="text-sm font-bold">
                 データの保存に失敗しました{saveError.attempt > 1 ? `（手動リトライ${saveError.attempt}回目）` : "（自動リトライ3回済）"}
               </p>
-              <p className="text-xs text-red-200">ネットワーク接続を確認し、再試行してください</p>
+              <p className="text-xs text-red-200">売上{unsentCount > 0 ? `${unsentCount}件を` : "は"}端末内に退避済み・通信回復後に自動再送します</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
