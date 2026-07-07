@@ -747,7 +747,22 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     taxRate:            ((item.tax_rate as number) ?? 0.10) as TaxRate,
     options:            (Array.isArray(item.options) ? undefined : item.options as MenuItemOptions | undefined),
     isTakeoutAvailable: (item.is_takeout_available as boolean | undefined) !== false,
+    isAvailable:        (item.is_available as boolean | undefined) !== false,
+    displayOrder:       (item.display_order as number | null | undefined) ?? undefined,
   });
+
+  // Try 0: all columns including is_available and display_order (new in Phase 1-②)
+  {
+    const { data, error } = await supabase
+      .from("menus")
+      .select("id, name, name_en, name_zh, name_ko, description, description_en, description_zh, description_ko, price, category, emoji, image_url, tax_rate, options, is_takeout_available, is_available, display_order")
+      .eq("store_id", STORE_ID)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (!error) return (data ?? []).map(toItem);
+    if (isTableMissingError(error)) return [];
+    if (error.code !== "42703") throw error;
+  }
 
   // Try 1: all columns including translations
   {
@@ -834,7 +849,7 @@ export async function saveMenuItem(item: MenuItem): Promise<void> {
 
 export async function updateMenuItem(
   id: string,
-  updates: { name?: string; name_en?: string; name_zh?: string; name_ko?: string; price?: number; category?: string; emoji?: string | null; tax_rate?: number; options?: MenuItemOptions; is_takeout_available?: boolean }
+  updates: { name?: string; name_en?: string; name_zh?: string; name_ko?: string; price?: number; category?: string; emoji?: string | null; tax_rate?: number; options?: MenuItemOptions; is_takeout_available?: boolean; is_available?: boolean; display_order?: number }
 ): Promise<void> {
   if (!supabase) throw new Error("Supabase not configured");
 
@@ -842,7 +857,7 @@ export async function updateMenuItem(
   if (error) {
     // 新カラムが存在しない場合はそれらを除いてリトライ
     if (error.code === "42703") {
-      const { options: _o, is_takeout_available: _t, ...rest } = updates;
+      const { options: _o, is_takeout_available: _t, is_available: _a, display_order: _d, ...rest } = updates;
       const { error: e2 } = await supabase.from("menus").update(rest).eq("id", id);
       if (e2) throw e2;
     } else {

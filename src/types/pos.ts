@@ -51,6 +51,8 @@ export interface MenuItem {
   taxRate: TaxRate;
   options?: MenuItemOptions;
   isTakeoutAvailable?: boolean; // undefined は true と同義
+  isAvailable?: boolean;        // 販売中フラグ。undefined/true=販売中、false=売り切れ
+  displayOrder?: number;        // オーナーが管理画面で並べた順序
 }
 
 export interface OrderOptions {

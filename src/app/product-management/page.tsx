@@ -1293,6 +1293,49 @@ export default function ProductManagementPage() {
     } catch (e: unknown) { alert("削除に失敗しました: " + (e as Error).message); }
   }
 
+  // ─ 販売可否トグル ─
+  async function handleToggleAvailability(item: MenuItem) {
+    const next = !(item.isAvailable !== false);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, isAvailable: next } : i));
+    try {
+      await updateMenuItem(item.id, { is_available: next });
+    } catch (e: unknown) {
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, isAvailable: !next } : i));
+      alert("販売可否の変更に失敗しました: " + (e as Error).message);
+    }
+  }
+
+  // ─ 並び替え（同一カテゴリー内でスワップ） ─
+  async function handleReorder(item: MenuItem, direction: "up" | "down") {
+    const sameCat = items
+      .filter(i => i.category === item.category)
+      .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+    const idx = sameCat.findIndex(i => i.id === item.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sameCat.length) return;
+    const partner = sameCat[swapIdx];
+    const orderA = item.displayOrder ?? 999;
+    const orderB = partner.displayOrder ?? 999;
+    setItems(prev => prev.map(i => {
+      if (i.id === item.id) return { ...i, displayOrder: orderB };
+      if (i.id === partner.id) return { ...i, displayOrder: orderA };
+      return i;
+    }));
+    try {
+      await Promise.all([
+        updateMenuItem(item.id,    { display_order: orderB }),
+        updateMenuItem(partner.id, { display_order: orderA }),
+      ]);
+    } catch (e: unknown) {
+      setItems(prev => prev.map(i => {
+        if (i.id === item.id) return { ...i, displayOrder: orderA };
+        if (i.id === partner.id) return { ...i, displayOrder: orderB };
+        return i;
+      }));
+      alert("並び替えに失敗しました: " + (e as Error).message);
+    }
+  }
+
   // ─ 商品追加 ─
   async function handleAdd() {
     setAddError("");
@@ -1469,10 +1512,21 @@ export default function ProductManagementPage() {
                         />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-4 px-4 py-3">
+                      <div className={`flex items-center gap-3 px-4 py-3 ${item.isAvailable === false ? "opacity-50" : ""}`}>
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <button onClick={() => handleReorder(item, "up")}
+                            className="w-6 h-6 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs flex items-center justify-center transition-all active:scale-95"
+                            title="上へ">▲</button>
+                          <button onClick={() => handleReorder(item, "down")}
+                            className="w-6 h-6 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs flex items-center justify-center transition-all active:scale-95"
+                            title="下へ">▼</button>
+                        </div>
                         <span className="text-3xl w-10 text-center flex-shrink-0">{item.emoji ?? ""}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                          <p className="text-sm font-semibold text-white truncate">
+                            {item.name}
+                            {item.isAvailable === false && <span className="ml-2 text-xs text-red-400 font-bold">売り切れ</span>}
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs text-slate-400">{catName(item.category)}</span>
                             <span className="text-xs text-slate-600">·</span>
@@ -1485,6 +1539,15 @@ export default function ProductManagementPage() {
                           ¥{item.price.toLocaleString()}
                         </p>
                         <div className="flex gap-1.5 flex-shrink-0">
+                          <button onClick={() => handleToggleAvailability(item)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 ${
+                              item.isAvailable === false
+                                ? "bg-red-900 hover:bg-red-800 text-red-300"
+                                : "bg-emerald-900 hover:bg-emerald-800 text-emerald-300"
+                            }`}
+                            title={item.isAvailable === false ? "販売再開" : "売り切れにする"}>
+                            {item.isAvailable === false ? "🔴 売切" : "🟢 販売中"}
+                          </button>
                           <button onClick={() => startEdit(item)}
                             className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-semibold transition-all active:scale-95">
                             編集

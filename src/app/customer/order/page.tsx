@@ -317,10 +317,11 @@ function CustomerOrderInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  const filteredItems =
+  const filteredItems = (
     activeCategoryId === "all"
       ? menuItems
-      : menuItems.filter((m) => m.category === activeCategoryId);
+      : menuItems.filter((m) => m.category === activeCategoryId)
+  ).filter(m => m.isAvailable !== false);
 
   const toppingCategoryId = categories.find(c => c.name === "トッピング")?.id ?? null;
   const toppingItems = toppingCategoryId ? menuItems.filter(i => i.category === toppingCategoryId) : [];

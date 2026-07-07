@@ -135,9 +135,10 @@ function TableMenuGrid({
   isTakeout: boolean;
   menuItems: MenuItem[];
 }) {
-  const filtered = isTakeout
+  const filtered = (isTakeout
     ? menuItems.filter(item => item.isTakeoutAvailable !== false)
-    : menuItems.filter(item => item.category === activeCategoryId);
+    : menuItems.filter(item => item.category === activeCategoryId)
+  ).filter(item => item.isAvailable !== false);
 
   return (
     <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
