@@ -1253,7 +1253,9 @@ export default function ProductManagementPage() {
     itemsByCat[item.category] = (itemsByCat[item.category] ?? 0) + 1;
   }
 
-  const filtered = filterCat === "all" ? items : items.filter(i => i.category === filterCat);
+  const filtered = (filterCat === "all" ? items : items.filter(i => i.category === filterCat))
+    .slice()
+    .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? id;
 
   // ─ 商品編集 ─

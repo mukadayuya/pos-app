@@ -6,10 +6,24 @@
 
 const { createClient } = require("@supabase/supabase-js");
 const { randomUUID } = require("crypto");
+const { readFileSync } = require("fs");
+const { join } = require("path");
 
-const SUPABASE_URL = "https://zrdefzqnbxhbwteukqpb.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyZGVmenFuYnhoYnd0ZXVrcXBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MDc0MzcsImV4cCI6MjA5MTk4MzQzN30.zIfHIy0f14IH5C5YFALCm-eEjsZim8dXascFgvR8nlc";
-const STORE_ID = "6f0842d5-7fe6-4278-818c-86e8a8731130"; // 焼鳥居酒屋ABC store UUID
+// .env.local から読み込む（Supabase移行後も同じスクリプトで動く）
+function loadEnv() {
+  const env = {};
+  const path = join(__dirname, "..", ".env.local");
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m) env[m[1]] = m[2].trim();
+  }
+  return env;
+}
+
+const env = loadEnv();
+const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const STORE_ID = env.ABC_STORE_ID || "6f0842d5-7fe6-4278-818c-86e8a8731130";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 

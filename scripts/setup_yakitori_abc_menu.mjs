@@ -323,26 +323,33 @@ const menus = [
     description_ko: "얼음 가득한 잔에 시원하게 드립니다." },
 ];
 
-const menuRows = menus.map(m => ({
-  id: m.id,
-  store_id: ABC_STORE_ID,
-  name: m.name,
-  name_en: m.name_en,
-  name_zh: m.name_zh,
-  name_ko: m.name_ko,
-  description: m.description,
-  description_en: m.description_en,
-  description_zh: m.description_zh,
-  description_ko: m.description_ko,
-  price: m.price,
-  category: m.category,
-  emoji: m.emoji,
-  tax_rate: 0.10,
-  is_tax_inclusive: false,
-  image_url: m.image,
-  is_takeout_available: m.takeout,
-  options: [],
-}));
+// カテゴリー内での連番（並び替え初期値）を計算
+const perCatCounter = {};
+const menuRows = menus.map(m => {
+  perCatCounter[m.category] = (perCatCounter[m.category] ?? 0) + 1;
+  return {
+    id: m.id,
+    store_id: ABC_STORE_ID,
+    name: m.name,
+    name_en: m.name_en,
+    name_zh: m.name_zh,
+    name_ko: m.name_ko,
+    description: m.description,
+    description_en: m.description_en,
+    description_zh: m.description_zh,
+    description_ko: m.description_ko,
+    price: m.price,
+    category: m.category,
+    emoji: m.emoji,
+    tax_rate: 0.10,
+    is_tax_inclusive: false,
+    image_url: m.image,
+    is_takeout_available: m.takeout,
+    is_available: true,
+    display_order: perCatCounter[m.category],
+    options: [],
+  };
+});
 
 async function req(method, path, body) {
   const res = await fetch(`${SB}/${path}`, {
