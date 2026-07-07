@@ -11,23 +11,25 @@ const THREE_DAYS_MS       = 3 * 24 * 60 * 60 * 1000;
 type TileStyle = "primary" | "accent" | "card" | "disabled";
 
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+const IS_ABC    = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+const IS_SIMPLE = IS_BRONCO || IS_ABC;
 
 const allTiles: {
   label: string; icon: string; href: string;
-  style: TileStyle; iconBg?: string; broncoHidden?: boolean;
+  style: TileStyle; iconBg?: string; hiddenInSimpleMode?: boolean;
 }[] = [
   { label: "レジ",                    icon: "🧾", href: "/register",           style: "primary"  },
-  { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent",                        broncoHidden: true },
+  { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent",                        hiddenInSimpleMode: true },
   { label: "売上データ",               icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
   { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
   { label: "点検 / 精算",             icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
   { label: "入出金管理",               icon: "💴", href: "#",                    style: "disabled"  },
-  { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50",  broncoHidden: true },
-  { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100", broncoHidden: true },
-  { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  broncoHidden: true },
+  { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50",  hiddenInSimpleMode: true },
+  { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100", hiddenInSimpleMode: true },
+  { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  hiddenInSimpleMode: true },
 ];
 
-const tiles = allTiles.filter(t => !IS_BRONCO || !t.broncoHidden);
+const tiles = allTiles.filter(t => !IS_SIMPLE || !t.hiddenInSimpleMode);
 
 function checkBannerVisible(): boolean {
   if (typeof window === "undefined") return false;
