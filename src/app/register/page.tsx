@@ -369,7 +369,31 @@ function RegisterPageInner() {
   const handleMenuItemTap = useCallback((item: MenuItem) => {
     // テイクアウト時は taxRate を 0.08 に変換したコピーを pendingItem にセット。
     // emoji / options.optionGroups など全プロパティはスプレッドで保持される。
-    setPendingItem(isTakeout ? toTakeoutMenuItem(item) : item);
+    const resolved = isTakeout ? toTakeoutMenuItem(item) : item;
+    // 焼鳥ABCなど、オプションを一切使わない店舗では
+    // 「ご飯の量／種類」モーダルを開かずに直接カートへ入れる
+    const hasCustomOptions = Array.isArray(resolved.options?.optionGroups)
+      && (resolved.options?.optionGroups?.length ?? 0) > 0;
+    if (IS_ABC && !hasCustomOptions) {
+      const taxRate = resolved.taxRate ?? 0.10;
+      const itemKey = `${resolved.id}_x_${taxRate}`;
+      setOrderItems(prev => {
+        const existing = prev.find(o => o.itemKey === itemKey);
+        if (existing) {
+          return prev.map(o => o.itemKey === itemKey ? { ...o, quantity: o.quantity + 1 } : o);
+        }
+        return [...prev, {
+          itemKey,
+          menuItem: resolved,
+          quantity: 1,
+          options: { riceType: "white", riceSize: "none", selections: [] },
+          unitPrice: resolved.price,
+          taxRate,
+        }];
+      });
+      return;
+    }
+    setPendingItem(resolved);
   }, [isTakeout]);
 
   const handleOptionConfirm = useCallback(
