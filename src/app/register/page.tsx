@@ -11,6 +11,7 @@ import { buildDraft, persistDraftOrder, fetchDraftOrder, clearDraftOrder } from 
 import { toTakeoutMenuItem } from "@/lib/menuTransform";
 import { fetchIsTakeoutEnabled } from "@/lib/storeSettings";
 import CategoryBar from "@/components/CategoryBar";
+import MenuSearchBox from "@/components/MenuSearchBox";
 import MenuPanel from "@/components/MenuPanel";
 import OrderPanel from "@/components/OrderPanel";
 import SalesHistory from "@/components/SalesHistory";
@@ -967,6 +968,12 @@ function RegisterPageInner() {
           onManualInputSelect={() => setIsManualInput(m => !m)}
         />
         <div className="flex-1 overflow-y-auto p-6 bg-[#F5F6FA]">
+          {IS_WARAI && (
+            <MenuSearchBox
+              menuItems={menuItems}
+              onSelect={handleMenuItemTap}
+            />
+          )}
           <MenuPanel
             activeCategoryId={activeCategoryId}
             isTakeout={isTakeout}
