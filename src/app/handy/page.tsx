@@ -183,6 +183,7 @@ export default function HandyPage() {
           menuItems={menuItems}
           onSelect={addToCart}
           initialLang={speechLangFor(lang)}
+          hideLangSelector
         />
       </div>
 

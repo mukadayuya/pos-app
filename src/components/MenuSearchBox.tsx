@@ -32,9 +32,10 @@ type Props = {
   menuItems: MenuItem[];
   onSelect: (item: MenuItem) => void;
   initialLang?: Lang;
+  hideLangSelector?: boolean;
 };
 
-export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP" }: Props) {
+export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP", hideLangSelector = false }: Props) {
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState<Lang>(initialLang);
   const [listening, setListening] = useState(false);
@@ -108,17 +109,19 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
   return (
     <div className="w-full mb-3">
       <div className="flex items-center gap-2 bg-white rounded-2xl border border-slate-300 px-3 py-2 shadow-sm">
-        <select
-          value={lang}
-          onChange={e => setLang(e.target.value as Lang)}
-          className="h-11 px-2 rounded-xl bg-slate-100 text-lg border border-slate-200 outline-none cursor-pointer"
-          title="音声認識の言語"
-          aria-label="音声認識の言語を選択"
-        >
-          {LANGS.map(l => (
-            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
-          ))}
-        </select>
+        {!hideLangSelector && (
+          <select
+            value={lang}
+            onChange={e => setLang(e.target.value as Lang)}
+            className="h-11 px-2 rounded-xl bg-slate-100 text-lg border border-slate-200 outline-none cursor-pointer"
+            title="音声認識の言語"
+            aria-label="音声認識の言語を選択"
+          >
+            {LANGS.map(l => (
+              <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+            ))}
+          </select>
+        )}
         <button
           onClick={listening ? stopListen : startListen}
           className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold transition-all ${
