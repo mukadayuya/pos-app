@@ -1,7 +1,7 @@
 // 炭火やきとり 笑路（豊田市）— マスターメニュー投入スクリプト
 // 出典: https://chaoo.jp/gourmet/shop/waraji/menu/
 //
-// 使い方:  node scripts/setup_warai_menu.mjs
+// 使い方:  node scripts/setup_waraji_menu.mjs
 // 再実行可: 既存の笑路店舗のカテゴリ・メニューを削除してから投入する（冪等）。
 
 import { readFileSync } from "node:fs";
@@ -24,7 +24,7 @@ const SB  = `${env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1`;
 const KEY = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // 笑路 店舗UUID（stores テーブルに登録するID）
-export const WARAI_STORE_ID = "a1c2b3d4-e5f6-4789-abcd-ef1234567890";
+export const WARAJI_STORE_ID = "a1c2b3d4-e5f6-4789-abcd-ef1234567890";
 
 const HEADERS = {
   apikey: KEY,
@@ -56,7 +56,7 @@ const categories = [
   { id: CAT.agemono,  name: "揚げ物・一品料理", display_order: 7 },
   { id: CAT.shime,    name: "〆・ご飯もの", display_order: 8 },
   { id: CAT.drink,    name: "ドリンク",     display_order: 9 },
-].map(c => ({ ...c, store_id: WARAI_STORE_ID }));
+].map(c => ({ ...c, store_id: WARAJI_STORE_ID }));
 
 // 全メニュー（読み仮名は kana 列に格納。読み仮名検索で使用）
 // 税抜価格。表示価格 = price * 1.10（内税10%）
@@ -163,7 +163,7 @@ const menuRows = rawMenus.map(m => {
   perCatCounter[m.cat] = (perCatCounter[m.cat] ?? 0) + 1;
   return {
     id: m.id,
-    store_id: WARAI_STORE_ID,
+    store_id: WARAJI_STORE_ID,
     name: m.name,
     description: m.kana,  // 説明カラムに読み仮名を保存（Phase B-①の読み仮名検索で使用）
     price: m.price,
@@ -197,8 +197,8 @@ async function count(path) {
 
 async function main() {
   console.log("既存の笑路データを削除...");
-  await req("DELETE", `menus?store_id=eq.${WARAI_STORE_ID}`);
-  await req("DELETE", `categories?store_id=eq.${WARAI_STORE_ID}`);
+  await req("DELETE", `menus?store_id=eq.${WARAJI_STORE_ID}`);
+  await req("DELETE", `categories?store_id=eq.${WARAJI_STORE_ID}`);
 
   console.log(`カテゴリ ${categories.length} 件を投入...`);
   await req("POST", "categories", categories);
@@ -206,8 +206,8 @@ async function main() {
   console.log(`メニュー ${menuRows.length} 件を投入...`);
   await req("POST", "menus", menuRows);
 
-  const catN  = await count(`categories?store_id=eq.${WARAI_STORE_ID}`);
-  const menuN = await count(`menus?store_id=eq.${WARAI_STORE_ID}`);
+  const catN  = await count(`categories?store_id=eq.${WARAJI_STORE_ID}`);
+  const menuN = await count(`menus?store_id=eq.${WARAJI_STORE_ID}`);
   console.log(`完了: categories=${catN}, menus=${menuN}`);
   if (catN !== categories.length || menuN !== menuRows.length) {
     throw new Error("投入件数が一致しません");

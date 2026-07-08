@@ -12,8 +12,8 @@ type TileStyle = "primary" | "accent" | "card" | "disabled";
 
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC    = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
-const IS_WARAI  = process.env.NEXT_PUBLIC_STORE_ID === "warai";
-const IS_SIMPLE = IS_BRONCO || IS_ABC || IS_WARAI;
+const IS_WARAJI  = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
+const IS_SIMPLE = IS_BRONCO || IS_ABC || IS_WARAJI;
 
 const allTiles: {
   label: string; icon: string; href: string;

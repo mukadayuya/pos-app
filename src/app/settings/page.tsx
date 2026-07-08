@@ -8,10 +8,10 @@ import { fetchPeriodSummary, fetchTodayHourlySales, HourlySales } from "@/lib/db
 
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
-const IS_WARAI = process.env.NEXT_PUBLIC_STORE_ID === "warai";
-const DEFAULT_STORE_NAME    = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAI ? "炭火やきとり 笑路" : "Kitchen Kazu";
-const DEFAULT_STORE_ADDRESS = IS_BRONCO ? "東京都大田区田園調布1-21-5" : IS_ABC ? "東京都新宿区西新宿1-2-3 ABCビル1F" : IS_WARAI ? "愛知県豊田市丸山町9丁目18" : "";
-const DEFAULT_STORE_TEL     = IS_BRONCO ? "03-3722-3694" : IS_ABC ? "03-1234-5678" : IS_WARAI ? "0565-42-8933" : "";
+const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
+const DEFAULT_STORE_NAME    = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : "Kitchen Kazu";
+const DEFAULT_STORE_ADDRESS = IS_BRONCO ? "東京都大田区田園調布1-21-5" : IS_ABC ? "東京都新宿区西新宿1-2-3 ABCビル1F" : IS_WARAJI ? "愛知県豊田市丸山町9丁目18" : "";
+const DEFAULT_STORE_TEL     = IS_BRONCO ? "03-3722-3694" : IS_ABC ? "03-1234-5678" : IS_WARAJI ? "0565-42-8933" : "";
 
 type SettingsTab    = "store" | "settlement" | "hardware";
 type SettlementSub  = "inspect" | "cashcount" | "close";
@@ -495,7 +495,7 @@ export default function SettingsPage() {
         )}
 
         <div className="mt-8 text-center text-slate-300 text-xs">
-          {IS_BRONCO ? "ブロンコ POS · Powered by FLOWS" : IS_ABC ? "焼鳥居酒屋ABC POS · Powered by FLOWS" : IS_WARAI ? "笑路 POS · Powered by FLOWS" : "Kitchen Kazu POS v2.0 · Powered by FLOWS"}
+          {IS_BRONCO ? "ブロンコ POS · Powered by FLOWS" : IS_ABC ? "焼鳥居酒屋ABC POS · Powered by FLOWS" : IS_WARAJI ? "笑路 POS · Powered by FLOWS" : "Kitchen Kazu POS v2.0 · Powered by FLOWS"}
         </div>
       </div>
     </div>
