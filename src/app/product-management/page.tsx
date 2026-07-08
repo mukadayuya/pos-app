@@ -1204,6 +1204,7 @@ export default function ProductManagementPage() {
   const [editingId, setEditingId]     = useState<string | null>(null);
   const [editState, setEditState]     = useState<ItemEditState | null>(null);
   const [filterCat, setFilterCat]     = useState<string>("all");
+  const [filterAvail, setFilterAvail] = useState<"all" | "available" | "soldout">("all");
   const [busy, setBusy]               = useState(false);
 
   // 商品追加モーダル
@@ -1254,6 +1255,11 @@ export default function ProductManagementPage() {
   }
 
   const filtered = (filterCat === "all" ? items : items.filter(i => i.category === filterCat))
+    .filter(i => {
+      if (filterAvail === "available") return i.isAvailable !== false;
+      if (filterAvail === "soldout")   return i.isAvailable === false;
+      return true;
+    })
     .slice()
     .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? id;
@@ -1489,6 +1495,40 @@ export default function ProductManagementPage() {
                 </button>
               ))}
               <span className="ml-auto text-slate-500 text-sm self-center">{filtered.length}件</span>
+            </div>
+
+            {/* 本日提供／売切 フィルター（日替わりメニュー入替支援） */}
+            <div className="flex gap-2 flex-wrap items-center">
+              <span className="text-xs text-slate-400 font-semibold mr-1">🍽️ 本日提供:</span>
+              {([
+                { key: "all",       label: "全て",     cls: "bg-slate-700 text-slate-200" },
+                { key: "available", label: "提供中",   cls: "bg-emerald-700 text-emerald-100" },
+                { key: "soldout",   label: "売切のみ", cls: "bg-red-800 text-red-100" },
+              ] as const).map(({ key, label, cls }) => (
+                <button key={key} onClick={() => setFilterAvail(key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    filterAvail === key ? cls : "bg-slate-800 text-slate-500 hover:bg-slate-700"
+                  }`}>
+                  {label}
+                </button>
+              ))}
+              {filtered.length > 0 && filterAvail !== "all" && (
+                <button
+                  onClick={async () => {
+                    const targets = filtered;
+                    if (!confirm(`表示中の ${targets.length} 件を全て「${filterAvail === "available" ? "🔴 売切" : "🟢 販売中"}」にします。よろしいですか？`)) return;
+                    const nextAvail = filterAvail === "available" ? false : true;
+                    setItems(prev => prev.map(i => targets.some(t => t.id === i.id) ? { ...i, isAvailable: nextAvail } : i));
+                    try {
+                      await Promise.all(targets.map(t => updateMenuItem(t.id, { is_available: nextAvail })));
+                    } catch (e: unknown) {
+                      alert("一括更新に失敗しました: " + (e as Error).message);
+                    }
+                  }}
+                  className="ml-auto px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-lg text-xs font-bold transition-all active:scale-95">
+                  ⚡ 一括で{filterAvail === "available" ? "売切" : "再開"}
+                </button>
+              )}
             </div>
 
             {/* 商品リスト */}
