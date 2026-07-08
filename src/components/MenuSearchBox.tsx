@@ -19,24 +19,31 @@ function searchTargets(item: MenuItem): string[] {
   ].filter(Boolean);
 }
 
-type Lang = "ja-JP" | "ne-NP" | "en-US";
+type Lang = "ja-JP" | "ne-NP" | "en-US" | "zh-CN" | "ko-KR";
 const LANGS: { code: Lang; flag: string; label: string }[] = [
   { code: "ja-JP", flag: "🇯🇵", label: "日本語" },
   { code: "ne-NP", flag: "🇳🇵", label: "नेपाली" },
   { code: "en-US", flag: "🇺🇸", label: "English" },
+  { code: "zh-CN", flag: "🇨🇳", label: "中文" },
+  { code: "ko-KR", flag: "🇰🇷", label: "한국어" },
 ];
 
 type Props = {
   menuItems: MenuItem[];
   onSelect: (item: MenuItem) => void;
+  initialLang?: Lang;
 };
 
-export default function MenuSearchBox({ menuItems, onSelect }: Props) {
+export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP" }: Props) {
   const [query, setQuery] = useState("");
-  const [lang, setLang] = useState<Lang>("ja-JP");
+  const [lang, setLang] = useState<Lang>(initialLang);
   const [listening, setListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const recogRef = useRef<any>(null);
+
+  useEffect(() => {
+    setLang(initialLang);
+  }, [initialLang]);
 
   useEffect(() => {
     return () => {
