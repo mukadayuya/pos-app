@@ -31,8 +31,10 @@ type SidePanel = "salesHistory" | null;
 
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+const IS_WARAI = process.env.NEXT_PUBLIC_STORE_ID === "warai";
 const STAFF_LIST = IS_BRONCO ? ["畠野", "向田", "スタッフA"]
   : IS_ABC ? ["佐藤", "山田", "スタッフA"]
+  : IS_WARAI ? ["小黒", "ラム", "ビカス"]
   : ["沖", "向田", "スタッフA"];
 
 // Supabase 未設定 / テーブル未作成時のフォールバックカテゴリー
@@ -374,7 +376,7 @@ function RegisterPageInner() {
     // 「ご飯の量／種類」モーダルを開かずに直接カートへ入れる
     const hasCustomOptions = Array.isArray(resolved.options?.optionGroups)
       && (resolved.options?.optionGroups?.length ?? 0) > 0;
-    if (IS_ABC && !hasCustomOptions) {
+    if ((IS_ABC || IS_WARAI) && !hasCustomOptions) {
       const taxRate = resolved.taxRate ?? 0.10;
       const itemKey = `${resolved.id}_x_${taxRate}`;
       setOrderItems(prev => {

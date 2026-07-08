@@ -154,7 +154,7 @@ async function seed() {
   if (delErr) { console.error("削除エラー:", delErr); process.exit(1); }
 
   const start = new Date("2026-05-13");
-  const end   = new Date("2026-06-30");
+  const end   = new Date("2026-07-30");
   const records = [];
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {

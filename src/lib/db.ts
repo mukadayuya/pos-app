@@ -621,6 +621,8 @@ export const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID === "bronco"
   ? "d61afc6a-ca9b-4641-a99b-1294985ade8e"
   : process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc"
   ? "6f0842d5-7fe6-4278-818c-86e8a8731130"
+  : process.env.NEXT_PUBLIC_STORE_ID === "warai"
+  ? "a1c2b3d4-e5f6-4789-abcd-ef1234567890"
   : (process.env.NEXT_PUBLIC_STORE_ID ?? "tetsu-bo");
 
 export async function fetchCategories(): Promise<CategoryRecord[]> {
