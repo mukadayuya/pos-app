@@ -17,9 +17,10 @@ const IS_SIMPLE = IS_BRONCO || IS_ABC || IS_WARAJI;
 
 const allTiles: {
   label: string; icon: string; href: string;
-  style: TileStyle; iconBg?: string; hiddenInSimpleMode?: boolean;
+  style: TileStyle; iconBg?: string; hiddenInSimpleMode?: boolean; onlyWaraji?: boolean;
 }[] = [
   { label: "レジ",                    icon: "🧾", href: "/register",           style: "primary"  },
+  { label: "ハンディ",                icon: "📱", href: "/handy",              style: "accent",     onlyWaraji: true },
   { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent",                        hiddenInSimpleMode: true },
   { label: "売上データ",               icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
   { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
@@ -30,7 +31,11 @@ const allTiles: {
   { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  hiddenInSimpleMode: true },
 ];
 
-const tiles = allTiles.filter(t => !IS_SIMPLE || !t.hiddenInSimpleMode);
+const tiles = allTiles.filter(t => {
+  if (t.onlyWaraji && !IS_WARAJI) return false;
+  if (IS_SIMPLE && t.hiddenInSimpleMode) return false;
+  return true;
+});
 
 function checkBannerVisible(): boolean {
   if (typeof window === "undefined") return false;
