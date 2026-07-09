@@ -55,13 +55,30 @@ type Props = {
   onSelect: (item: MenuItem) => void;
   initialLang?: Lang;
   hideLangSelector?: boolean;
+  /** 翻訳名など、名前・読み仮名以外の追加検索対象（多言語検索用） */
+  extraTargets?: (item: MenuItem) => string[];
 };
 
-export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP", hideLangSelector = false }: Props) {
+// Apple端末（iPhone/iPad/Mac Safari）の音声認識はネパール語非対応
+function isApplePlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+}
+
+// 端末で使えない言語は日本語認識に自動フォールバック
+function resolveSpeechLang(lang: Lang): { effective: string; fallbackFrom: Lang | null } {
+  if (lang === "ne-NP" && isApplePlatform()) {
+    return { effective: "ja-JP", fallbackFrom: "ne-NP" };
+  }
+  return { effective: lang, fallbackFrom: null };
+}
+
+export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP", hideLangSelector = false, extraTargets }: Props) {
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState<Lang>(initialLang);
   const [listening, setListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
+  const [speechInfo, setSpeechInfo] = useState<string | null>(null);
   const recogRef = useRef<any>(null);
 
   useEffect(() => {
@@ -85,7 +102,11 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       return menuItems
         .filter(m => m.isAvailable !== false)
         .map(m => {
-          const targets = searchTargets(m);
+          // 日本語名・読み仮名に加えて、翻訳名（ネパール語/英語等）も検索対象に
+          const targets = [
+            ...searchTargets(m),
+            ...((extraTargets?.(m) ?? []).map(normalize).filter(Boolean)),
+          ];
           let score = 0;
           for (const t of targets) {
             if (t.startsWith(q)) score = Math.max(score, 3);
@@ -106,7 +127,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       if (mapped !== cleaned) list = run(normalize(mapped));
     }
     return list;
-  }, [menuItems]);
+  }, [menuItems, extraTargets]);
 
   // 検索欄への表示用テキスト。漢字のままで直接ヒットしないなら読み仮名に変換して見せる
   // （「歩」と表示されるのを防ぎ「ほ」を表示する）
@@ -147,6 +168,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
 
   const startListen = () => {
     setSpeechError(null);
+    setSpeechInfo(null);
     // アプリ内ブラウザは開始前に案内（試しても必ず失敗するため）
     if (isInAppBrowser()) {
       setSpeechError(friendlySpeechError("service-not-allowed"));
@@ -158,11 +180,20 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       setSpeechError("この端末のブラウザは音声入力に対応していません。Safari または Chrome をご利用ください");
       return;
     }
+    // 端末が対応していない言語は日本語認識に自動切替（例: Apple端末のネパール語）
+    const { effective, fallbackFrom } = resolveSpeechLang(lang);
+    if (fallbackFrom === "ne-NP") {
+      setSpeechInfo("🇳🇵 यो उपकरणले नेपाली आवाज बुझ्दैन। कृपया जापानीमा बोल्नुहोस्（この端末はネパール語音声に未対応のため、日本語で認識します）");
+    }
+    beginRecognition(SR, effective, false);
+  };
+
+  const beginRecognition = (SR: any, speechLang: string, isRetry: boolean) => {
     // 二重起動防止：既存の認識が生きていれば止めてから開始
     try { recogRef.current?.abort?.(); } catch { /* ignore */ }
     try {
       const r = new SR();
-      r.lang = lang;
+      r.lang = speechLang;
       r.continuous = false;
       // 話している途中から画面に反映（体感速度を大幅改善）
       r.interimResults = true;
@@ -226,7 +257,15 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
         clearTimeout(safetyTimer);
         clearNoResultTimer();
         if (finalizeTimer) clearTimeout(finalizeTimer);
-        const msg = friendlySpeechError(e.error ?? "unknown");
+        const code = e.error ?? "unknown";
+        // 未対応言語なら日本語認識で1回だけ自動リトライ
+        if (code === "language-not-supported" && !isRetry && speechLang !== "ja-JP") {
+          setSpeechInfo("この言語の音声認識は端末未対応のため、日本語で認識します");
+          setListening(false);
+          beginRecognition(SR, "ja-JP", true);
+          return;
+        }
+        const msg = friendlySpeechError(code);
         if (msg) setSpeechError(msg);
         setListening(false);
       };
@@ -295,6 +334,9 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
 
       {speechError && (
         <p className="text-xs text-red-500 mt-1 px-2">{speechError}</p>
+      )}
+      {speechInfo && !speechError && (
+        <p className="text-xs text-amber-600 mt-1 px-2">{speechInfo}</p>
       )}
 
       {results.length > 0 && (

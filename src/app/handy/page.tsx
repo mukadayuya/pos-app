@@ -5,7 +5,12 @@ import { MenuItem } from "@/types/pos";
 import type { CategoryRecord } from "@/lib/db";
 import MenuSearchBox from "@/components/MenuSearchBox";
 import { t, type Lang } from "@/lib/i18n";
-import { warajiItemName, warajiCatName } from "@/data/warajiTranslations";
+import { warajiItemName, warajiCatName, warajiMenuTranslations } from "@/data/warajiTranslations";
+
+// 翻訳名（ネパール語・英語・中国語・韓国語）も検索対象にする
+function translationTargets(item: MenuItem): string[] {
+  return Object.values(warajiMenuTranslations[item.name] ?? {}) as string[];
+}
 
 const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
 const STAFF_LIST = IS_WARAJI ? ["小黒", "ラム", "ビカス"] : ["向田", "スタッフA"];
@@ -308,6 +313,7 @@ export default function HandyPage() {
                 onSelect={addToCart}
                 initialLang={speechLangFor(lang)}
                 hideLangSelector
+                extraTargets={translationTargets}
               />
             </div>
 
