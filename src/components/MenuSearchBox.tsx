@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { MenuItem } from "@/types/pos";
 
 // カタカナ→ひらがな正規化（検索マッチ用）
@@ -17,6 +17,28 @@ function searchTargets(item: MenuItem): string[] {
     normalize(item.name),
     normalize(item.description ?? ""),  // 読み仮名は description に格納
   ].filter(Boolean);
+}
+
+// 音声認識が一音の発話を漢字にしてしまった場合の読み仮名テーブル
+// 例:「ほ」と言うと「歩」が返る → 「ほ」に変換して再検索する
+const KANJI_KANA: Record<string, string> = {
+  "歩": "ほ", "保": "ほ", "穂": "ほ", "名": "な", "菜": "な", "奈": "な",
+  "実": "み", "身": "み", "味": "み", "三": "み", "手": "て", "天": "て",
+  "目": "め", "芽": "め", "気": "き", "木": "き", "黄": "き", "都": "と",
+  "戸": "と", "十": "と", "田": "た", "多": "た", "他": "た", "差": "さ",
+  "佐": "さ", "課": "か", "蚊": "か", "下": "か", "火": "ひ", "日": "ひ",
+  "湯": "ゆ", "由": "ゆ", "世": "せ", "瀬": "せ", "背": "せ", "素": "す",
+  "巣": "す", "津": "つ", "通": "つ", "絵": "え", "江": "え", "尾": "お",
+  "緒": "お", "和": "わ", "輪": "わ", "葉": "は", "歯": "は", "波": "は",
+  "矢": "や", "夜": "よ", "四": "よ", "無": "む", "根": "ね", "音": "ね",
+  "値": "ね", "野": "の", "里": "り", "理": "り", "路": "ろ", "間": "ま",
+  "真": "ま", "馬": "ま", "空": "そら", "君": "くん", "区": "く", "九": "く",
+};
+
+// 短い入力の漢字を読み仮名に変換（2文字以下のときのみ適用）
+function kanjiToKana(raw: string): string {
+  if (raw.length > 2) return raw;
+  return Array.from(raw).map(ch => KANJI_KANA[ch] ?? ch).join("");
 }
 
 type Lang = "ja-JP" | "ne-NP" | "en-US" | "zh-CN" | "ko-KR";
@@ -52,24 +74,41 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
     };
   }, []);
 
-  const results = query.trim() === "" ? [] : (() => {
-    const q = normalize(query);
-    return menuItems
-      .filter(m => m.isAvailable !== false)
-      .map(m => {
-        const targets = searchTargets(m);
-        let score = 0;
-        for (const t of targets) {
-          if (t.startsWith(q)) score = Math.max(score, 3);
-          else if (t.includes(q)) score = Math.max(score, 1);
-        }
-        return { item: m, score };
-      })
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
-      .map(x => x.item);
-  })();
+  // 検索本体。音声認識の候補選定でも再利用するため関数化
+  const searchFor = useCallback((raw: string): MenuItem[] => {
+    // 音声認識が付けがちな句読点・記号を除去
+    const cleaned = raw.replace(/[。、．，.,!?！？\s]+/g, "");
+    if (!cleaned) return [];
+
+    const run = (q: string): MenuItem[] => {
+      if (!q) return [];
+      return menuItems
+        .filter(m => m.isAvailable !== false)
+        .map(m => {
+          const targets = searchTargets(m);
+          let score = 0;
+          for (const t of targets) {
+            if (t.startsWith(q)) score = Math.max(score, 3);
+            else if (t.includes(q)) score = Math.max(score, 1);
+          }
+          return { item: m, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8)
+        .map(x => x.item);
+    };
+
+    let list = run(normalize(cleaned));
+    // ヒットなし＆短い入力なら、漢字→読み仮名変換して再検索（「歩」→「ほ」）
+    if (list.length === 0) {
+      const mapped = kanjiToKana(cleaned);
+      if (mapped !== cleaned) list = run(normalize(mapped));
+    }
+    return list;
+  }, [menuItems]);
+
+  const results = useMemo(() => searchFor(query), [query, searchFor]);
 
   // LINE・Instagram等のアプリ内ブラウザ判定（音声認識APIがOS制限で使えない）
   const isInAppBrowser = () => {
@@ -77,17 +116,24 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
     return /Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent);
   };
 
-  const friendlySpeechError = (code: string): string => {
+  const friendlySpeechError = (code: string): string | null => {
+    if (code === "aborted") return null; // ユーザー自身の停止・画面遷移。エラー表示しない
     if (code === "service-not-allowed" || code === "not-allowed") {
       return isInAppBrowser()
         ? "LINEなどアプリ内ブラウザでは音声入力が使えません。画面右下の「…」→「他のブラウザで開く」からSafariで開いてください"
         : "マイクの使用が許可されていません。ブラウザ設定でこのサイトのマイクを許可してください";
     }
-    if (code === "no-speech")     return "音声が聞き取れませんでした。もう一度お話しください";
+    if (code === "no-speech")     return "音声が聞き取れませんでした。マイクに近づけてもう一度お話しください";
     if (code === "audio-capture") return "マイクが見つかりません。端末のマイク設定をご確認ください";
     if (code === "network")       return "通信エラーです。ネット環境をご確認ください";
+    if (code === "language-not-supported")
+      return "この端末はこの言語の音声認識に対応していません。言語を切り替えてお試しください";
+    if (code === "bad-grammar")   return "音声を解釈できませんでした。もう一度お試しください";
     return `音声入力エラー: ${code}`;
   };
+
+  // かな・英数のみ（漢字を含まない）判定。短い発話の漢字誤変換対策で使用
+  const isKanaOnly = (s: string) => /^[ぁ-んァ-ヶーゝゞ・\sa-zA-Z0-9]+$/.test(s.trim());
 
   const startListen = () => {
     setSpeechError(null);
@@ -102,25 +148,60 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       setSpeechError("この端末のブラウザは音声入力に対応していません。Safari または Chrome をご利用ください");
       return;
     }
+    // 二重起動防止：既存の認識が生きていれば止めてから開始
+    try { recogRef.current?.abort?.(); } catch { /* ignore */ }
     try {
       const r = new SR();
       r.lang = lang;
-      r.interimResults = false;
-      r.maxAlternatives = 1;
+      r.continuous = false;
+      // 話している途中から画面に反映（体感速度を大幅改善）
+      r.interimResults = true;
+      // 認識候補を複数もらう：「ほ」→「歩」のような漢字誤変換でも
+      // 別候補で検索ヒットすればそちらを採用できる
+      r.maxAlternatives = 5;
+
+      // 無音・無応答での固まり防止（12秒で自動停止）
+      const safetyTimer = setTimeout(() => {
+        try { r.stop(); } catch { /* ignore */ }
+      }, 12000);
+
       r.onstart = () => setListening(true);
       r.onresult = (e: any) => {
-        const text = e.results?.[0]?.[0]?.transcript ?? "";
-        setQuery(text);
+        const res = e.results?.[e.results.length - 1];
+        if (!res) return;
+        if (!res.isFinal) {
+          // 途中経過をそのまま表示（リアルタイム検索）
+          const t = res[0]?.transcript ?? "";
+          if (t) setQuery(t);
+          return;
+        }
+        // 確定：全候補から「検索がヒットするもの」を優先採用
+        const alts: string[] = [];
+        for (let i = 0; i < res.length; i++) {
+          const t = res[i]?.transcript?.trim();
+          if (t) alts.push(t);
+        }
+        const best =
+          alts.find(a => searchFor(a).length > 0) ??   // 検索ヒットする候補
+          alts.find(isKanaOnly) ??                      // かなだけの候補（漢字誤変換回避）
+          alts[0] ?? "";
+        setQuery(best);
       };
       r.onerror = (e: any) => {
-        setSpeechError(friendlySpeechError(e.error ?? "unknown"));
+        clearTimeout(safetyTimer);
+        const msg = friendlySpeechError(e.error ?? "unknown");
+        if (msg) setSpeechError(msg);
         setListening(false);
       };
-      r.onend = () => setListening(false);
+      r.onend = () => {
+        clearTimeout(safetyTimer);
+        setListening(false);
+      };
       recogRef.current = r;
       r.start();
     } catch (err: any) {
       setSpeechError(err?.message ?? "音声入力を起動できませんでした");
+      setListening(false);
     }
   };
 
