@@ -1,6 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchMenuItems, fetchCategories } from "@/lib/db";
 import { MenuItem } from "@/types/pos";
 import type { CategoryRecord } from "@/lib/db";
@@ -11,7 +10,6 @@ import { warajiItemName, warajiCatName } from "@/data/warajiTranslations";
 const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
 const STAFF_LIST = IS_WARAJI ? ["小黒", "ラム", "ビカス"] : ["向田", "スタッフA"];
 
-// ハンディ操作するのはスタッフ。日本語＋ネパール語（＋英中韓）を提供
 const HANDY_LANGS: { code: Lang; flag: string; label: string }[] = [
   { code: "ja", flag: "🇯🇵", label: "日本語" },
   { code: "ne", flag: "🇳🇵", label: "नेपाली" },
@@ -20,15 +18,23 @@ const HANDY_LANGS: { code: Lang; flag: string; label: string }[] = [
   { code: "ko", flag: "🇰🇷", label: "한국어" },
 ];
 
-type CartItem = {
-  itemKey: string;
-  item: MenuItem;
-  qty: number;
+type CartItem = { itemKey: string; item: MenuItem; qty: number };
+
+type OrderRecord = {
+  id: string;
+  tableNo: string;
+  staff: string;
+  items: { name: string; emoji: string; qty: number; unitPrice: number }[];
+  totalTaxIncl: number;
+  sentAt: number; // epoch ms
+  served: boolean;
+  closed: boolean;
 };
 
 const TABLES = ["1", "2", "3", "4", "5", "6", "カウンター1", "カウンター2", "座敷1", "座敷2"];
+const LS_ORDERS_KEY = "waraji_handy_orders";
+const LS_LANG_KEY = "waraji_handy_lang";
 
-// UI言語→音声認識言語のマッピング
 function speechLangFor(lang: Lang): "ja-JP" | "en-US" | "ne-NP" | "zh-CN" | "ko-KR" {
   if (lang === "en") return "en-US";
   if (lang === "ne") return "ne-NP";
@@ -36,6 +42,30 @@ function speechLangFor(lang: Lang): "ja-JP" | "en-US" | "ne-NP" | "zh-CN" | "ko-
   if (lang === "ko") return "ko-KR";
   return "ja-JP";
 }
+
+function loadOrders(): OrderRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LS_ORDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as OrderRecord[];
+    // 24時間より古い注文は自動で除外（デモで hisotry が散らからないように）
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return parsed.filter(o => o.sentAt > cutoff);
+  } catch { return []; }
+}
+
+function saveOrders(list: OrderRecord[]) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(LS_ORDERS_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+}
+
+function fmtTime(ms: number) {
+  const d = new Date(ms);
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+
+type Tab = "order" | "pending" | "history";
 
 export default function HandyPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -48,16 +78,16 @@ export default function HandyPage() {
   const [showCart, setShowCart] = useState(false);
   const [sending, setSending] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("order");
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
 
   useEffect(() => {
-    // 保存された言語設定を復元
-    const saved = localStorage.getItem("waraji_handy_lang") as Lang | null;
+    const saved = localStorage.getItem(LS_LANG_KEY) as Lang | null;
     if (saved && HANDY_LANGS.some(l => l.code === saved)) setLang(saved);
+    setOrders(loadOrders());
   }, []);
-
-  useEffect(() => {
-    if (lang) localStorage.setItem("waraji_handy_lang", lang);
-  }, [lang]);
+  useEffect(() => { localStorage.setItem(LS_LANG_KEY, lang); }, [lang]);
+  useEffect(() => { saveOrders(orders); }, [orders]);
 
   useEffect(() => {
     fetchCategories()
@@ -70,11 +100,8 @@ export default function HandyPage() {
       })
       .catch(console.error);
   }, []);
-
   useEffect(() => {
-    fetchMenuItems()
-      .then(items => setMenuItems(items))
-      .catch(console.error);
+    fetchMenuItems().then(items => setMenuItems(items)).catch(console.error);
   }, []);
 
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
@@ -87,9 +114,7 @@ export default function HandyPage() {
     setCart(prev => {
       const key = item.id;
       const existing = prev.find(c => c.itemKey === key);
-      if (existing) {
-        return prev.map(c => c.itemKey === key ? { ...c, qty: c.qty + 1 } : c);
-      }
+      if (existing) return prev.map(c => c.itemKey === key ? { ...c, qty: c.qty + 1 } : c);
       return [...prev, { itemKey: key, item, qty: 1 }];
     });
     setFlash(warajiItemName(item.name, lang));
@@ -99,31 +124,59 @@ export default function HandyPage() {
   const changeQty = (key: string, delta: number) => {
     setCart(prev => prev.map(c => c.itemKey === key ? { ...c, qty: c.qty + delta } : c).filter(c => c.qty > 0));
   };
-
-  const removeFromCart = (key: string) => {
-    setCart(prev => prev.filter(c => c.itemKey !== key));
-  };
+  const removeFromCart = (key: string) => setCart(prev => prev.filter(c => c.itemKey !== key));
 
   const sendToKitchen = async () => {
     if (cart.length === 0) return;
     setSending(true);
     try {
-      await new Promise(r => setTimeout(r, 400));
+      const record: OrderRecord = {
+        id: crypto.randomUUID(),
+        tableNo,
+        staff,
+        items: cart.map(c => ({
+          name: c.item.name,
+          emoji: c.item.emoji ?? "🍽️",
+          qty: c.qty,
+          unitPrice: Math.round(c.item.price * (1 + (c.item.taxRate ?? 0.10))),
+        })),
+        totalTaxIncl: cartTotal,
+        sentAt: Date.now(),
+        served: false,
+        closed: false,
+      };
+      await new Promise(r => setTimeout(r, 300));
+      setOrders(prev => [record, ...prev]);
       setCart([]);
       setShowCart(false);
-      setFlash("✓ " + t(lang, "sendOrder"));
-      setTimeout(() => setFlash(null), 1500);
+      setFlash("✓ キッチンへ送信しました");
+      setTimeout(() => setFlash(null), 1200);
     } finally {
       setSending(false);
     }
+  };
+
+  const toggleServed = (id: string) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, served: !o.served } : o));
+  };
+  const closeOrder = (id: string) => {
+    if (!confirm("この注文を会計済み（クローズ）にしますか？")) return;
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, closed: true, served: true } : o));
+  };
+  const cancelOrder = (id: string) => {
+    if (!confirm("この注文を取り消しますか？")) return;
+    setOrders(prev => prev.filter(o => o.id !== id));
   };
 
   const filteredItems = menuItems
     .filter(m => m.category === activeCatId && m.isAvailable !== false)
     .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
 
-  // UI ラベル（i18n）
-  const uiLabels = {
+  const pendingOrders = useMemo(() => orders.filter(o => !o.closed), [orders]);
+  const historyOrders = useMemo(() => [...orders].sort((a, b) => b.sentAt - a.sentAt), [orders]);
+
+  // UI ラベル
+  const L = {
     tableLabel:  lang === "ja" ? "卓" : lang === "en" ? "Table" : lang === "ne" ? "टेबल" : lang === "zh" ? "桌" : lang === "ko" ? "테이블" : "Table",
     staffLabel:  lang === "ja" ? "担当" : lang === "en" ? "Staff" : lang === "ne" ? "स्टाफ" : lang === "zh" ? "员工" : lang === "ko" ? "담당" : "Staff",
     itemsLabel:  lang === "ja" ? "品" : lang === "en" ? "items" : lang === "ne" ? "वस्तु" : lang === "zh" ? "品" : lang === "ko" ? "개" : "items",
@@ -133,7 +186,16 @@ export default function HandyPage() {
     orderContentLabel: lang === "ja" ? "注文内容" : t(lang, "cartTitle"),
     totalLabel:  lang === "ja" ? "合計（税込）" : t(lang, "total"),
     noItemsInCat: t(lang, "noItems"),
-    homeLabel:   lang === "ja" ? "HOME" : "HOME",
+    tabOrder:    lang === "ja" ? "注文" : "Order",
+    tabPending:  lang === "ja" ? "未提供" : "Open",
+    tabHistory:  lang === "ja" ? "履歴" : "History",
+    served:      lang === "ja" ? "提供済" : "Served",
+    serve:       lang === "ja" ? "提供" : "Serve",
+    close:       lang === "ja" ? "会計" : "Close",
+    cancel:      lang === "ja" ? "取消" : "Cancel",
+    closed:      lang === "ja" ? "会計済" : "Closed",
+    noPending:   lang === "ja" ? "未提供の注文はありません" : "No open orders",
+    noHistory:   lang === "ja" ? "本日の注文履歴はまだありません" : "No history today",
   };
 
   return (
@@ -141,11 +203,13 @@ export default function HandyPage() {
       {/* ── Header ─────────────────────────────────────── */}
       <header className="bg-indigo-600 text-white px-3 py-2.5 shadow-md sticky top-0 z-10">
         <div className="flex items-center justify-between gap-2">
-          <Link href="/" className="text-xs text-indigo-200 hover:text-white">← {uiLabels.homeLabel}</Link>
-          <div className="text-center">
+          <div className="w-16 text-left">
             <p className="text-[10px] leading-none opacity-70">HANDY</p>
             <p className="text-sm font-bold leading-tight">笑路 (Waraji)</p>
           </div>
+          <p className="text-xs opacity-70">
+            {L.tableLabel}{tableNo} · {staff}
+          </p>
           <select
             value={lang}
             onChange={e => setLang(e.target.value as Lang)}
@@ -162,83 +226,126 @@ export default function HandyPage() {
             value={tableNo}
             onChange={e => setTableNo(e.target.value)}
             className="flex-1 bg-indigo-700 border border-indigo-400 rounded-lg px-2 py-1.5 text-sm font-bold outline-none"
-            aria-label={uiLabels.tableLabel}
           >
-            {TABLES.map(t => <option key={t} value={t}>{uiLabels.tableLabel} {t}</option>)}
+            {TABLES.map(t => <option key={t} value={t}>{L.tableLabel} {t}</option>)}
           </select>
           <select
             value={staff}
             onChange={e => setStaff(e.target.value)}
             className="flex-1 bg-indigo-700 border border-indigo-400 rounded-lg px-2 py-1.5 text-sm font-bold outline-none"
-            aria-label={uiLabels.staffLabel}
           >
             {STAFF_LIST.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
       </header>
 
-      {/* ── Search ─────────────────────────────────────── */}
-      <div className="px-3 pt-3">
-        <MenuSearchBox
-          menuItems={menuItems}
-          onSelect={addToCart}
-          initialLang={speechLangFor(lang)}
-          hideLangSelector
-        />
+      {/* ── Tab Bar ────────────────────────────────────── */}
+      <div className="flex bg-white border-b border-slate-200 sticky top-[110px] z-10">
+        {([
+          { key: "order",   icon: "🛒", label: L.tabOrder,   badge: cartCount },
+          { key: "pending", icon: "⏳", label: L.tabPending, badge: pendingOrders.length },
+          { key: "history", icon: "📜", label: L.tabHistory, badge: 0 },
+        ] as const).map(item => (
+          <button
+            key={item.key}
+            onClick={() => setTab(item.key)}
+            className={`flex-1 py-2.5 text-xs font-bold border-b-2 transition-all ${
+              tab === item.key
+                ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            <span className="text-base mr-1">{item.icon}</span>
+            {item.label}
+            {item.badge > 0 && (
+              <span className="ml-1 inline-block bg-red-500 text-white text-[10px] rounded-full px-1.5 py-0.5 font-black align-top">
+                {item.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* ── Category tabs (horizontal scroll) ──────────── */}
-      <div className="px-2 pb-2 overflow-x-auto no-scrollbar">
-        <div className="flex gap-2 whitespace-nowrap">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCatId(cat.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
-                activeCatId === cat.id
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-slate-600 border border-slate-200"
-              }`}
-            >
-              {warajiCatName(cat.name, lang)}
-            </button>
+      {/* ── Main content by tab ─────────────────────────── */}
+      {tab === "order" && (
+        <>
+          <div className="px-3 pt-3">
+            <MenuSearchBox
+              menuItems={menuItems}
+              onSelect={addToCart}
+              initialLang={speechLangFor(lang)}
+              hideLangSelector
+            />
+          </div>
+
+          <div className="px-2 pb-2 overflow-x-auto no-scrollbar">
+            <div className="flex gap-2 whitespace-nowrap">
+              {categories.map(cat => (
+                <button key={cat.id} onClick={() => setActiveCatId(cat.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    activeCatId === cat.id ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"
+                  }`}>
+                  {warajiCatName(cat.name, lang)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <main className="flex-1 overflow-y-auto px-3 pb-32">
+            <div className="grid grid-cols-2 gap-2">
+              {filteredItems.map(item => {
+                const totalPrice = Math.round(item.price * (1 + (item.taxRate ?? 0.10)));
+                const displayName = warajiItemName(item.name, lang);
+                const showJa = lang !== "ja" && displayName !== item.name;
+                return (
+                  <button key={item.id} onClick={() => addToCart(item)}
+                    className="bg-white rounded-xl p-3 shadow-sm border border-slate-200 hover:border-indigo-400 active:scale-95 transition-all text-left">
+                    <div className="flex items-start gap-2">
+                      <span className="text-2xl leading-none">{item.emoji ?? "🍽️"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-800 leading-tight line-clamp-2">{displayName}</p>
+                        {showJa && <p className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">{item.name}</p>}
+                        <p className="text-sm font-black text-indigo-600 mt-1">¥{totalPrice}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {filteredItems.length === 0 && (
+              <p className="text-center text-slate-400 text-sm py-12">{L.noItemsInCat}</p>
+            )}
+          </main>
+        </>
+      )}
+
+      {tab === "pending" && (
+        <main className="flex-1 overflow-y-auto px-3 py-3 pb-24 space-y-3">
+          {pendingOrders.length === 0 ? (
+            <p className="text-center text-slate-400 text-sm py-12">{L.noPending}</p>
+          ) : pendingOrders.map(o => (
+            <OrderCard key={o.id} order={o} labels={L}
+              onServe={() => toggleServed(o.id)}
+              onClose={() => closeOrder(o.id)}
+              onCancel={() => cancelOrder(o.id)}
+            />
           ))}
-        </div>
-      </div>
+        </main>
+      )}
 
-      {/* ── Menu grid ──────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto px-3 pb-32">
-        <div className="grid grid-cols-2 gap-2">
-          {filteredItems.map(item => {
-            const totalPrice = Math.round(item.price * (1 + (item.taxRate ?? 0.10)));
-            const displayName = warajiItemName(item.name, lang);
-            const showJa = lang !== "ja" && displayName !== item.name;
-            return (
-              <button
-                key={item.id}
-                onClick={() => addToCart(item)}
-                className="bg-white rounded-xl p-3 shadow-sm border border-slate-200 hover:border-indigo-400 active:scale-95 transition-all text-left"
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-2xl leading-none">{item.emoji ?? "🍽️"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 leading-tight line-clamp-2">
-                      {displayName}
-                    </p>
-                    {showJa && (
-                      <p className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">{item.name}</p>
-                    )}
-                    <p className="text-sm font-black text-indigo-600 mt-1">¥{totalPrice}</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        {filteredItems.length === 0 && (
-          <p className="text-center text-slate-400 text-sm py-12">{uiLabels.noItemsInCat}</p>
-        )}
-      </main>
+      {tab === "history" && (
+        <main className="flex-1 overflow-y-auto px-3 py-3 pb-24 space-y-3">
+          {historyOrders.length === 0 ? (
+            <p className="text-center text-slate-400 text-sm py-12">{L.noHistory}</p>
+          ) : historyOrders.map(o => (
+            <OrderCard key={o.id} order={o} labels={L} readonly
+              onServe={() => toggleServed(o.id)}
+              onClose={() => closeOrder(o.id)}
+              onCancel={() => cancelOrder(o.id)}
+            />
+          ))}
+        </main>
+      )}
 
       {/* ── Flash toast ────────────────────────────────── */}
       {flash && (
@@ -247,51 +354,39 @@ export default function HandyPage() {
         </div>
       )}
 
-      {/* ── Sticky cart bar ────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] p-3 z-20">
-        {cart.length === 0 ? (
-          <button
-            disabled
-            className="w-full h-14 rounded-2xl bg-slate-100 text-slate-400 font-bold text-sm"
-          >
-            {uiLabels.selectPrompt}
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowCart(true)}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 rounded-2xl px-3 py-2.5 flex items-center justify-between active:scale-95 transition-all"
-            >
-              <span className="text-xs font-bold text-slate-600">{cartCount}{uiLabels.itemsLabel}</span>
-              <span className="text-base font-black text-slate-800">¥{cartTotal.toLocaleString()}</span>
+      {/* ── Sticky cart bar (only on order tab) ────────── */}
+      {tab === "order" && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] p-3 z-20">
+          {cart.length === 0 ? (
+            <button disabled className="w-full h-14 rounded-2xl bg-slate-100 text-slate-400 font-bold text-sm">
+              {L.selectPrompt}
             </button>
-            <button
-              onClick={sendToKitchen}
-              disabled={sending}
-              className="flex-[1.4] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-2xl font-black text-sm active:scale-95 transition-all"
-            >
-              {sending ? uiLabels.sendingLabel : uiLabels.sendLabel}
-            </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={() => setShowCart(true)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 rounded-2xl px-3 py-2.5 flex items-center justify-between active:scale-95 transition-all">
+                <span className="text-xs font-bold text-slate-600">{cartCount}{L.itemsLabel}</span>
+                <span className="text-base font-black text-slate-800">¥{cartTotal.toLocaleString()}</span>
+              </button>
+              <button onClick={sendToKitchen} disabled={sending}
+                className="flex-[1.4] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-2xl font-black text-sm active:scale-95 transition-all">
+                {sending ? L.sendingLabel : L.sendLabel}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Cart modal ─────────────────────────────────── */}
       {showCart && (
         <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowCart(false)}>
-          <div
-            className="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col animate-slideup"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col animate-slideup" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500">{uiLabels.tableLabel} {tableNo} · {staff}</p>
-                <p className="text-lg font-black text-slate-800">{uiLabels.orderContentLabel} {cartCount}{uiLabels.itemsLabel}</p>
+                <p className="text-xs text-slate-500">{L.tableLabel} {tableNo} · {staff}</p>
+                <p className="text-lg font-black text-slate-800">{L.orderContentLabel} {cartCount}{L.itemsLabel}</p>
               </div>
-              <button
-                onClick={() => setShowCart(false)}
-                className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 text-lg"
-              >✕</button>
+              <button onClick={() => setShowCart(false)} className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 text-lg">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {cart.map(c => {
@@ -306,13 +401,10 @@ export default function HandyPage() {
                       <p className="text-xs text-slate-500">¥{each} × {c.qty} = ¥{(each * c.qty).toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => changeQty(c.itemKey, -1)}
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700">−</button>
+                      <button onClick={() => changeQty(c.itemKey, -1)} className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700">−</button>
                       <span className="w-6 text-center font-bold">{c.qty}</span>
-                      <button onClick={() => changeQty(c.itemKey, 1)}
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700">+</button>
-                      <button onClick={() => removeFromCart(c.itemKey)}
-                        className="ml-1 w-8 h-8 rounded-lg bg-red-50 text-red-500 text-sm">🗑</button>
+                      <button onClick={() => changeQty(c.itemKey, 1)} className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700">+</button>
+                      <button onClick={() => removeFromCart(c.itemKey)} className="ml-1 w-8 h-8 rounded-lg bg-red-50 text-red-500 text-sm">🗑</button>
                     </div>
                   </div>
                 );
@@ -320,15 +412,11 @@ export default function HandyPage() {
             </div>
             <div className="p-4 border-t border-slate-200 bg-white">
               <div className="flex justify-between items-baseline mb-3">
-                <span className="text-sm text-slate-500">{uiLabels.totalLabel}</span>
+                <span className="text-sm text-slate-500">{L.totalLabel}</span>
                 <span className="text-2xl font-black text-slate-800">¥{cartTotal.toLocaleString()}</span>
               </div>
-              <button
-                onClick={sendToKitchen}
-                disabled={sending}
-                className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-2xl font-black text-base active:scale-95"
-              >
-                {sending ? uiLabels.sendingLabel : uiLabels.sendLabel}
+              <button onClick={sendToKitchen} disabled={sending} className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-2xl font-black text-base active:scale-95">
+                {sending ? L.sendingLabel : L.sendLabel}
               </button>
             </div>
           </div>
@@ -344,6 +432,66 @@ export default function HandyPage() {
         }
         .animate-slideup { animation: slideup 0.24s ease-out; }
       `}</style>
+    </div>
+  );
+}
+
+function OrderCard({ order, labels, readonly, onServe, onClose, onCancel }: {
+  order: OrderRecord;
+  labels: { tableLabel: string; served: string; serve: string; close: string; cancel: string; closed: string; itemsLabel: string };
+  readonly?: boolean;
+  onServe: () => void;
+  onClose: () => void;
+  onCancel: () => void;
+}) {
+  const totalQty = order.items.reduce((s, i) => s + i.qty, 0);
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${order.closed ? "border-slate-200 opacity-70" : order.served ? "border-emerald-300" : "border-amber-300"}`}>
+      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100">
+        <div>
+          <p className="text-xs font-bold text-slate-800">
+            {labels.tableLabel}{order.tableNo}
+            <span className="ml-2 text-slate-400 font-normal">{fmtTime(order.sentAt)}</span>
+          </p>
+          <p className="text-[10px] text-slate-400">{order.staff}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          {order.closed ? (
+            <span className="text-[10px] px-2 py-1 bg-slate-100 text-slate-500 rounded-md font-bold">{labels.closed}</span>
+          ) : order.served ? (
+            <span className="text-[10px] px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md font-bold">✓ {labels.served}</span>
+          ) : (
+            <span className="text-[10px] px-2 py-1 bg-amber-100 text-amber-700 rounded-md font-bold">未提供</span>
+          )}
+        </div>
+      </div>
+      <div className="px-3 py-2 space-y-0.5">
+        {order.items.map((it, i) => (
+          <div key={i} className="flex items-center text-xs">
+            <span className="w-6">{it.emoji}</span>
+            <span className="flex-1 truncate">{it.name}</span>
+            <span className="text-slate-500 font-mono">× {it.qty}</span>
+          </div>
+        ))}
+      </div>
+      <div className="px-3 py-2 border-t border-slate-100 flex items-center justify-between">
+        <span className="text-xs text-slate-500">{totalQty}{labels.itemsLabel}</span>
+        <span className="text-sm font-black text-slate-800">¥{order.totalTaxIncl.toLocaleString()}</span>
+      </div>
+      {!readonly && !order.closed && (
+        <div className="flex border-t border-slate-100">
+          <button onClick={onServe}
+            className={`flex-1 py-2 text-xs font-bold ${order.served ? "text-slate-400" : "text-emerald-600 hover:bg-emerald-50"}`}>
+            {order.served ? "↺ " + labels.served : "✓ " + labels.serve}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 border-l border-slate-100">
+            💴 {labels.close}
+          </button>
+          <button onClick={onCancel} className="flex-1 py-2 text-xs font-bold text-red-500 hover:bg-red-50 border-l border-slate-100">
+            🗑 {labels.cancel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
