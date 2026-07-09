@@ -623,6 +623,8 @@ export const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID === "bronco"
   ? "6f0842d5-7fe6-4278-818c-86e8a8731130"
   : process.env.NEXT_PUBLIC_STORE_ID === "waraji"
   ? "a1c2b3d4-e5f6-4789-abcd-ef1234567890"
+  : process.env.NEXT_PUBLIC_STORE_ID === "shoten"
+  ? "3f8a2b1c-9d4e-4f6a-8b2c-7e5d9a1f3c60"
   : (process.env.NEXT_PUBLIC_STORE_ID ?? "tetsu-bo");
 
 export async function fetchCategories(): Promise<CategoryRecord[]> {

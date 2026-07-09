@@ -29,7 +29,8 @@ import {
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
 const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-const STORE_DISPLAY_NAME = IS_BRONCO ? "ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : "Kitchen Kazu";
+const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+const STORE_DISPLAY_NAME = IS_BRONCO ? "ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : IS_SHOTEN ? "居食屋 笑点" : "Kitchen Kazu";
 
 // ─── Types ────────────────────────────────────────────────────
 type MainTab = "today" | "orders" | "category" | "items" | "gender" | "staff" | "hourly" | "yearly";

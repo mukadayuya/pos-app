@@ -213,22 +213,30 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
           try { r.stop(); } catch { /* ignore */ }
         }, 500);
       };
-      // 「ほ」のような一音発話は認識エンジンが続きを待って確定を保留するため、
-      // 途中経過ゼロのまま3秒経ったら強制確定させる
+      // 完全無音のまま5秒経ったら諦めて終了させる
+      // 注意: 「音を検知したら即解除」する。3秒固定だった時、ゆっくり話し始めた
+      // 正常な発話まで切ってしまい「無反応」に見える事故が起きたため
       let noResultTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
         try { r.stop(); } catch { /* ignore */ }
-      }, 3000);
+      }, 5000);
       const clearNoResultTimer = () => {
         if (noResultTimer) { clearTimeout(noResultTimer); noResultTimer = null; }
       };
+      // 結果ゼロで終わったかを追跡（無言で待機に戻る「無反応」を撲滅するため）
+      let gotResult = false;
+      let hadError = false;
 
       r.onstart = () => setListening(true);
-      // 話し声が途切れた瞬間に確定を要求（さらに速く）
+      // 音・話し声を検知したら「無音タイマー」は解除（話している最中に切らない）
+      r.onsoundstart = clearNoResultTimer;
+      r.onspeechstart = clearNoResultTimer;
+      // 話し声が途切れたら0.3秒の猶予をおいて確定（即stopだと結果を取りこぼす）
       r.onspeechend = () => {
-        try { r.stop(); } catch { /* ignore */ }
+        setTimeout(() => { try { r.stop(); } catch { /* ignore */ } }, 300);
       };
       r.onresult = (e: any) => {
         clearNoResultTimer();
+        gotResult = true;
         const res = e.results?.[e.results.length - 1];
         if (!res) return;
         if (!res.isFinal) {
@@ -254,6 +262,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
         setQuery(displayText(best));
       };
       r.onerror = (e: any) => {
+        hadError = true;
         clearTimeout(safetyTimer);
         clearNoResultTimer();
         if (finalizeTimer) clearTimeout(finalizeTimer);
@@ -274,6 +283,10 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
         clearNoResultTimer();
         if (finalizeTimer) clearTimeout(finalizeTimer);
         setListening(false);
+        // 何も認識できずに終わった場合は無言で戻らず必ず案内を出す（「無反応」の撲滅）
+        if (!gotResult && !hadError) {
+          setSpeechError("音声を検出できませんでした。🎤を押してから一呼吸おいて、はっきりお話しください");
+        }
       };
       recogRef.current = r;
       r.start();

@@ -40,7 +40,8 @@ function printReceipt(record: SalesRecord) {
   const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
   const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
   const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-  const defaultStoreName = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : "Kitchen Kazu";
+const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+  const defaultStoreName = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : IS_SHOTEN ? "居食屋 笑点" : "Kitchen Kazu";
   const storeName   = typeof window !== "undefined" ? (localStorage.getItem("store_name") || defaultStoreName) : defaultStoreName;
 
   const itemDiscountTotalForReceipt = record.itemDiscountTotal ?? 0;

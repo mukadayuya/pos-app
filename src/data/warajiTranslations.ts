@@ -13,6 +13,15 @@ export const warajiCategoryTranslations: Record<string, Partial<Record<Lang, str
   "揚げ物・一品料理": { en: "Fried / A la Carte", ne: "फ्राइ / एकल परिकार",       zh: "炸物·单品",   ko: "튀김 / 일품요리" },
   "〆・ご飯もの":    { en: "Rice / Finishers",    ne: "भात / अन्तिम परिकार",      zh: "主食·收尾",   ko: "밥 / 마무리" },
   "ドリンク":        { en: "Drinks",              ne: "पेय पदार्थ",              zh: "饮品",         ko: "음료" },
+  // ── 居食屋 笑点（系列店）のカテゴリー ──
+  "本日のオススメ":  { en: "Today's Specials",    ne: "आजको विशेष",              zh: "今日推荐",     ko: "오늘의 추천" },
+  "刺身・刺盛り":    { en: "Sashimi",             ne: "सासिमी",                  zh: "刺身拼盘",     ko: "사시미" },
+  "お湯ぽちゃ料理":  { en: "Warm Comfort Dishes", ne: "तातो परिकार",             zh: "温热料理",     ko: "따뜻한 요리" },
+  "SPEED・珍味":     { en: "Quick Bites",         ne: "छिटो खाजा",               zh: "快速小菜",     ko: "스피드 안주" },
+  "野菜":            { en: "Vegetables",          ne: "तरकारी",                  zh: "蔬菜",         ko: "야채" },
+  "揚物":            { en: "Fried",               ne: "फ्राइ",                   zh: "炸物",         ko: "튀김" },
+  "焼物":            { en: "Grilled",             ne: "पोलेको",                  zh: "烤物",         ko: "구이" },
+  "日本酒":          { en: "Sake",                ne: "सेक (जापानी रक्सी)",       zh: "日本酒",       ko: "사케" },
 };
 
 // メニュー個別翻訳: 全78品ではなく主要な人気メニュー中心にカバー
@@ -114,6 +123,98 @@ export const warajiMenuTranslations: Record<string, Partial<Record<Lang, string>
   "烏龍茶":         { en: "Oolong Tea",         ne: "उलोङ चिया",           zh: "乌龙茶",     ko: "우롱차" },
   "緑茶":           { en: "Green Tea",          ne: "हरियो चिया",          zh: "绿茶",       ko: "녹차" },
 };
+
+// ── 居食屋 笑点（系列店）のメニュー翻訳 ──
+// 笑路と同名の商品（ポテト・ねぎま等）は上の既存エントリが自動で使われる
+Object.assign(warajiMenuTranslations, {
+  // 本日のオススメ
+  "コーンクリームコロッケ":       { en: "Corn Cream Croquette",      ne: "कर्न क्रीम क्रोकेट",        zh: "玉米奶油可乐饼", ko: "콘 크림 고로케" },
+  "飛騨牛のタタキ":               { en: "Hida Beef Tataki",          ne: "हिदा गाईको तातकी",          zh: "飞驒牛tataki",   ko: "히다규 타타키" },
+  "ローストビーフ":               { en: "Roast Beef",                ne: "रोस्ट बिफ",                 zh: "烤牛肉",         ko: "로스트비프" },
+  "黒毛和牛センマイ刺":           { en: "Wagyu Tripe Sashimi",       ne: "वागु ट्राइप सासिमी",        zh: "黑毛和牛千层肚", ko: "흑모와규 천엽회" },
+  "あん肝":                       { en: "Monkfish Liver",            ne: "मंकफिस कलेजो",              zh: "鮟鱇鱼肝",       ko: "아귀 간" },
+  "バイ貝煮付け":                 { en: "Simmered Whelk",            ne: "उमालेको शंखे",              zh: "煮海螺",         ko: "고둥 조림" },
+  "生ガキ":                       { en: "Raw Oyster (Iwate)",        ne: "काँचो सिपी",                zh: "生蚝",           ko: "생굴" },
+  "カンパチかま塩焼":             { en: "Salt-grilled Amberjack Collar", ne: "नुनमा पोलेको माछा",     zh: "盐烤章红鱼下巴", ko: "소금구이 방어목살" },
+  "豚巻きアスパラ":               { en: "Pork-wrapped Asparagus",    ne: "पोर्कमा बेरिएको एस्पारागस", zh: "猪肉卷芦笋",     ko: "돼지고기 아스파라거스말이" },
+  "ボイルイカ生わかめ":           { en: "Boiled Squid & Wakame",     ne: "उमालेको स्क्विड र वाकामे", zh: "白灼鱿鱼海带",   ko: "데친 오징어 미역" },
+  "穴子の煮付け":                 { en: "Simmered Conger Eel",       ne: "उमालेको ईल",                zh: "煮星鳗",         ko: "붕장어 조림" },
+  "もろこし丸":                   { en: "Corn Fritter Ball",         ne: "मकैको बल",                  zh: "玉米丸",         ko: "옥수수 완자" },
+  "シーフードグラタン":           { en: "Seafood Gratin",            ne: "सिफुड ग्राटिन",             zh: "海鲜焗烤",       ko: "씨푸드 그라탕" },
+  "海ぶどう":                     { en: "Sea Grapes",                ne: "समुद्री अंगूर",             zh: "海葡萄",         ko: "바다포도" },
+  "里芋の唐あげ":                 { en: "Fried Taro",                ne: "तारो फ्राइ",                zh: "炸芋头",         ko: "토란 튀김" },
+  "トーフステーキ":               { en: "Tofu Steak",                ne: "तोफु स्टेक",                zh: "豆腐排",         ko: "두부 스테이크" },
+  "クリームチーズの特製醤油漬け": { en: "Soy-marinated Cream Cheese", ne: "सोयामा क्रीम चीज",         zh: "酱油腌奶油奶酪", ko: "간장절임 크림치즈" },
+  "手羽唐":                       { en: "Fried Chicken Wings",       ne: "पखेटा फ्राइ",               zh: "炸鸡翅",         ko: "닭날개 튀김" },
+  "焼春巻":                       { en: "Grilled Spring Roll",       ne: "पोलेको स्प्रिङ रोल",        zh: "烤春卷",         ko: "구운 춘권" },
+  "棒々鶏":                       { en: "Bang Bang Chicken",         ne: "बाङबाङ चिकन",               zh: "棒棒鸡",         ko: "방방지" },
+  "えびチリ":                     { en: "Chili Shrimp",              ne: "चिली झिंगा",                zh: "干烧虾仁",       ko: "칠리새우" },
+  "こんにゃくの唐あげ":           { en: "Fried Konjac",              ne: "कोन्याकु फ्राइ",            zh: "炸魔芋",         ko: "곤약 튀김" },
+  "厚切りハムカツ":               { en: "Thick-cut Ham Cutlet",      ne: "बाक्लो ह्याम कट्लेट",       zh: "厚切火腿排",     ko: "두꺼운 햄까스" },
+  // 刺身・刺盛り
+  "刺盛り（1人前 2〜5種）":       { en: "Sashimi Platter (2-5 kinds)", ne: "सासिमी प्लेटर",           zh: "刺身拼盘",       ko: "모듬회" },
+  "本マグロ":                     { en: "Bluefin Tuna",              ne: "ब्लुफिन टुना",              zh: "蓝鳍金枪鱼",     ko: "참다랑어" },
+  "シマアジ":                     { en: "Striped Jack",              ne: "धारीदार माछा",              zh: "条纹竹荚鱼",     ko: "시마아지" },
+  "ヤリイカ":                     { en: "Spear Squid",               ne: "स्क्विड",                   zh: "枪乌贼",         ko: "창오징어" },
+  "サーモン":                     { en: "Salmon",                    ne: "सामन",                      zh: "三文鱼",         ko: "연어" },
+  "タイ昆布じめ":                 { en: "Kombu-cured Sea Bream",     ne: "कोम्बुमा राखेको माछा",      zh: "昆布腌鲷鱼",     ko: "다시마절임 도미" },
+  "タコ":                         { en: "Octopus",                   ne: "अक्टोपस",                   zh: "章鱼",           ko: "문어" },
+  // お湯ぽちゃ料理
+  "角煮":                         { en: "Braised Pork Belly",        ne: "पोर्क बेली",                zh: "红烧肉",         ko: "삼겹살 조림" },
+  "だし巻き玉子":                 { en: "Dashi Rolled Omelet",       ne: "दशी ओम्लेट",                zh: "高汤蛋卷",       ko: "계란말이" },
+  "ピリ辛手羽煮":                 { en: "Spicy Simmered Wings",      ne: "पिरो पखेटा",                zh: "微辣炖鸡翅",     ko: "매콤 닭날개조림" },
+  "さばみそ":                     { en: "Mackerel in Miso",          ne: "मिसो म्याकरेल",             zh: "味噌青花鱼",     ko: "고등어 미소조림" },
+  "どて煮":                       { en: "Nagoya Miso Stew",          ne: "मिसो स्ट्यु",               zh: "味噌炖牛筋",     ko: "도테니" },
+  "スタミナサラダ":               { en: "Stamina Salad",             ne: "स्टामिना सलाद",             zh: "活力沙拉",       ko: "스태미나 샐러드" },
+  "台湾どーふ":                   { en: "Taiwanese Spicy Tofu",      ne: "ताइवानी तोफु",              zh: "台湾豆腐",       ko: "대만 두부" },
+  "じゃがバター":                 { en: "Butter Potato",             ne: "बटर आलु",                   zh: "黄油土豆",       ko: "감자버터" },
+  "焼き小なす":                   { en: "Grilled Baby Eggplant",     ne: "पोलेको भन्टा",              zh: "烤小茄子",       ko: "구운 애가지" },
+  "塩ソーキ大根煮":               { en: "Salt Soki & Daikon",        ne: "सोकी र मूला",               zh: "盐味软骨炖萝卜", ko: "소키 무 조림" },
+  // SPEED・珍味
+  "チャンジャ":                   { en: "Changja (spicy cod guts)",  ne: "चाङजा",                     zh: "鳕鱼肠",         ko: "창난젓" },
+  "いか塩辛":                     { en: "Salted Squid",              ne: "नुनिलो स्क्विड",            zh: "咸鱿鱼",         ko: "오징어젓" },
+  "わさび昆布":                   { en: "Wasabi Kombu",              ne: "वासाबी कोम्बु",             zh: "山葵昆布",       ko: "와사비 다시마" },
+  "コブクロ":                     { en: "Pork Offal",                ne: "पोर्क अफल",                 zh: "猪小肚",         ko: "코부쿠로" },
+  "梅水晶":                       { en: "Ume Shark Cartilage",       ne: "उमे कार्टिलेज",             zh: "梅水晶",         ko: "우메스이쇼" },
+  // 野菜
+  "茶豆":                         { en: "Edamame (Chamame)",         ne: "चामामे",                    zh: "茶豆",           ko: "챠마메" },
+  "韓国宗家キムチ":               { en: "Jongga Kimchi",             ne: "किम्ची",                    zh: "宗家泡菜",       ko: "종가 김치" },
+  "グリーンサラダ":               { en: "Green Salad",               ne: "हरियो सलाद",                zh: "蔬菜沙拉",       ko: "그린 샐러드" },
+  "セロリスティック":             { en: "Celery Sticks",             ne: "सेलेरी स्टिक",              zh: "芹菜条",         ko: "셀러리 스틱" },
+  "トマトスライス":               { en: "Sliced Tomato",             ne: "टमाटर स्लाइस",              zh: "番茄片",         ko: "토마토 슬라이스" },
+  "おかんのQちゃん":              { en: "Mom's Cucumber Pickles",    ne: "काँक्रोको अचार",            zh: "妈妈的腌黄瓜",   ko: "큐짱 절임" },
+  "なす揚げびたし":               { en: "Fried Marinated Eggplant",  ne: "भन्टा फ्राइ",               zh: "炸茄子浸汁",     ko: "가지 튀김절임" },
+  "新玉オンスラ":                 { en: "New Onion Slices",          ne: "प्याज स्लाइस",              zh: "新洋葱片",       ko: "햇양파 슬라이스" },
+  "冷やっこ":                     { en: "Cold Tofu",                 ne: "चिसो तोफु",                 zh: "凉豆腐",         ko: "냉두부" },
+  "おかんのらっきょ":             { en: "Pickled Scallion",          ne: "अचारी प्याज",               zh: "腌藠头",         ko: "락교" },
+  // 揚物
+  "れんこんのはさみあげ":         { en: "Stuffed Lotus Root",        ne: "कमल जरा फ्राइ",             zh: "藕夹",           ko: "연근 튀김" },
+  "唐あげ":                       { en: "Fried Chicken (Karaage)",   ne: "करागे",                     zh: "炸鸡",           ko: "가라아게" },
+  "うずらフライ":                 { en: "Fried Quail Eggs",          ne: "बट्टाई फ्राइ",              zh: "炸鹌鹑蛋",       ko: "메추리알 튀김" },
+  "タコ唐":                       { en: "Fried Octopus",             ne: "अक्टोपस फ्राइ",             zh: "炸章鱼",         ko: "문어 튀김" },
+  "みそ串カツ":                   { en: "Miso Kushikatsu",           ne: "मिसो कुशिकात्सु",           zh: "味噌串炸",       ko: "미소 쿠시카츠" },
+  // 焼物
+  "ポークフランクソーセージ":     { en: "Pork Frankfurter",          ne: "पोर्क ससेज",                zh: "猪肉香肠",       ko: "포크 소시지" },
+  "砂肝串":                       { en: "Gizzard Skewer",            ne: "गिजार्ड सिख",               zh: "鸡胗串",         ko: "모래집 꼬치" },
+  "ししゃも":                     { en: "Shishamo Smelt",            ne: "सिसामो माछा",               zh: "柳叶鱼",         ko: "시샤모" },
+  "いか一夜干し":                 { en: "Overnight-dried Squid",     ne: "सुकाएको स्क्विड",           zh: "一夜干鱿鱼",     ko: "반건조 오징어" },
+  "エイヒレ":                     { en: "Grilled Stingray Fin",      ne: "स्टिङरे फिन",               zh: "烤魟鱼鳍",       ko: "가오리 지느러미" },
+  "ほっけ焼":                     { en: "Grilled Atka Mackerel",     ne: "पोलेको होक्के माछा",        zh: "烤花鲫鱼",       ko: "임연수 구이" },
+  // 〆・ご飯もの
+  "五目あんかけ焼そば":           { en: "Gomoku Ankake Yakisoba",    ne: "गोमोकु याकिसोबा",           zh: "五目烩炒面",     ko: "고모쿠 안카케 야키소바" },
+  "おにぎり（梅・鮭）":           { en: "Rice Ball (Ume/Salmon)",    ne: "भातको डल्लो",               zh: "饭团(梅/鲑鱼)",  ko: "주먹밥(우메/연어)" },
+  "だし茶漬け（梅・鮭）":         { en: "Dashi Chazuke (Ume/Salmon)", ne: "दशी चाज़ुके",              zh: "高汤茶泡饭",     ko: "다시 오차즈케" },
+  "チャーハン":                   { en: "Fried Rice",                ne: "फ्राइड राइस",               zh: "炒饭",           ko: "볶음밥" },
+  "温玉肉丼":                     { en: "Meat Bowl w/ Soft Egg",     ne: "मासु भात र अण्डा",          zh: "温泉蛋肉盖饭",   ko: "고기 온천란 덮밥" },
+  "台湾ラーメン":                 { en: "Taiwan Ramen",              ne: "ताइवान रामेन",              zh: "台湾拉面",       ko: "대만 라멘" },
+  "ライス":                       { en: "Rice",                      ne: "भात",                       zh: "米饭",           ko: "공기밥" },
+  "ギョーザ":                     { en: "Gyoza (5pcs, homemade)",    ne: "ग्योजा",                    zh: "自制饺子",       ko: "교자" },
+  // 日本酒
+  "くどき上手（純米吟醸 300ml）": { en: "Kudoki Jozu (Junmai Ginjo)", ne: "कुदोकी जोजु सेक",          zh: "口说上手 纯米吟酿", ko: "쿠도키죠즈" },
+  "出羽桜（桜花吟醸 300ml）":     { en: "Dewazakura (Oka Ginjo)",    ne: "देवाजाकुरा सेक",            zh: "出羽樱 樱花吟酿", ko: "데와자쿠라" },
+  "陸奥男山（超辛口純米 300ml）": { en: "Mutsu Otokoyama (Dry)",     ne: "मुत्सु ओतोकोयामा सेक",      zh: "陆奥男山 超辛口", ko: "무츠오토코야마" },
+  "考の司（純米吟醸 300ml）":     { en: "Ko no Tsukasa (Junmai Ginjo)", ne: "कोनोत्सुकासा सेक",       zh: "考之司 纯米吟酿", ko: "코노츠카사" },
+});
 
 export function warajiCatName(name: string, lang: Lang): string {
   if (lang === "ja") return name;

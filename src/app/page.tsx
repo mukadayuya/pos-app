@@ -13,7 +13,8 @@ type TileStyle = "primary" | "accent" | "card" | "disabled";
 const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC    = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
 const IS_WARAJI  = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-const IS_SIMPLE = IS_BRONCO || IS_ABC || IS_WARAJI;
+const IS_SHOTEN  = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+const IS_SIMPLE = IS_BRONCO || IS_ABC || IS_WARAJI || IS_SHOTEN;
 
 const allTiles: {
   label: string; icon: string; href: string;
@@ -32,7 +33,7 @@ const allTiles: {
 ];
 
 const tiles = allTiles.filter(t => {
-  if (t.onlyWaraji && !IS_WARAJI) return false;
+  if (t.onlyWaraji && !(IS_WARAJI || IS_SHOTEN)) return false;
   if (IS_SIMPLE && t.hiddenInSimpleMode) return false;
   return true;
 });

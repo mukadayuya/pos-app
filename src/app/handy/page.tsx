@@ -13,7 +13,9 @@ function translationTargets(item: MenuItem): string[] {
 }
 
 const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-const STAFF_LIST = IS_WARAJI ? ["小黒", "ラム", "ビカス"] : ["向田", "スタッフA"];
+const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+const STAFF_LIST = (IS_WARAJI || IS_SHOTEN) ? ["小黒", "ラム", "ビカス"] : ["向田", "スタッフA"];
+const STORE_DISPLAY = IS_SHOTEN ? "笑点" : "笑路";
 
 const HANDY_LANGS: { code: Lang; flag: string; label: string }[] = [
   { code: "ja", flag: "🇯🇵", label: "日本語" },
@@ -273,7 +275,7 @@ export default function HandyPage() {
           <div className="px-3 py-2 flex items-center gap-2 min-w-0">
             <div className="flex-shrink-0 min-w-0">
               <p className="text-[9px] leading-none opacity-70 font-bold tracking-wider">HANDY</p>
-              <p className="text-sm font-bold leading-tight truncate">笑路</p>
+              <p className="text-sm font-bold leading-tight truncate">{STORE_DISPLAY}</p>
             </div>
             <div className="flex-1 text-center min-w-0">
               <p className="text-[10px] opacity-70 leading-tight">

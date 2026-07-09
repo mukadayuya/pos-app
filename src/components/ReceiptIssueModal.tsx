@@ -17,7 +17,8 @@ function printFormalReceipt(params: {
   const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
   const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
   const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-  const storeName    = localStorage.getItem("store_name")     || (IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : "Kitchen Kazu");
+const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+  const storeName    = localStorage.getItem("store_name")     || (IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : IS_SHOTEN ? "居食屋 笑点" : "Kitchen Kazu");
   const storeAddress = localStorage.getItem("store_address")  || "";
   const storeTel     = localStorage.getItem("store_tel")      || "";
   const invoiceNum   = localStorage.getItem("invoice_number") || "";
