@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { fetchMenuItems, fetchCategories } from "@/lib/db";
 import { MenuItem } from "@/types/pos";
 import type { CategoryRecord } from "@/lib/db";
@@ -39,6 +39,10 @@ type OrderRecord = {
 const TABLES = ["1", "2", "3", "4", "5", "6", "カウンター1", "カウンター2", "座敷1", "座敷2"];
 const LS_ORDERS_KEY = "waraji_handy_orders";
 const LS_LANG_KEY = "waraji_handy_lang";
+const LS_CART_KEY = "waraji_handy_cart";
+const LS_TABLE_KEY = "waraji_handy_table";
+const LS_STAFF_KEY = "waraji_handy_staff";
+const MAX_QTY = 99;
 
 function speechLangFor(lang: Lang): "ja-JP" | "en-US" | "ne-NP" | "zh-CN" | "ko-KR" {
   if (lang === "en") return "en-US";
@@ -88,10 +92,27 @@ export default function HandyPage() {
   useEffect(() => {
     const saved = localStorage.getItem(LS_LANG_KEY) as Lang | null;
     if (saved && HANDY_LANGS.some(l => l.code === saved)) setLang(saved);
+    // 卓・担当者もリロード後に復元（営業中の画面更新で選び直しにならないように）
+    const savedTable = localStorage.getItem(LS_TABLE_KEY);
+    if (savedTable && TABLES.includes(savedTable)) setTableNo(savedTable);
+    const savedStaff = localStorage.getItem(LS_STAFF_KEY);
+    if (savedStaff && STAFF_LIST.includes(savedStaff)) setStaff(savedStaff);
     setOrders(loadOrders());
   }, []);
   useEffect(() => { localStorage.setItem(LS_LANG_KEY, lang); }, [lang]);
+  useEffect(() => { localStorage.setItem(LS_TABLE_KEY, tableNo); }, [tableNo]);
+  useEffect(() => { localStorage.setItem(LS_STAFF_KEY, staff); }, [staff]);
   useEffect(() => { saveOrders(orders); }, [orders]);
+
+  // カートを永続化（{商品id, 数量} のみ保存。リロードしても注文取り直しにならない）
+  // 注意: 復元完了前に空カートで上書きしないよう、復元後にのみ保存を有効化
+  const cartHydratedRef = useRef(false);
+  useEffect(() => {
+    if (!cartHydratedRef.current) return;
+    try {
+      localStorage.setItem(LS_CART_KEY, JSON.stringify(cart.map(c => ({ id: c.item.id, qty: c.qty }))));
+    } catch { /* ignore */ }
+  }, [cart]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +125,23 @@ export default function HandyPage() {
         setCategories(sorted);
         if (sorted.length > 0) setActiveCatId(sorted[0].id);
         setMenuItems(items);
+        // 保存されていたカートを復元（メニューに存在しない商品は捨てる）
+        try {
+          const rawCart = localStorage.getItem(LS_CART_KEY);
+          if (rawCart) {
+            const stored = JSON.parse(rawCart) as { id: string; qty: number }[];
+            const restored: CartItem[] = stored
+              .map(s => {
+                const item = items.find(m => m.id === s.id);
+                if (!item || item.isAvailable === false) return null;
+                return { itemKey: item.id, item, qty: Math.min(MAX_QTY, Math.max(1, s.qty)) };
+              })
+              .filter((c): c is CartItem => c !== null);
+            if (restored.length > 0) setCart(restored);
+          }
+        } catch { /* ignore */ }
+        // ここから先はカート変更を保存してよい（復元完了）
+        cartHydratedRef.current = true;
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -120,7 +158,7 @@ export default function HandyPage() {
     setCart(prev => {
       const key = item.id;
       const existing = prev.find(c => c.itemKey === key);
-      if (existing) return prev.map(c => c.itemKey === key ? { ...c, qty: c.qty + 1 } : c);
+      if (existing) return prev.map(c => c.itemKey === key ? { ...c, qty: Math.min(MAX_QTY, c.qty + 1) } : c);
       return [...prev, { itemKey: key, item, qty: 1 }];
     });
     setFlash(warajiItemName(item.name, lang));
@@ -128,12 +166,22 @@ export default function HandyPage() {
   }, [lang]);
 
   const changeQty = (key: string, delta: number) => {
-    setCart(prev => prev.map(c => c.itemKey === key ? { ...c, qty: c.qty + delta } : c).filter(c => c.qty > 0));
+    setCart(prev => prev
+      .map(c => c.itemKey === key ? { ...c, qty: Math.min(MAX_QTY, c.qty + delta) } : c)
+      .filter(c => c.qty > 0));
   };
   const removeFromCart = (key: string) => setCart(prev => prev.filter(c => c.itemKey !== key));
 
+  // カートが空になったらモーダルを自動で閉じる（空モーダルが残らないように）
+  useEffect(() => {
+    if (showCart && cart.length === 0) setShowCart(false);
+  }, [cart.length, showCart]);
+
+  // 連打ガードは state ではなく ref で行う（stateは非同期更新のため同一瞬間の連打をすり抜ける）
+  const sendingRef = useRef(false);
   const sendToKitchen = async () => {
-    if (cart.length === 0) return;
+    if (sendingRef.current || cart.length === 0) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       const record: OrderRecord = {
@@ -158,19 +206,16 @@ export default function HandyPage() {
       setFlash("✓ キッチンへ送信しました");
       setTimeout(() => setFlash(null), 1200);
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
 
+  // 確認はカード内の2度押しUI（OrderCard側）で行うため、ここでは即実行
   const toggleServed = (id: string) => setOrders(prev => prev.map(o => o.id === id ? { ...o, served: !o.served } : o));
-  const closeOrder = (id: string) => {
-    if (!confirm("この注文を会計済み（クローズ）にしますか？")) return;
+  const closeOrder = (id: string) =>
     setOrders(prev => prev.map(o => o.id === id ? { ...o, closed: true, served: true } : o));
-  };
-  const cancelOrder = (id: string) => {
-    if (!confirm("この注文を取り消しますか？")) return;
-    setOrders(prev => prev.filter(o => o.id !== id));
-  };
+  const cancelOrder = (id: string) => setOrders(prev => prev.filter(o => o.id !== id));
 
   const filteredItems = menuItems
     .filter(m => m.category === activeCatId && m.isAvailable !== false)
@@ -184,8 +229,11 @@ export default function HandyPage() {
   const openTables = useMemo(() => Array.from(new Set(openOrders.map(o => o.tableNo))), [openOrders]);
   // 絞り込み対象の卓の注文が全て会計済みになったら自動で「全卓」に戻す
   const effectiveFilter = tableFilter !== "all" && !openTables.includes(tableFilter) ? "all" : tableFilter;
+  // 卓管理は古い順（FIFO）: 先に入った注文から提供するのが現場の鉄則
   const visibleOpenOrders = useMemo(
-    () => effectiveFilter === "all" ? openOrders : openOrders.filter(o => o.tableNo === effectiveFilter),
+    () => (effectiveFilter === "all" ? openOrders : openOrders.filter(o => o.tableNo === effectiveFilter))
+      .slice()
+      .sort((a, b) => a.sentAt - b.sentAt),
     [openOrders, effectiveFilter],
   );
   const historyOrders = useMemo(() => [...orders].sort((a, b) => b.sentAt - a.sentAt), [orders]);
@@ -207,6 +255,7 @@ export default function HandyPage() {
     serve:       lang === "ja" ? "提供する" : "Serve",
     close:       lang === "ja" ? "会計" : "Close",
     cancel:      lang === "ja" ? "取消" : "Cancel",
+    confirmTap:  lang === "ja" ? "もう一度タップで確定" : lang === "en" ? "Tap again to confirm" : lang === "ne" ? "पुष्टि गर्न फेरि ट्याप गर्नुहोस्" : lang === "zh" ? "再次点击确认" : lang === "ko" ? "한 번 더 탭하여 확정" : "Tap again",
     closed:      lang === "ja" ? "会計済" : "Closed",
     pending:     lang === "ja" ? "未提供" : "Pending",
     noPending:   lang === "ja" ? "対応中の注文はありません" : "No open orders",
@@ -520,13 +569,29 @@ export default function HandyPage() {
 
 function OrderCard({ order, labels, readonly, onServe, onClose, onCancel }: {
   order: OrderRecord;
-  labels: { tableLabel: string; served: string; serve: string; close: string; cancel: string; closed: string; pending: string; itemsLabel: string };
+  labels: { tableLabel: string; served: string; serve: string; close: string; cancel: string; closed: string; pending: string; itemsLabel: string; confirmTap: string };
   readonly?: boolean;
   onServe: () => void;
   onClose: () => void;
   onCancel: () => void;
 }) {
   const totalQty = order.items.reduce((s, i) => s + i.qty, 0);
+  // 会計・取消は「2度押しで確定」方式（OSダイアログ禁止・誤タップ防止）
+  const [confirming, setConfirming] = useState<null | "close" | "cancel">(null);
+  useEffect(() => {
+    if (!confirming) return;
+    const timer = setTimeout(() => setConfirming(null), 3000);
+    return () => clearTimeout(timer);
+  }, [confirming]);
+
+  const handleClose = () => {
+    if (confirming === "close") { setConfirming(null); onClose(); }
+    else setConfirming("close");
+  };
+  const handleCancel = () => {
+    if (confirming === "cancel") { setConfirming(null); onCancel(); }
+    else setConfirming("cancel");
+  };
   return (
     <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden min-w-0 ${
       order.closed ? "border-slate-200 opacity-70" :
@@ -566,15 +631,25 @@ function OrderCard({ order, labels, readonly, onServe, onClose, onCancel }: {
       </div>
       {!readonly && !order.closed && (
         <div className="flex border-t border-slate-100">
-          <button onClick={onServe}
+          <button onClick={() => { setConfirming(null); onServe(); }}
             className={`flex-1 py-2.5 text-xs font-bold transition-all ${order.served ? "text-slate-400 active:bg-slate-50" : "text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100"}`}>
             {order.served ? "↺ " + labels.served : "✓ " + labels.serve}
           </button>
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs font-bold text-blue-600 hover:bg-blue-50 active:bg-blue-100 border-l border-slate-100">
-            💴 {labels.close}
+          <button onClick={handleClose}
+            className={`flex-1 py-2.5 text-xs font-bold border-l border-slate-100 transition-all ${
+              confirming === "close"
+                ? "bg-blue-600 text-white animate-pulse"
+                : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+            }`}>
+            {confirming === "close" ? labels.confirmTap : `💴 ${labels.close}`}
           </button>
-          <button onClick={onCancel} className="flex-1 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 active:bg-red-100 border-l border-slate-100">
-            🗑 {labels.cancel}
+          <button onClick={handleCancel}
+            className={`flex-1 py-2.5 text-xs font-bold border-l border-slate-100 transition-all ${
+              confirming === "cancel"
+                ? "bg-red-600 text-white animate-pulse"
+                : "text-red-500 hover:bg-red-50 active:bg-red-100"
+            }`}>
+            {confirming === "cancel" ? labels.confirmTap : `🗑 ${labels.cancel}`}
           </button>
         </div>
       )}
