@@ -215,7 +215,7 @@ export default function HandyPage() {
     <div className="min-h-[100svh] flex flex-col bg-slate-100 w-full overflow-x-hidden">
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
         {/* ── Header ─────────────────────────────────────── */}
-        <header className="bg-slate-800 text-white shadow-md sticky top-0 z-30" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <header className="bg-white text-slate-900 border-b border-slate-200 shadow-sm sticky top-0 z-30" style={{ paddingTop: "env(safe-area-inset-top)" }}>
           <div className="px-3 py-2 flex items-center gap-2 min-w-0">
             <div className="flex-shrink-0 min-w-0">
               <p className="text-[9px] leading-none opacity-70 font-bold tracking-wider">HANDY</p>
@@ -229,7 +229,7 @@ export default function HandyPage() {
             <select
               value={lang}
               onChange={e => setLang(e.target.value as Lang)}
-              className="flex-shrink-0 bg-slate-700 border border-slate-500 rounded-lg px-1.5 py-1 text-xs font-bold outline-none cursor-pointer max-w-[80px]"
+              className="flex-shrink-0 bg-slate-100 border border-slate-300 text-slate-800 rounded-lg px-1.5 py-1 text-xs font-bold outline-none cursor-pointer max-w-[80px]"
               aria-label="Language"
             >
               {HANDY_LANGS.map(l => (
@@ -249,7 +249,7 @@ export default function HandyPage() {
                   setTimeout(() => setFlash(null), 2500);
                 }
               }}
-              className="flex-1 min-w-0 bg-slate-700 border border-slate-500 rounded-lg px-2 py-2 text-sm font-bold outline-none"
+              className="flex-1 min-w-0 bg-slate-100 border border-slate-300 text-slate-800 rounded-lg px-2 py-2 text-sm font-bold outline-none"
               aria-label={L.tableChoice}
             >
               {TABLES.map(t => <option key={t} value={t}>{L.tableLabel} {t}</option>)}
@@ -257,7 +257,7 @@ export default function HandyPage() {
             <select
               value={staff}
               onChange={e => setStaff(e.target.value)}
-              className="flex-1 min-w-0 bg-slate-700 border border-slate-500 rounded-lg px-2 py-2 text-sm font-bold outline-none"
+              className="flex-1 min-w-0 bg-slate-100 border border-slate-300 text-slate-800 rounded-lg px-2 py-2 text-sm font-bold outline-none"
               aria-label={L.staffChoice}
             >
               {STAFF_LIST.map(s => <option key={s} value={s}>{s}</option>)}
@@ -265,7 +265,7 @@ export default function HandyPage() {
           </div>
 
           {/* ── Tab Bar (attached to header for smooth stickiness) ── */}
-          <div className="flex bg-black/20 border-t border-slate-600">
+          <div className="flex bg-white border-t border-slate-100">
             {([
               { key: "order",   icon: "🛒", label: L.tabOrder,   badge: cartCount },
               { key: "pending", icon: "⏳", label: L.tabPending, badge: unservedCount },
@@ -275,8 +275,7 @@ export default function HandyPage() {
                 key={item.key}
                 onClick={() => setTab(item.key)}
                 className={`flex-1 min-w-0 py-2 text-xs font-bold transition-all relative ${
-                  tab === item.key ? "bg-white text-orange-700" : "text-slate-300"
-                }`}
+                  tab === item.key ? "bg-slate-100 text-slate-900" : "text-slate-400"                }`}
               >
                 <span className="text-sm mr-1">{item.icon}</span>
                 <span className="truncate">{item.label}</span>
@@ -294,7 +293,7 @@ export default function HandyPage() {
         {loading && (
           <div className="flex-1 flex items-center justify-center py-16">
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-3" />
+              <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500">{L.loading}</p>
             </div>
           </div>
@@ -317,7 +316,7 @@ export default function HandyPage() {
                 {categories.map(cat => (
                   <button key={cat.id} onClick={() => setActiveCatId(cat.id)}
                     className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
-                      activeCatId === cat.id ? "bg-orange-600 text-white" : "bg-white text-slate-600 border border-slate-200"
+                      activeCatId === cat.id ? "bg-slate-900 text-white" : "bg-white text-slate-600 border border-slate-200"
                     }`}>
                     {warajiCatName(cat.name, lang)}
                   </button>
@@ -333,7 +332,7 @@ export default function HandyPage() {
                   const showJa = lang !== "ja" && displayName !== item.name;
                   return (
                     <button key={item.id} onClick={() => addToCart(item)}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 hover:border-orange-400 active:scale-95 transition-all text-left overflow-hidden min-w-0">
+                      className="bg-white rounded-xl shadow-sm border border-slate-200 hover:border-slate-400 active:scale-95 transition-all text-left overflow-hidden min-w-0">
                       {item.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -351,7 +350,7 @@ export default function HandyPage() {
                             {showJa && <p className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">{item.name}</p>}
                           </div>
                         </div>
-                        <p className="text-sm font-black text-orange-700 mt-1">¥{totalPrice.toLocaleString()}</p>
+                        <p className="text-sm font-black text-slate-900 mt-1">¥{totalPrice.toLocaleString()}</p>
                       </div>
                     </button>
                   );
@@ -371,14 +370,14 @@ export default function HandyPage() {
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => setTableFilter("all")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    effectiveFilter === "all" ? "bg-orange-600 text-white" : "bg-white text-slate-500 border border-slate-200"
+                    effectiveFilter === "all" ? "bg-slate-900 text-white" : "bg-white text-slate-500 border border-slate-200"
                   }`}>
                   {L.allTables} ({openOrders.length})
                 </button>
                 {openTables.map(tn => (
                   <button key={tn} onClick={() => setTableFilter(tn)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      effectiveFilter === tn ? "bg-orange-600 text-white" : "bg-white text-slate-500 border border-slate-200"
+                      effectiveFilter === tn ? "bg-slate-900 text-white" : "bg-white text-slate-500 border border-slate-200"
                     }`}>
                     {L.tableLabel}{tn}
                   </button>
@@ -443,7 +442,7 @@ export default function HandyPage() {
                   <span className="text-base font-black text-slate-800 truncate">¥{cartTotal.toLocaleString()}</span>
                 </button>
                 <button onClick={sendToKitchen} disabled={sending}
-                  className="flex-[1.4] min-w-0 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white rounded-2xl font-black text-xs px-2 py-2.5 active:scale-95 transition-all truncate">
+                  className="flex-[1.4] min-w-0 bg-slate-900 hover:bg-slate-700 disabled:opacity-60 text-white rounded-2xl font-black text-xs px-2 py-2.5 active:scale-95 transition-all truncate">
                   {sending ? L.sendingLabel : L.sendLabel}
                 </button>
               </div>
@@ -492,7 +491,7 @@ export default function HandyPage() {
                 <span className="text-sm text-slate-500 flex-shrink-0">{L.totalLabel}</span>
                 <span className="text-2xl font-black text-slate-800 truncate">¥{cartTotal.toLocaleString()}</span>
               </div>
-              <button onClick={sendToKitchen} disabled={sending} className="w-full h-14 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white rounded-2xl font-black text-base active:scale-95">
+              <button onClick={sendToKitchen} disabled={sending} className="w-full h-14 bg-slate-900 hover:bg-slate-700 disabled:opacity-60 text-white rounded-2xl font-black text-base active:scale-95">
                 {sending ? L.sendingLabel : L.sendLabel}
               </button>
             </div>

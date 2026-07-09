@@ -9,7 +9,10 @@
 - 背景: `bg-[#F5F6FA]`（全ページ統一）
 - カード: `bg-white rounded-3xl shadow-[0_2px_12px_rgb(0,0,0,0.06)] ring-1 ring-black/[0.04]`
 - ヘッダー: `bg-white/80 backdrop-blur-xl border-b border-black/[0.05]`（グラスモーフィズム）
-- アクセント: indigo-600（プライマリ）/ amber-500（セカンダリ／受給チャンス）
+- ⚠️ **紫禁止（2026-07-09 向田さん指示・永久ルール）**: purple / violet / indigo は食欲減退色のため
+  飲食UIでは客向け・スタッフ向け問わず使用禁止。既存の indigo/violet 箇所も触るたびに置き換える
+- 基調: **白ベース＋ニュートラル**（bg-white / slate系）。プライマリボタンは slate-900（黒）
+- ステータス色のみ有彩色可: 提供=emerald / 会計・金額=blue / 警告・売切=red / 注意=amber
 - ホバー: `hover:-translate-y-0.5 active:scale-95 transition-all duration-200`
 - タイポ: font-black for headings, font-semibold for labels, tabular-nums for numbers
 

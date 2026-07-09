@@ -127,7 +127,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
           className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold transition-all ${
             listening
               ? "bg-red-500 text-white animate-pulse"
-              : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+              : "bg-slate-900 text-white hover:bg-slate-700 active:scale-95"
           }`}
           title={listening ? "停止" : "音声で検索"}
           aria-label={listening ? "音声入力を停止" : "音声入力を開始"}
@@ -163,7 +163,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
                 onSelect(item);
                 setQuery("");
               }}
-              className="w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-orange-50 active:bg-orange-100 flex items-center gap-3"
+              className="w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 active:bg-slate-100 flex items-center gap-3"
             >
               <span className="text-2xl w-8 text-center flex-shrink-0">{item.emoji ?? ""}</span>
               <div className="flex-1 min-w-0">
