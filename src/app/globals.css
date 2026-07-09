@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * ─── LINE内蔵ブラウザ／モバイル全般の横スクロール完全防止 ───
+ * - overflow-x: clip は sticky を壊さない（hidden は壊す）
+ * - max-width: 100% で 100vw のオーバーフローを封じる
+ * - webkit-text-size-adjust で iOS Safari/LINE の勝手フォント拡大を防ぐ
+ * - touch-action: manipulation でダブルタップズームを抑止（誤操作減）
+ */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  touch-action: manipulation;
+}
+
+/* iOS の慣性スクロールをスムーズに */
+* {
+  -webkit-overflow-scrolling: touch;
+}
