@@ -71,12 +71,35 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       .map(x => x.item);
   })();
 
+  // LINE・Instagram等のアプリ内ブラウザ判定（音声認識APIがOS制限で使えない）
+  const isInAppBrowser = () => {
+    if (typeof navigator === "undefined") return false;
+    return /Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+  };
+
+  const friendlySpeechError = (code: string): string => {
+    if (code === "service-not-allowed" || code === "not-allowed") {
+      return isInAppBrowser()
+        ? "LINEなどアプリ内ブラウザでは音声入力が使えません。画面右下の「…」→「他のブラウザで開く」からSafariで開いてください"
+        : "マイクの使用が許可されていません。ブラウザ設定でこのサイトのマイクを許可してください";
+    }
+    if (code === "no-speech")     return "音声が聞き取れませんでした。もう一度お話しください";
+    if (code === "audio-capture") return "マイクが見つかりません。端末のマイク設定をご確認ください";
+    if (code === "network")       return "通信エラーです。ネット環境をご確認ください";
+    return `音声入力エラー: ${code}`;
+  };
+
   const startListen = () => {
     setSpeechError(null);
+    // アプリ内ブラウザは開始前に案内（試しても必ず失敗するため）
+    if (isInAppBrowser()) {
+      setSpeechError(friendlySpeechError("service-not-allowed"));
+      return;
+    }
     const SR = (typeof window !== "undefined") &&
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
     if (!SR) {
-      setSpeechError("この端末は音声入力に対応していません");
+      setSpeechError("この端末のブラウザは音声入力に対応していません。Safari または Chrome をご利用ください");
       return;
     }
     try {
@@ -90,7 +113,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
         setQuery(text);
       };
       r.onerror = (e: any) => {
-        setSpeechError(`音声入力エラー: ${e.error ?? "unknown"}`);
+        setSpeechError(friendlySpeechError(e.error ?? "unknown"));
         setListening(false);
       };
       r.onend = () => setListening(false);
