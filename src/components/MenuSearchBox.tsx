@@ -182,6 +182,14 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
           try { r.stop(); } catch { /* ignore */ }
         }, 500);
       };
+      // 「ほ」のような一音発話は認識エンジンが続きを待って確定を保留するため、
+      // 途中経過ゼロのまま3秒経ったら強制確定させる
+      let noResultTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+        try { r.stop(); } catch { /* ignore */ }
+      }, 3000);
+      const clearNoResultTimer = () => {
+        if (noResultTimer) { clearTimeout(noResultTimer); noResultTimer = null; }
+      };
 
       r.onstart = () => setListening(true);
       // 話し声が途切れた瞬間に確定を要求（さらに速く）
@@ -189,6 +197,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
         try { r.stop(); } catch { /* ignore */ }
       };
       r.onresult = (e: any) => {
+        clearNoResultTimer();
         const res = e.results?.[e.results.length - 1];
         if (!res) return;
         if (!res.isFinal) {
@@ -215,6 +224,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       };
       r.onerror = (e: any) => {
         clearTimeout(safetyTimer);
+        clearNoResultTimer();
         if (finalizeTimer) clearTimeout(finalizeTimer);
         const msg = friendlySpeechError(e.error ?? "unknown");
         if (msg) setSpeechError(msg);
@@ -222,6 +232,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       };
       r.onend = () => {
         clearTimeout(safetyTimer);
+        clearNoResultTimer();
         if (finalizeTimer) clearTimeout(finalizeTimer);
         setListening(false);
       };
