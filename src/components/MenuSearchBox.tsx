@@ -75,7 +75,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
   }, []);
 
   // 検索本体。音声認識の候補選定でも再利用するため関数化
-  const searchFor = useCallback((raw: string): MenuItem[] => {
+  const searchFor = useCallback((raw: string, useKanaFallback: boolean = true): MenuItem[] => {
     // 音声認識が付けがちな句読点・記号を除去
     const cleaned = raw.replace(/[。、．，.,!?！？\s]+/g, "");
     if (!cleaned) return [];
@@ -101,12 +101,22 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
 
     let list = run(normalize(cleaned));
     // ヒットなし＆短い入力なら、漢字→読み仮名変換して再検索（「歩」→「ほ」）
-    if (list.length === 0) {
+    if (list.length === 0 && useKanaFallback) {
       const mapped = kanjiToKana(cleaned);
       if (mapped !== cleaned) list = run(normalize(mapped));
     }
     return list;
   }, [menuItems]);
+
+  // 検索欄への表示用テキスト。漢字のままで直接ヒットしないなら読み仮名に変換して見せる
+  // （「歩」と表示されるのを防ぎ「ほ」を表示する）
+  const displayText = useCallback((raw: string): string => {
+    const cleaned = raw.replace(/[。、．，.,!?！？]+/g, "").trim();
+    if (!cleaned) return "";
+    if (searchFor(cleaned, false).length > 0) return cleaned; // そのままヒットするなら原文
+    const mapped = kanjiToKana(cleaned);
+    return mapped !== cleaned ? mapped : cleaned;
+  }, [searchFor]);
 
   const results = useMemo(() => searchFor(query), [query, searchFor]);
 
@@ -164,37 +174,55 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       const safetyTimer = setTimeout(() => {
         try { r.stop(); } catch { /* ignore */ }
       }, 12000);
+      // 途中経過が止まったら即確定させる（OSの無音待ち1〜2秒を短縮）
+      let finalizeTimer: ReturnType<typeof setTimeout> | null = null;
+      const scheduleFinalize = () => {
+        if (finalizeTimer) clearTimeout(finalizeTimer);
+        finalizeTimer = setTimeout(() => {
+          try { r.stop(); } catch { /* ignore */ }
+        }, 500);
+      };
 
       r.onstart = () => setListening(true);
+      // 話し声が途切れた瞬間に確定を要求（さらに速く）
+      r.onspeechend = () => {
+        try { r.stop(); } catch { /* ignore */ }
+      };
       r.onresult = (e: any) => {
         const res = e.results?.[e.results.length - 1];
         if (!res) return;
         if (!res.isFinal) {
-          // 途中経過をそのまま表示（リアルタイム検索）
+          // 途中経過を即時表示（リアルタイム検索）。漢字は読み仮名で表示
           const t = res[0]?.transcript ?? "";
-          if (t) setQuery(t);
+          if (t) setQuery(displayText(t));
+          scheduleFinalize();
           return;
         }
-        // 確定：全候補から「検索がヒットするもの」を優先採用
+        if (finalizeTimer) clearTimeout(finalizeTimer);
+        // 確定：全候補から「かなのみ＆ヒット→ヒット→かなのみ→先頭」の優先順で採用
         const alts: string[] = [];
         for (let i = 0; i < res.length; i++) {
           const t = res[i]?.transcript?.trim();
           if (t) alts.push(t);
         }
         const best =
-          alts.find(a => searchFor(a).length > 0) ??   // 検索ヒットする候補
-          alts.find(isKanaOnly) ??                      // かなだけの候補（漢字誤変換回避）
+          alts.find(a => isKanaOnly(a) && searchFor(a).length > 0) ??
+          alts.find(a => searchFor(a).length > 0) ??
+          alts.find(isKanaOnly) ??
           alts[0] ?? "";
-        setQuery(best);
+        // 表示は必ず読み仮名優先（「歩」ではなく「ほ」を見せる）
+        setQuery(displayText(best));
       };
       r.onerror = (e: any) => {
         clearTimeout(safetyTimer);
+        if (finalizeTimer) clearTimeout(finalizeTimer);
         const msg = friendlySpeechError(e.error ?? "unknown");
         if (msg) setSpeechError(msg);
         setListening(false);
       };
       r.onend = () => {
         clearTimeout(safetyTimer);
+        if (finalizeTimer) clearTimeout(finalizeTimer);
         setListening(false);
       };
       recogRef.current = r;
