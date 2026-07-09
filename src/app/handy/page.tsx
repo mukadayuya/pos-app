@@ -78,6 +78,7 @@ export default function HandyPage() {
   const [tab, setTab] = useState<Tab>("order");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tableFilter, setTableFilter] = useState<string>("all");
 
   useEffect(() => {
     const saved = localStorage.getItem(LS_LANG_KEY) as Lang | null;
@@ -170,7 +171,18 @@ export default function HandyPage() {
     .filter(m => m.category === activeCatId && m.isAvailable !== false)
     .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
 
-  const pendingOrders = useMemo(() => orders.filter(o => !o.closed), [orders]);
+  // 未会計の注文（卓管理タブに表示）
+  const openOrders = useMemo(() => orders.filter(o => !o.closed), [orders]);
+  // 赤バッジ = まだ提供していない注文の数（提供済は含めない）
+  const unservedCount = useMemo(() => openOrders.filter(o => !o.served).length, [openOrders]);
+  // 未会計の注文がある卓の一覧（絞り込みチップ用）
+  const openTables = useMemo(() => Array.from(new Set(openOrders.map(o => o.tableNo))), [openOrders]);
+  // 絞り込み対象の卓の注文が全て会計済みになったら自動で「全卓」に戻す
+  const effectiveFilter = tableFilter !== "all" && !openTables.includes(tableFilter) ? "all" : tableFilter;
+  const visibleOpenOrders = useMemo(
+    () => effectiveFilter === "all" ? openOrders : openOrders.filter(o => o.tableNo === effectiveFilter),
+    [openOrders, effectiveFilter],
+  );
   const historyOrders = useMemo(() => [...orders].sort((a, b) => b.sentAt - a.sentAt), [orders]);
 
   const L = {
@@ -183,15 +195,16 @@ export default function HandyPage() {
     totalLabel:  lang === "ja" ? "合計（税込）" : t(lang, "total"),
     noItemsInCat: t(lang, "noItems"),
     tabOrder:    lang === "ja" ? "注文" : "Order",
-    tabPending:  lang === "ja" ? "未提供" : "Open",
+    tabPending:  lang === "ja" ? "卓管理" : lang === "en" ? "Tables" : lang === "ne" ? "टेबल" : lang === "zh" ? "桌台" : lang === "ko" ? "테이블" : "Tables",
     tabHistory:  lang === "ja" ? "履歴" : "History",
+    allTables:   lang === "ja" ? "全卓" : lang === "en" ? "All" : lang === "ne" ? "सबै" : lang === "zh" ? "全部" : lang === "ko" ? "전체" : "All",
     served:      lang === "ja" ? "提供済" : "Served",
     serve:       lang === "ja" ? "提供する" : "Serve",
     close:       lang === "ja" ? "会計" : "Close",
     cancel:      lang === "ja" ? "取消" : "Cancel",
     closed:      lang === "ja" ? "会計済" : "Closed",
     pending:     lang === "ja" ? "未提供" : "Pending",
-    noPending:   lang === "ja" ? "未提供の注文はありません" : "No pending orders",
+    noPending:   lang === "ja" ? "対応中の注文はありません" : "No open orders",
     noHistory:   lang === "ja" ? "本日の注文履歴はまだありません" : "No history yet",
     loading:     lang === "ja" ? "読み込み中..." : t(lang, "loadingMenu"),
     tableChoice: lang === "ja" ? "卓を選択" : "Table",
@@ -227,7 +240,15 @@ export default function HandyPage() {
           <div className="px-3 pb-2 flex gap-2 min-w-0">
             <select
               value={tableNo}
-              onChange={e => setTableNo(e.target.value)}
+              onChange={e => {
+                const next = e.target.value;
+                setTableNo(next);
+                // カートに商品が残ったまま卓を替えると誤送信の元なので注意を出す
+                if (cart.length > 0) {
+                  setFlash(`⚠️ カートの${cartCount}品は ${L.tableLabel}${next} として送信されます`);
+                  setTimeout(() => setFlash(null), 2500);
+                }
+              }}
               className="flex-1 min-w-0 bg-indigo-700 border border-indigo-400 rounded-lg px-2 py-2 text-sm font-bold outline-none"
               aria-label={L.tableChoice}
             >
@@ -247,7 +268,7 @@ export default function HandyPage() {
           <div className="flex bg-indigo-700/50 border-t border-indigo-500">
             {([
               { key: "order",   icon: "🛒", label: L.tabOrder,   badge: cartCount },
-              { key: "pending", icon: "⏳", label: L.tabPending, badge: pendingOrders.length },
+              { key: "pending", icon: "⏳", label: L.tabPending, badge: unservedCount },
               { key: "history", icon: "📜", label: L.tabHistory, badge: 0 },
             ] as const).map(item => (
               <button
@@ -345,12 +366,31 @@ export default function HandyPage() {
 
         {!loading && tab === "pending" && (
           <main className="flex-1 overflow-y-auto px-3 py-3 pb-24 space-y-3 min-w-0">
-            {pendingOrders.length === 0 ? (
+            {/* 卓での絞り込みチップ */}
+            {openTables.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setTableFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    effectiveFilter === "all" ? "bg-indigo-600 text-white" : "bg-white text-slate-500 border border-slate-200"
+                  }`}>
+                  {L.allTables} ({openOrders.length})
+                </button>
+                {openTables.map(tn => (
+                  <button key={tn} onClick={() => setTableFilter(tn)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      effectiveFilter === tn ? "bg-indigo-600 text-white" : "bg-white text-slate-500 border border-slate-200"
+                    }`}>
+                    {L.tableLabel}{tn}
+                  </button>
+                ))}
+              </div>
+            )}
+            {visibleOpenOrders.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-6xl mb-3 opacity-50">⏳</p>
                 <p className="text-sm text-slate-400">{L.noPending}</p>
               </div>
-            ) : pendingOrders.map(o => (
+            ) : visibleOpenOrders.map(o => (
               <OrderCard key={o.id} order={o} labels={L}
                 onServe={() => toggleServed(o.id)}
                 onClose={() => closeOrder(o.id)}
