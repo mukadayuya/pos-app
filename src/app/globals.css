@@ -27,20 +27,34 @@ body {
 
 /*
  * ─── LINE内蔵ブラウザ／モバイル全般の横スクロール完全防止 ───
- * - overflow-x: clip は sticky を壊さない（hidden は壊す）
- * - max-width: 100% で 100vw のオーバーフローを封じる
- * - webkit-text-size-adjust で iOS Safari/LINE の勝手フォント拡大を防ぐ
- * - touch-action: manipulation でダブルタップズームを抑止（誤操作減）
+ * LINEの古いWebViewは overflow-x: clip 非対応のため hidden をフォールバックに置く。
  */
 html, body {
+  width: 100%;
   max-width: 100%;
-  overflow-x: clip;
+  overflow-x: hidden;      /* 古いWebView用フォールバック */
+  overflow-x: clip;        /* 現代ブラウザ用（stickyを壊さない） */
+  overscroll-behavior-x: none; /* 横方向のバウンス無効化 */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  position: relative;
 }
 
 body {
-  touch-action: manipulation;
+  touch-action: manipulation; /* ダブルタップズーム抑止 */
+}
+
+/* 全要素で「明示指定なしなら親幅を超えない」を強制 */
+*, *::before, *::after {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 画像・動画のはみ出し防止 */
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
 }
 
 /* iOS の慣性スクロールをスムーズに */
