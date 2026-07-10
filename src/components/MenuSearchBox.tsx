@@ -57,6 +57,8 @@ type Props = {
   hideLangSelector?: boolean;
   /** 翻訳名など、名前・読み仮名以外の追加検索対象（多言語検索用） */
   extraTargets?: (item: MenuItem) => string[];
+  /** 検索欄の説明文の例示（店舗により実在メニューを差し替える） */
+  placeholder?: string;
 };
 
 // Apple端末（iPhone/iPad/Mac Safari）の音声認識はネパール語非対応
@@ -73,7 +75,7 @@ function resolveSpeechLang(lang: Lang): { effective: string; fallbackFrom: Lang 
   return { effective: lang, fallbackFrom: null };
 }
 
-export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP", hideLangSelector = false, extraTargets }: Props) {
+export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-JP", hideLangSelector = false, extraTargets, placeholder }: Props) {
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState<Lang>(initialLang);
   const [listening, setListening] = useState(false);
@@ -338,7 +340,7 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="ひらがな・かたかな・音声で検索（例:「な」で 生ビール・なんこつ）"
+          placeholder={placeholder ?? "ひらがな・かたかな・音声で検索（例:「なま」で 生ビール・生ガキ）"}
           className="flex-1 bg-transparent outline-none text-base text-slate-800 placeholder:text-slate-400"
         />
         {query && (
