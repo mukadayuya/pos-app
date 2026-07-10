@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   description: "飲食店向けPOSレジアプリ",
 };
 
+// LINE内蔵ブラウザ判定などmiddlewareでのUser-Agent分岐を確実に効かせるため、
+// 静的ページとしてCDNにキャッシュされず毎回サーバーを通す（force-dynamic）。
+// これがないと完全に静的生成されたページがmiddlewareをバイパスしてCDNから
+// 直接返され、LINE→外部ブラウザの自動リダイレクトが効かなくなる。
+export const dynamic = "force-dynamic";
+
 // LINE内蔵ブラウザ・モバイル各種で確実にビューポート幅に収める設定
 export const viewport: Viewport = {
   width: "device-width",
