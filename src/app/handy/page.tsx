@@ -367,7 +367,7 @@ export default function HandyPage() {
                 extraTargets={translationTargets}
                 placeholder={
                   IS_SHOTEN
-                    ? "ひらがな・かたかな・音声で検索（例:「なま」で 生ガキ・「ひだ」で 飛騨牛）"
+                    ? "ひらがな・かたかな・音声で検索（例:「なま」で 生ビール・「ひだ」で 飛騨牛）"
                     : IS_WARAJI
                       ? "ひらがな・かたかな・音声で検索（例:「なま」で 生ビール・「つく」で つくね）"
                       : undefined

@@ -45,6 +45,7 @@ const CAT = {
   yakimono: "e5f01007-2f3a-4b5c-8d6e-a00000000007",
   shime:    "e5f01008-2f3a-4b5c-8d6e-a00000000008",
   sake:     "e5f01009-2f3a-4b5c-8d6e-a00000000009",
+  drink:    "e5f01010-2f3a-4b5c-8d6e-a00000000010",
 };
 
 const categories = [
@@ -57,6 +58,7 @@ const categories = [
   { id: CAT.yakimono, name: "焼物",             display_order: 7 },
   { id: CAT.shime,    name: "〆・ご飯もの",     display_order: 8 },
   { id: CAT.sake,     name: "日本酒",           display_order: 9 },
+  { id: CAT.drink,    name: "ドリンク",         display_order: 10 },
 ].map(c => ({ ...c, store_id: SHOTEN_STORE_ID }));
 
 // 商品画像（全URL 200確認済み 2026-07-09。Special:FilePathは実体へリダイレクトされる公式URL）
@@ -203,6 +205,18 @@ const rawMenus = [
   { cat: "sake", name: "出羽桜（桜花吟醸 300ml）",            kana: "でわざくら",                 price: 1350, emoji: "🍶", img: "sake" },
   { cat: "sake", name: "陸奥男山（超辛口純米 300ml）",        kana: "むつおとこやま",             price: 1500, emoji: "🍶", img: "sake" },
   { cat: "sake", name: "考の司（純米吟醸 300ml）",            kana: "こうのつかさ",               price: 1500, emoji: "🍶", img: "sake" },
+
+  // ── ドリンク（10品・笑路と同一ラインナップ）─
+  { cat: "drink", name: "生ビール（中）",                     kana: "なまびーるちゅう",           price: 500,  emoji: "🍺" },
+  { cat: "drink", name: "ハイボール",                         kana: "はいぼーる",                 price: 500,  emoji: "🥃" },
+  { cat: "drink", name: "レモンサワー",                       kana: "れもんさわー",               price: 500,  emoji: "🍋" },
+  { cat: "drink", name: "モヒート",                           kana: "もひーと",                   price: 500,  emoji: "🍹" },
+  { cat: "drink", name: "カシスオレンジ",                     kana: "かしすおれんじ",             price: 500,  emoji: "🍹" },
+  { cat: "drink", name: "芋焼酎（グラス）",                   kana: "いもじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
+  { cat: "drink", name: "麦焼酎（グラス）",                   kana: "むぎじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
+  { cat: "drink", name: "米焼酎（グラス）",                   kana: "こめじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
+  { cat: "drink", name: "烏龍茶",                             kana: "うーろんちゃ",               price: 300,  emoji: "☕" },
+  { cat: "drink", name: "緑茶",                               kana: "りょくちゃ",                 price: 300,  emoji: "🍵" },
 ];
 
 const perCatCounter = {};
