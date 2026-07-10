@@ -213,12 +213,14 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
           try { r.stop(); } catch { /* ignore */ }
         }, 500);
       };
-      // 完全無音のまま5秒経ったら諦めて終了させる
-      // 注意: 「音を検知したら即解除」する。3秒固定だった時、ゆっくり話し始めた
-      // 正常な発話まで切ってしまい「無反応」に見える事故が起きたため
+      // 完全無音のまま10秒経ったら諦めて終了させる
+      // 注意1: 「音を検知したら即解除」する。3秒固定だった時、ゆっくり話し始めた
+      //       正常な発話まで切ってしまい「無反応」に見える事故が起きたため
+      // 注意2: iOS Safari初回のマイク許可ダイアログを操作する間もこのタイマーが
+      //       進むため、短いと許可完了前にタイムアウトする。10秒に緩和。
       let noResultTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
         try { r.stop(); } catch { /* ignore */ }
-      }, 5000);
+      }, 10000);
       const clearNoResultTimer = () => {
         if (noResultTimer) { clearTimeout(noResultTimer); noResultTimer = null; }
       };
@@ -227,6 +229,9 @@ export default function MenuSearchBox({ menuItems, onSelect, initialLang = "ja-J
       let hadError = false;
 
       r.onstart = () => setListening(true);
+      // マイクストリーム取得時点でも無音タイマーを解除（onsoundstartより早い）
+      // iOS Safariは環境音レベルでは onsoundstart が発火しないことがあるため保険
+      r.onaudiostart = clearNoResultTimer;
       // 音・話し声を検知したら「無音タイマー」は解除（話している最中に切らない）
       r.onsoundstart = clearNoResultTimer;
       r.onspeechstart = clearNoResultTimer;
