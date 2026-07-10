@@ -384,7 +384,7 @@ export default function HandyPage() {
             <main className="flex-1 overflow-y-auto px-3 pb-40">
               <div className="grid grid-cols-2 gap-2">
                 {filteredItems.map(item => {
-                  const totalPrice = Math.round(item.price * (1 + (item.taxRate ?? 0.10)));
+                  const taxIncl = Math.round(item.price * (1 + (item.taxRate ?? 0.10)));
                   const displayName = warajiItemName(item.name, lang);
                   const showJa = lang !== "ja" && displayName !== item.name;
                   return (
@@ -407,7 +407,10 @@ export default function HandyPage() {
                             {showJa && <p className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">{item.name}</p>}
                           </div>
                         </div>
-                        <p className="text-sm font-black text-slate-900 mt-1">¥{totalPrice.toLocaleString()}</p>
+                        <p className="text-sm font-black text-slate-900 mt-1">
+                          ¥{item.price.toLocaleString()}
+                          <span className="text-[10px] font-normal text-slate-400 ml-1">(税込¥{taxIncl.toLocaleString()})</span>
+                        </p>
                       </div>
                     </button>
                   );
@@ -524,14 +527,16 @@ export default function HandyPage() {
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {cart.map(c => {
                 const rate = c.item.taxRate ?? 0.10;
-                const each = Math.round(c.item.price * (1 + rate));
+                const eachTaxIncl = Math.round(c.item.price * (1 + rate));
                 const displayName = warajiItemName(c.item.name, lang);
                 return (
                   <div key={c.itemKey} className="bg-slate-50 rounded-xl p-3 flex items-center gap-2 min-w-0">
                     <span className="text-xl flex-shrink-0">{c.item.emoji ?? "🍽️"}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold truncate">{displayName}</p>
-                      <p className="text-xs text-slate-500 truncate">¥{each} × {c.qty} = ¥{(each * c.qty).toLocaleString()}</p>
+                      <p className="text-xs text-slate-500 truncate">
+                        ¥{c.item.price.toLocaleString()}（税込¥{eachTaxIncl.toLocaleString()}） × {c.qty} = ¥{(eachTaxIncl * c.qty).toLocaleString()}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => changeQty(c.itemKey, -1)} className="w-8 h-8 rounded-lg bg-white border border-slate-300 font-bold text-slate-700 text-sm">−</button>
