@@ -101,6 +101,15 @@ const IMG = {
   okranatto:   FP("Okra%20natto%20by%20kamikura.jpg"), // ねばねばMIX
   kombu:       FP("Tsukudaniphoto.jpg"),             // わさび昆布（佃煮）
   ikasashimi:  FP("Ika%20sashimi.JPG"),              // ボイルイカ生わかめ
+  // ドリンク用画像（全URL 200確認済み 2026-07-10）
+  beer:        FP("Sapporo%20Ginjikomi%20Special%20Clean%20Malt%20Draft%20Beer%20%28224291451%29.jpg"), // 生ビール
+  highball:    FP("Amber%20Moon%20Ingredients.jpg"), // ハイボール
+  lemonsour:   FP("Niku%20Tokidoki%20Lemon%20Sour%20MeiekiIMG%2020220807%20184905%20HDR%2004.jpg"),     // レモンサワー
+  mojito:      FP("Fresh%20Mojito%20Premium.jpg"),   // モヒート
+  cassisorange:FP("Cassis%20and%20Orange%208757100129%20173bcfcb9d%20o.jpg"),                          // カシスオレンジ
+  shochu:      FP("Shochu%20001.jpg"),               // 芋・麦・米焼酎（3種共用）
+  oolong:      FP("Oolong%20Tea.jpg"),               // 烏龍茶
+  greentea:    FP("White%20cup%20with%20green%20tea%20in%20it.jpg"),                                    // 緑茶
 };
 
 // 全91品（kana = 読み仮名検索用、img = 画像キー）
@@ -215,16 +224,16 @@ const rawMenus = [
   { cat: "sake", name: "考の司（純米吟醸 300ml）",            kana: "こうのつかさ",               price: 1500, emoji: "🍶", img: "sake" },
 
   // ── ドリンク（10品・笑路と同一ラインナップ）─
-  { cat: "drink", name: "生ビール（中）",                     kana: "なまびーるちゅう",           price: 500,  emoji: "🍺" },
-  { cat: "drink", name: "ハイボール",                         kana: "はいぼーる",                 price: 500,  emoji: "🥃" },
-  { cat: "drink", name: "レモンサワー",                       kana: "れもんさわー",               price: 500,  emoji: "🍋" },
-  { cat: "drink", name: "モヒート",                           kana: "もひーと",                   price: 500,  emoji: "🍹" },
-  { cat: "drink", name: "カシスオレンジ",                     kana: "かしすおれんじ",             price: 500,  emoji: "🍹" },
-  { cat: "drink", name: "芋焼酎（グラス）",                   kana: "いもじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
-  { cat: "drink", name: "麦焼酎（グラス）",                   kana: "むぎじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
-  { cat: "drink", name: "米焼酎（グラス）",                   kana: "こめじょうちゅうぐらす",     price: 500,  emoji: "🥃" },
-  { cat: "drink", name: "烏龍茶",                             kana: "うーろんちゃ",               price: 300,  emoji: "☕" },
-  { cat: "drink", name: "緑茶",                               kana: "りょくちゃ",                 price: 300,  emoji: "🍵" },
+  { cat: "drink", name: "生ビール（中）",                     kana: "なまびーるちゅう",           price: 500,  emoji: "🍺", img: "beer" },
+  { cat: "drink", name: "ハイボール",                         kana: "はいぼーる",                 price: 500,  emoji: "🥃", img: "highball" },
+  { cat: "drink", name: "レモンサワー",                       kana: "れもんさわー",               price: 500,  emoji: "🍋", img: "lemonsour" },
+  { cat: "drink", name: "モヒート",                           kana: "もひーと",                   price: 500,  emoji: "🍹", img: "mojito" },
+  { cat: "drink", name: "カシスオレンジ",                     kana: "かしすおれんじ",             price: 500,  emoji: "🍹", img: "cassisorange" },
+  { cat: "drink", name: "芋焼酎（グラス）",                   kana: "いもじょうちゅうぐらす",     price: 500,  emoji: "🥃", img: "shochu" },
+  { cat: "drink", name: "麦焼酎（グラス）",                   kana: "むぎじょうちゅうぐらす",     price: 500,  emoji: "🥃", img: "shochu" },
+  { cat: "drink", name: "米焼酎（グラス）",                   kana: "こめじょうちゅうぐらす",     price: 500,  emoji: "🥃", img: "shochu" },
+  { cat: "drink", name: "烏龍茶",                             kana: "うーろんちゃ",               price: 300,  emoji: "☕", img: "oolong" },
+  { cat: "drink", name: "緑茶",                               kana: "りょくちゃ",                 price: 300,  emoji: "🍵", img: "greentea" },
 ];
 
 const perCatCounter = {};
