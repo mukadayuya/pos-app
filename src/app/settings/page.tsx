@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { fetchDefaultStoreId } from "@/lib/adminDb";
 import { fetchPeriodSummary, fetchTodayHourlySales, HourlySales } from "@/lib/db";
 import { fetchDailySettlement, saveZReport, todayJstRange, type DailySettlement } from "@/lib/settlement";
+import { fetchTodayCashEvents, createCashEvent, deleteCashEvent, KIND_LABEL, type CashEvent, type CashEventKind } from "@/lib/cashEvents";
 import { enqueueSettlement, hasRegisteredPrinter } from "@/lib/printer/client";
 import type { SettlementReportInput } from "@/lib/printer/escpos";
 
@@ -89,6 +90,13 @@ export default function SettingsPage() {
   const [reportMsg, setReportMsg]           = useState<{ text: string; ok: boolean } | null>(null);
   const [reportBusy, setReportBusy]         = useState(false);
 
+  // 現金入出金（Phase 1-⑤）
+  const [cashEvents, setCashEvents]         = useState<CashEvent[]>([]);
+  const [cashEventBusy, setCashEventBusy]   = useState(false);
+  const [cashForm, setCashForm]             = useState<{ kind: CashEventKind; amount: string; note: string }>({
+    kind: "petty_cash", amount: "", note: "",
+  });
+
   useEffect(() => {
     setStoreName(localStorage.getItem("store_name")       || DEFAULT_STORE_NAME);
     setStoreAddress(localStorage.getItem("store_address") || DEFAULT_STORE_ADDRESS);
@@ -102,18 +110,58 @@ export default function SettingsPage() {
     setInspectLoading(true);
     try {
       const sid = await fetchDefaultStoreId();
-      const { from, to } = todayJstRange();
-      const [summary, hourly, settle] = await Promise.all([
+      const { from, to, reportDate } = todayJstRange();
+      const [summary, hourly, settle, events] = await Promise.all([
         fetchPeriodSummary(from, to),
         fetchTodayHourlySales(),
         fetchDailySettlement(from, to),
+        fetchTodayCashEvents(reportDate.toISOString().slice(0, 10)),
       ]);
       setTodaySales(summary);
       setHourlyData(hourly);
       setSettlement(settle);
+      setCashEvents(events);
     } catch { /* ignore */ }
     finally { setInspectLoading(false); }
   }, []);
+
+  const loadCashEventsOnly = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const { reportDate } = todayJstRange();
+    const events = await fetchTodayCashEvents(reportDate.toISOString().slice(0, 10));
+    setCashEvents(events);
+  }, []);
+
+  const handleAddCashEvent = useCallback(async () => {
+    const amt = Number(cashForm.amount);
+    if (!amt || !Number.isFinite(amt)) return;
+    // 出金系はマイナス、入金系はプラスに正規化
+    const signed = ["petty_cash", "withdrawal"].includes(cashForm.kind)
+      ? -Math.abs(amt)
+      : Math.abs(amt);
+    setCashEventBusy(true);
+    try {
+      const { reportDate } = todayJstRange();
+      await createCashEvent({
+        event_date: reportDate.toISOString().slice(0, 10),
+        kind: cashForm.kind,
+        amount: signed,
+        note: cashForm.note || null,
+      });
+      setCashForm({ kind: "petty_cash", amount: "", note: "" });
+      await loadCashEventsOnly();
+    } finally { setCashEventBusy(false); }
+  }, [cashForm, loadCashEventsOnly]);
+
+  const handleDeleteCashEvent = useCallback(async (id: string) => {
+    if (!confirm("この入出金レコードを削除しますか？")) return;
+    await deleteCashEvent(id);
+    await loadCashEventsOnly();
+  }, [loadCashEventsOnly]);
+
+  // 期待レジ金 = 釣銭準備金＋入金−出金−仮払い ＋ 現金売上（返品含む）
+  const cashEventsNet = cashEvents.reduce((s, e) => s + e.amount, 0);
+  const expectedCash = cashEventsNet + (settlement?.byPayment.cash.total ?? 0);
 
   // レポート入力の共通ビルダー
   const buildReportInput = useCallback((kind: "X" | "Z", cashDeclared?: number): SettlementReportInput | null => {
@@ -462,6 +510,80 @@ export default function SettingsPage() {
             {/* レジ金入力 */}
             {settleSub === "cashcount" && (
               <div className="space-y-4">
+                {/* 現金入出金（釣銭準備金・仮払い・入出金） */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                  <h3 className="text-sm font-bold text-slate-600">🪙 現金の増減（本日）</h3>
+                  <div className="grid grid-cols-[130px_1fr_1fr_auto] gap-2 items-end">
+                    <label className="block">
+                      <span className="text-xs text-slate-500">種別</span>
+                      <select
+                        value={cashForm.kind}
+                        onChange={e => setCashForm(f => ({ ...f, kind: e.target.value as CashEventKind }))}
+                        className="w-full mt-1 px-2 py-2 rounded-lg border border-slate-300 text-sm outline-none"
+                      >
+                        <option value="opening_float">釣銭準備金</option>
+                        <option value="deposit">入金</option>
+                        <option value="petty_cash">仮払い（出）</option>
+                        <option value="withdrawal">出金</option>
+                        <option value="change">両替</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-xs text-slate-500">金額</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={cashForm.amount}
+                        onChange={e => setCashForm(f => ({ ...f, amount: e.target.value }))}
+                        placeholder="10000"
+                        className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none tabular-nums"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs text-slate-500">用途メモ</span>
+                      <input
+                        type="text"
+                        value={cashForm.note}
+                        onChange={e => setCashForm(f => ({ ...f, note: e.target.value }))}
+                        placeholder="例: 食材買い出し"
+                        className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none"
+                      />
+                    </label>
+                    <button
+                      onClick={handleAddCashEvent}
+                      disabled={cashEventBusy || !cashForm.amount}
+                      className="h-10 px-4 rounded-lg bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white text-sm font-bold"
+                    >追加</button>
+                  </div>
+
+                  {/* 本日履歴 */}
+                  {cashEvents.length === 0 ? (
+                    <p className="text-xs text-slate-400">本日の入出金はまだありません。</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">
+                      {cashEvents.map(e => (
+                        <li key={e.id} className="py-2 flex items-center gap-3">
+                          <span className="text-xs w-20 bg-slate-100 text-slate-700 rounded px-2 py-0.5 text-center font-semibold">{KIND_LABEL[e.kind]}</span>
+                          <span className={`text-sm font-bold tabular-nums w-24 text-right ${e.amount >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                            {e.amount >= 0 ? "+" : ""}{fmtYen(e.amount)}
+                          </span>
+                          <span className="text-xs text-slate-500 flex-1 truncate">{e.note ?? "—"}</span>
+                          <button onClick={() => handleDeleteCashEvent(e.id)} className="text-xs text-slate-400 hover:text-red-500">✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* 期待レジ金 */}
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-emerald-900 font-bold">期待レジ金額</p>
+                      <p className="text-[10px] text-emerald-700 mt-0.5">釣銭準備＋入金−出金−仮払い＋現金売上</p>
+                    </div>
+                    <p className="text-xl font-black text-emerald-800 tabular-nums">{fmtYen(expectedCash)}</p>
+                  </div>
+                </div>
+
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
                     <div className="grid grid-cols-[1fr_100px_100px_120px] gap-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -514,13 +636,23 @@ export default function SettingsPage() {
                       <span className="text-lg font-black text-slate-800 tabular-nums">{fmtYen(settlement?.byPayment.cash.total ?? 0)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                      <span className="text-sm text-slate-600">釣銭準備＋入金−出金−仮払い（本日）</span>
+                      <span className={`text-lg font-black tabular-nums ${cashEventsNet >= 0 ? "text-slate-800" : "text-red-600"}`}>
+                        {cashEventsNet >= 0 ? "+" : ""}{fmtYen(cashEventsNet)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100 bg-slate-50 rounded px-2">
+                      <span className="text-sm text-slate-600">期待レジ金</span>
+                      <span className="text-lg font-black text-slate-800 tabular-nums">{fmtYen(expectedCash)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100">
                       <span className="text-sm text-slate-600">レジ金実測（入力値）</span>
                       <span className="text-lg font-black text-slate-800 tabular-nums">{fmtYen(cashTotal)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 bg-slate-50 rounded-xl px-3">
-                      <span className="text-sm font-bold text-slate-700">差異</span>
+                      <span className="text-sm font-bold text-slate-700">差異（実測−期待）</span>
                       {(() => {
-                        const diff = cashTotal - (settlement?.byPayment.cash.total ?? 0);
+                        const diff = cashTotal - expectedCash;
                         return (
                           <span className={`text-lg font-black tabular-nums ${diff === 0 ? "text-emerald-600" : diff > 0 ? "text-blue-600" : "text-red-600"}`}>
                             {diff >= 0 ? "+" : ""}{fmtYen(diff)}
