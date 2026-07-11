@@ -78,6 +78,47 @@ export default function PrintersSettingsPage() {
     await load();
   }
 
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testMsg, setTestMsg] = useState<{ mac: string; text: string; ok: boolean } | null>(null);
+
+  async function testPrint(mac: string) {
+    setTesting(mac);
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/print/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: STORE_ID,
+          kind: "test",
+          targetMac: mac,
+          receipt: {
+            storeName: "🖨️ テスト印刷",
+            createdAt: new Date().toISOString(),
+            lines: [
+              { name: "接続テスト", qty: 1, unitPriceTaxIncl: 0, taxRate: 0 },
+            ],
+            subtotalTaxIncl: 0,
+            totalTaxIncl: 0,
+            footerNote: "この用紙が印刷されれば設定OKです",
+            columns: 42,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        setTestMsg({ mac, text: `失敗: ${msg}`, ok: false });
+      } else {
+        const j = await res.json();
+        setTestMsg({ mac, text: `キュー投入OK (jobId=${j.jobId?.slice(0, 8)}…). 数秒以内に印刷されます。`, ok: true });
+      }
+    } catch (e) {
+      setTestMsg({ mac, text: `エラー: ${(e as Error).message}`, ok: false });
+    } finally {
+      setTesting(null);
+    }
+  }
+
   const cloudPrntUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/print/cloudprnt`
     : "https://[このアプリのURL]/api/print/cloudprnt";
@@ -178,15 +219,29 @@ export default function PrintersSettingsPage() {
                       {d.status_msg ? `｜${d.status_msg}` : ""}
                     </p>
                   </div>
-                  <button
-                    onClick={() => removeDevice(d.mac_address)}
-                    className="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1"
-                  >
-                    削除
-                  </button>
+                  <div className="flex flex-col gap-1 items-end">
+                    <button
+                      onClick={() => testPrint(d.mac_address)}
+                      disabled={testing === d.mac_address}
+                      className="text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-xs font-bold px-3 py-1 rounded-lg"
+                    >
+                      {testing === d.mac_address ? "投入中…" : "🖨️ テスト印刷"}
+                    </button>
+                    <button
+                      onClick={() => removeDevice(d.mac_address)}
+                      className="text-red-500 hover:text-red-700 text-xs font-bold px-3 py-1"
+                    >
+                      削除
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
+          )}
+          {testMsg && (
+            <p className={`text-xs mt-3 ${testMsg.ok ? "text-emerald-700" : "text-red-600"}`}>
+              [{formatPrinterMac(testMsg.mac)}] {testMsg.text}
+            </p>
           )}
         </section>
       </main>
