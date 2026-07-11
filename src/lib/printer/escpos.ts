@@ -175,3 +175,122 @@ export function buildReceipt(input: ReceiptInput): Uint8Array {
 export function toBase64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
 }
+
+// ─── X/Zレポート印刷（Phase 1-⑥／Phase 1-⑫）──────────────────
+export type SettlementReportInput = {
+  storeName: string;
+  storeAddress?: string;
+  storeTel?: string;
+  kind: "X" | "Z";               // Xは中間確認、Zは日次締め
+  reportDate: Date;              // 対象営業日
+  createdAt: Date;               // 発行時刻
+  from: Date;
+  to: Date;
+  staff?: string;
+  count: number;                 // 会計件数
+  guests: number;
+  totalTaxIncl: number;
+  discountTotal: number;
+  tax8: number;
+  tax10: number;
+  sub8: number;
+  sub10: number;
+  byPayment: {
+    cash: { total: number; count: number };
+    card: { total: number; count: number };
+    voucher: { total: number; count: number };
+    qr:   { total: number; count: number };
+  };
+  byHour?: { hour: number; total: number; count: number }[];
+  cashDeclared?: number;         // レジ金実測（Zのみ）
+  cashDiff?: number;             // 差異（Zのみ）
+  columns?: 32 | 42 | 48;
+};
+
+export function buildSettlementReport(input: SettlementReportInput): Uint8Array {
+  const cols = input.columns ?? 42;
+  const sep  = "-".repeat(cols);
+  const dsep = "=".repeat(cols);
+  const b = new Builder();
+
+  b.init().center().bold(true).big(true);
+  b.line(input.kind === "X" ? "X レポート" : "Z レポート");
+  b.big(false).bold(false);
+  b.line(input.storeName);
+  if (input.storeAddress) b.line(input.storeAddress);
+  if (input.storeTel)     b.line(`TEL ${input.storeTel}`);
+  b.feed(1).left();
+
+  const pdate = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}`;
+  };
+  const ptime = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  b.line(`営業日 ${pdate(input.reportDate)}`);
+  b.line(`期間   ${pdate(input.from)} ${ptime(input.from)} - ${pdate(input.to)} ${ptime(input.to)}`);
+  b.line(`発行   ${pdate(input.createdAt)} ${ptime(input.createdAt)}${input.staff ? ` (${input.staff})` : ""}`);
+  b.line(dsep);
+
+  // ── サマリ
+  b.bold(true);
+  b.line(pad2col("会計件数",  `${input.count}件`, cols));
+  b.line(pad2col("客数",      `${input.guests}名`, cols));
+  b.big(true);
+  b.line(pad2col("合計(税込)", fmtYen(input.totalTaxIncl), cols / 2));
+  b.big(false);
+  if (input.discountTotal > 0)
+    b.line(pad2col("値引合計",  fmtYen(-input.discountTotal), cols));
+  b.bold(false);
+  b.line(sep);
+
+  // ── 税率別
+  b.bold(true).line("【 税率別 】").bold(false);
+  b.line(pad2col("  8%対象(税抜)", fmtYen(input.sub8), cols));
+  b.line(pad2col("    (内税8%)",   fmtYen(input.tax8), cols));
+  b.line(pad2col(" 10%対象(税抜)", fmtYen(input.sub10), cols));
+  b.line(pad2col("   (内税10%)",   fmtYen(input.tax10), cols));
+  b.line(sep);
+
+  // ── 支払方法別（Phase 1-⑫）
+  b.bold(true).line("【 支払方法別 】").bold(false);
+  const p = input.byPayment;
+  const payLine = (label: string, e: { total: number; count: number }) =>
+    b.line(pad2col(`  ${label} (${e.count}件)`, fmtYen(e.total), cols));
+  payLine("現金",   p.cash);
+  payLine("カード", p.card);
+  payLine("QR決済", p.qr);
+  payLine("商品券", p.voucher);
+  b.line(sep);
+
+  // ── 時間帯別（省略可・売上ある時間帯のみ表示）
+  if (input.byHour && input.byHour.some(h => h.total > 0)) {
+    b.bold(true).line("【 時間帯別 】").bold(false);
+    for (const h of input.byHour) {
+      if (h.total > 0) {
+        b.line(pad2col(`  ${String(h.hour).padStart(2, "0")}時 (${h.count}件)`, fmtYen(h.total), cols));
+      }
+    }
+    b.line(sep);
+  }
+
+  // ── レジ金差異（Zのみ）
+  if (input.kind === "Z" && typeof input.cashDeclared === "number") {
+    b.bold(true).line("【 レジ金 】").bold(false);
+    b.line(pad2col("  現金売上合計", fmtYen(input.byPayment.cash.total), cols));
+    b.line(pad2col("  レジ金実測",   fmtYen(input.cashDeclared), cols));
+    const diff = input.cashDiff ?? (input.cashDeclared - input.byPayment.cash.total);
+    b.bold(true).line(pad2col("  差異", (diff >= 0 ? "+" : "") + fmtYen(diff), cols)).bold(false);
+    b.line(sep);
+  }
+
+  b.feed(1).center();
+  b.line(input.kind === "Z" ? "── 精算完了 ──" : "── 中間確認 ──");
+  b.feed(2);
+  b.cut();
+  return b.build();
+}
+

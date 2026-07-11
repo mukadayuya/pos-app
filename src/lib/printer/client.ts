@@ -80,9 +80,43 @@ function toReceiptInput(record: SalesRecord, store: StoreInfo, tableLabel?: stri
   };
 }
 
+import type { SettlementReportInput } from "@/lib/printer/escpos";
+
 export type EnqueueResult =
   | { ok: true; jobId: string; payloadSize: number }
   | { ok: false; error: string };
+
+/** X/Zレポートを印刷キューに投入 */
+export async function enqueueSettlement(
+  report: SettlementReportInput,
+  opts?: { reportId?: string | null; targetMac?: string | null },
+): Promise<EnqueueResult> {
+  try {
+    const res = await fetch("/api/print/settlement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        storeId:  STORE_ID,
+        reportId: opts?.reportId ?? null,
+        targetMac: opts?.targetMac ?? null,
+        report: {
+          ...report,
+          reportDate: report.reportDate.toISOString(),
+          createdAt:  report.createdAt.toISOString(),
+          from:       report.from.toISOString(),
+          to:         report.to.toISOString(),
+        },
+      }),
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => String(res.status));
+      return { ok: false, error: msg };
+    }
+    return { ok: true, ...(await res.json()) };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
 
 /** レシート印刷ジョブを積む。プリンターが登録されている場合のみ効く */
 export async function enqueueReceipt(

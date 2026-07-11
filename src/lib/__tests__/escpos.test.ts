@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReceipt, toBase64, type ReceiptInput } from "@/lib/printer/escpos";
+import { buildReceipt, buildSettlementReport, toBase64, type ReceiptInput, type SettlementReportInput } from "@/lib/printer/escpos";
 import iconv from "iconv-lite";
 
 // 基本レシート入力（テストの土台）
@@ -97,5 +97,77 @@ describe("buildReceipt", () => {
   it("toBase64 が Node Buffer と同一結果", () => {
     const bytes = buildReceipt(base);
     expect(toBase64(bytes)).toBe(Buffer.from(bytes).toString("base64"));
+  });
+});
+
+// ── X/Zレポート ─────────────────────────────────────────────
+const baseReport: SettlementReportInput = {
+  storeName: "居食屋 笑点",
+  storeTel: "0565-00-0000",
+  kind: "Z",
+  reportDate: new Date("2026-07-13T00:00:00+09:00"),
+  createdAt:  new Date("2026-07-14T02:00:00+09:00"),
+  from:       new Date("2026-07-13T00:00:00+09:00"),
+  to:         new Date("2026-07-14T00:00:00+09:00"),
+  staff: "ラム",
+  count: 42, guests: 88,
+  totalTaxIncl: 128000,
+  discountTotal: 3200,
+  tax8: 800, tax10: 10000,
+  sub8: 10000, sub10: 100000,
+  byPayment: {
+    cash: { total: 80000, count: 26 },
+    card: { total: 30000, count: 10 },
+    voucher: { total: 3000, count: 2 },
+    qr:   { total: 15000, count: 4 },
+  },
+  byHour: [
+    { hour: 18, total: 40000, count: 12 },
+    { hour: 19, total: 55000, count: 18 },
+    { hour: 20, total: 33000, count: 12 },
+  ],
+  cashDeclared: 80500,
+  cashDiff: 500,
+};
+
+describe("buildSettlementReport", () => {
+  it("Z レポートに主要項目が全て入る", () => {
+    const bytes = buildSettlementReport(baseReport);
+    const decoded = iconv.decode(Buffer.from(bytes), "shift_jis");
+    expect(decoded).toContain("Z レポート");
+    expect(decoded).toContain("128,000"); // 合計
+    expect(decoded).toContain("42件");     // 会計件数
+    expect(decoded).toContain("88名");     // 客数
+    expect(decoded).toContain("8%対象");
+    expect(decoded).toContain("10%対象");
+    expect(decoded).toContain("現金");
+    expect(decoded).toContain("カード");
+    expect(decoded).toContain("QR決済");
+    expect(decoded).toContain("商品券");
+    expect(decoded).toContain("18時");
+    expect(decoded).toContain("レジ金実測");
+    expect(decoded).toContain("差異");
+    expect(decoded).toContain("+\\500"); // Shift_JIS の ¥ は "\" として印字
+  });
+
+  it("X レポートはレジ金差異を印字しない", () => {
+    const xReport: SettlementReportInput = { ...baseReport, kind: "X" };
+    // cashDeclared が入っていても X なら レジ金 セクションは出ない
+    const bytes = buildSettlementReport({ ...xReport, cashDeclared: 80500 });
+    const decoded = iconv.decode(Buffer.from(bytes), "shift_jis");
+    expect(decoded).toContain("X レポート");
+    expect(decoded).not.toContain("レジ金実測");
+  });
+
+  it("時間帯データがない/売上ゼロなら時間帯セクションを出さない", () => {
+    const noHour = { ...baseReport, byHour: undefined };
+    const decoded = iconv.decode(Buffer.from(buildSettlementReport(noHour)), "shift_jis");
+    expect(decoded).not.toContain("時間帯別");
+  });
+
+  it("末尾がカット(GS V 1)で終わる", () => {
+    const bytes = buildSettlementReport(baseReport);
+    const last3 = Array.from(bytes.slice(-3));
+    expect(last3).toEqual([0x1d, 0x56, 1]);
   });
 });
