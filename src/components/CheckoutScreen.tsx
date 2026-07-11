@@ -282,7 +282,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
           </button>
         </div>
         {showReceiptModal && (
-          <ReceiptIssueModal total={completedRecord.total} onClose={() => setShowReceiptModal(false)} />
+          <ReceiptIssueModal total={completedRecord.total} tax8={completedRecord.tax8} tax10={completedRecord.tax10} onClose={() => setShowReceiptModal(false)} />
         )}
       </div>
     );

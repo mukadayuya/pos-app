@@ -5,14 +5,34 @@ import { useState } from "react";
 interface Props {
   total?: number;       // provided → pre-fills and locks amount; omitted → user enters manually
   onClose: () => void;
+  // インボイス対応: 内税8%/10%の内訳（レシート由来の場合のみ）
+  tax8?: number;
+  tax10?: number;
 }
 
 const TADASHI_PRESETS = ["お食事代として", "御会食代として", "飲食代として"] as const;
+
+// 印紙税額表（金銭又は有価証券の受取書・売上代金）
+// https://www.nta.go.jp/taxes/shiraberu/shinkoku/kakusyu/inshi/17_01.htm
+// 税抜5万円未満は非課税。以下は税抜金額ベース。
+function requiredStampAmount(taxExcludedTotal: number): { stamp: number; nextThreshold?: number } {
+  const t = Math.floor(taxExcludedTotal);
+  if (t < 50000)          return { stamp: 0,      nextThreshold: 50000 };
+  if (t < 1000000)        return { stamp: 200,    nextThreshold: 1000000 };
+  if (t < 2000000)        return { stamp: 400,    nextThreshold: 2000000 };
+  if (t < 3000000)        return { stamp: 600,    nextThreshold: 3000000 };
+  if (t < 5000000)        return { stamp: 1000,   nextThreshold: 5000000 };
+  if (t < 10000000)       return { stamp: 2000,   nextThreshold: 10000000 };
+  return { stamp: 4000 }; // 1000万以上（簡略化、実際は段階的）
+}
 
 function printFormalReceipt(params: {
   addressee: string;
   tadashi: string;
   total: number;
+  tax8?: number;
+  tax10?: number;
+  issuer?: string;
 }) {
   const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
   const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
@@ -26,9 +46,15 @@ const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
 
   const addressee = params.addressee.trim() || "上様";
   const tadashi   = params.tadashi.trim()   || "お食事代として";
+  const issuer    = params.issuer?.trim() || "";
 
   // ¥12,000ー  改ざん防止
   const amountStr = `￥${params.total.toLocaleString()}ー`;
+
+  const totalTax = (params.tax8 ?? 0) + (params.tax10 ?? 0);
+  const taxExcluded = params.total - totalTax;
+  const stamp = requiredStampAmount(taxExcluded);
+  const showTaxBreakdown = totalTax > 0;
 
   const dateStr = new Date().toLocaleDateString("ja-JP-u-ca-japanese", {
     era: "long", year: "numeric", month: "long", day: "numeric",
@@ -211,6 +237,16 @@ const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
 
   <p class="tadashi-row">但し<span>${escapeHtml(tadashi)}</span></p>
 
+  ${showTaxBreakdown ? `<p class="tax-breakdown" style="font-size:9pt;color:#555;margin-bottom:6mm;padding-left:1mm;">
+    内訳: 税抜 ￥${taxExcluded.toLocaleString()}
+    ${params.tax8  ? ` / 8%対象 内税 ￥${params.tax8.toLocaleString()}` : ""}
+    ${params.tax10 ? ` / 10%対象 内税 ￥${params.tax10.toLocaleString()}` : ""}
+  </p>` : ""}
+
+  ${stamp.stamp > 0 ? `<p style="font-size:10pt;color:#a30000;margin-bottom:6mm;padding-left:1mm;">
+    ※ 印紙 ￥${stamp.stamp.toLocaleString()} を貼付・消印してください（税抜5万円以上）
+  </p>` : ""}
+
   <p class="confirmed">上記の金額正に領収いたしました</p>
 
   <div class="bottom">
@@ -220,6 +256,7 @@ const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
       ${storeAddress ? `<p>${escapeHtml(storeAddress)}</p>` : ""}
       ${storeTel     ? `<p>TEL ${escapeHtml(storeTel)}</p>` : ""}
       ${invoiceNum   ? `<p class="invoice-num">登録番号 ${escapeHtml(invoiceNum)}</p>` : ""}
+      ${issuer       ? `<p style="font-size:9pt;color:#555;">発行者 ${escapeHtml(issuer)}</p>` : ""}
       ${logoDataUrl  ? `<img class="seal" src="${logoDataUrl}" alt="社印">` : ""}
     </div>
   </div>
@@ -244,15 +281,23 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export default function ReceiptIssueModal({ total, onClose }: Props) {
+export default function ReceiptIssueModal({ total, onClose, tax8, tax10 }: Props) {
   const [addressee, setAddressee] = useState("");
   const [tadashiPreset, setTadashiPreset] = useState<string>(TADASHI_PRESETS[0]);
   const [tadashiFree, setTadashiFree]     = useState("");
   const [isCustom, setIsCustom]           = useState(false);
   const [manualAmount, setManualAmount]   = useState("");
+  const [issuer, setIssuer]               = useState("");
 
-  const resolvedTotal = total ?? parseInt(manualAmount.replace(/,/g, ""), 10);
+  const resolvedTotal = total ?? parseInt(manualAmount.replace(/,/g, ""), 10) || 0;
   const resolvedTadashi = isCustom ? tadashiFree : tadashiPreset;
+
+  const totalTaxFromProps = (tax8 ?? 0) + (tax10 ?? 0);
+  // 手動入力金額の場合はざっくり税10%で逆算（概算警告用）
+  const approxTaxExcluded = totalTaxFromProps > 0
+    ? resolvedTotal - totalTaxFromProps
+    : Math.round(resolvedTotal / 1.1);
+  const stampInfo = requiredStampAmount(approxTaxExcluded);
 
   const canIssue = total !== undefined
     ? true
@@ -261,7 +306,7 @@ export default function ReceiptIssueModal({ total, onClose }: Props) {
   const handleIssue = () => {
     const finalTotal = total !== undefined ? total : parseInt(manualAmount.replace(/,/g, ""), 10);
     if (!finalTotal || finalTotal <= 0) return;
-    printFormalReceipt({ addressee, tadashi: resolvedTadashi, total: finalTotal });
+    printFormalReceipt({ addressee, tadashi: resolvedTadashi, total: finalTotal, tax8, tax10, issuer });
   };
 
   return (
@@ -357,11 +402,42 @@ export default function ReceiptIssueModal({ total, onClose }: Props) {
             )}
           </div>
 
+          {/* 発行者（担当） */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              発行者担当 <span className="text-slate-400 font-normal text-xs">（任意・発行者欄に印字）</span>
+            </label>
+            <input
+              type="text"
+              value={issuer}
+              onChange={e => setIssuer(e.target.value)}
+              placeholder="例：山田"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+            />
+          </div>
+
+          {/* 印紙警告 */}
+          {stampInfo.stamp > 0 && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 text-xs text-amber-800 space-y-1">
+              <p className="font-bold">⚠️ 収入印紙 ¥{stampInfo.stamp.toLocaleString()} の貼付が必要です</p>
+              <p>税抜5万円以上の売上代金の受取書には印紙税が課税されます。印紙貼付後、割印（消印）してください。</p>
+            </div>
+          )}
+
           {/* プレビュー */}
           <div className="bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 space-y-0.5 border border-slate-200">
             <p><span className="font-semibold text-slate-600">宛名：</span>{addressee.trim() || "上様"}</p>
             <p><span className="font-semibold text-slate-600">金額：</span>￥{(resolvedTotal || 0).toLocaleString()}ー</p>
             <p><span className="font-semibold text-slate-600">但し：</span>{resolvedTadashi || "─"}</p>
+            {totalTaxFromProps > 0 && (
+              <p><span className="font-semibold text-slate-600">税内訳：</span>
+                {tax8  ? ` 8%内税 ¥${tax8.toLocaleString()}` : ""}
+                {tax10 ? ` 10%内税 ¥${tax10.toLocaleString()}` : ""}
+              </p>
+            )}
+            {issuer && (
+              <p><span className="font-semibold text-slate-600">発行者：</span>{issuer}</p>
+            )}
           </div>
         </div>
 
