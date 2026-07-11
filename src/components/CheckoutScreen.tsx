@@ -6,6 +6,7 @@ import { riceTypeLabels, riceSizeLabels } from "@/data/menu";
 import { OrderOptions } from "@/types/pos";
 import { computeTaxTotals, computeDiscountAmount, computeItemDiscountAmount, computeItemDiscountDisplay } from "@/lib/utils";
 import ReceiptIssueModal from "./ReceiptIssueModal";
+import SplitBillModal from "./SplitBillModal";
 import { enqueueReceipt, hasRegisteredPrinter } from "@/lib/printer/client";
 
 function optionLabel(opts: OrderOptions): string {
@@ -169,6 +170,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
   const [step, setStep] = useState<"payment" | "complete">("payment");
   const [completedRecord, setCompletedRecord] = useState<SalesRecord | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   // ── 税額計算 ──────────────────────────────────────────────
   const { subtotal, itemDiscountTotal, tax8, tax10, taxOther, totalTax, baseTotal } = computeTaxTotals(items);
@@ -298,7 +300,13 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
           ← 戻る
         </button>
         <h1 className="text-slate-900 text-lg font-bold tracking-tight">会計</h1>
-        <div className="w-16" />
+        <button
+          onClick={() => setShowSplitModal(true)}
+          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors active:scale-95"
+          title="割り勘計算"
+        >
+          🍽️ 割り勘
+        </button>
       </div>
 
       {/* 3カラムメイン */}
@@ -506,6 +514,9 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
           </button>
         </div>
       </div>
+      {showSplitModal && (
+        <SplitBillModal total={total} onClose={() => setShowSplitModal(false)} />
+      )}
     </div>
   );
 }
