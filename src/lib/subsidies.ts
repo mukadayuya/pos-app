@@ -30,6 +30,15 @@ export interface Subsidy {
   benefits: string | null;
   application_url: string | null;
   priority: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** 直近30日以内に登録された補助金かどうか（Phase 3-⑨ 新制度アラート） */
+export function isNewSubsidy(subsidy: Subsidy): boolean {
+  if (!subsidy.created_at) return false;
+  const days = (Date.now() - new Date(subsidy.created_at).getTime()) / (24 * 60 * 60 * 1000);
+  return days <= 30;
 }
 
 // 店舗プロフィール（判定に使うマスター情報）
@@ -101,7 +110,7 @@ export async function fetchAllSubsidies(): Promise<Subsidy[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("subsidies")
-    .select("id, name, short_name, provider, category, max_amount, typical_amount, deadline_date, conditions_json, description, benefits, application_url, priority")
+    .select("id, name, short_name, provider, category, max_amount, typical_amount, deadline_date, conditions_json, description, benefits, application_url, priority, created_at, updated_at")
     .eq("is_active", true)
     .order("priority", { ascending: false });
   if (error) return [];

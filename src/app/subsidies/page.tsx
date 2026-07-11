@@ -12,6 +12,7 @@ import {
   computeAnnualRevenue,
   findAvailableSubsidies,
   daysUntilDeadline,
+  isNewSubsidy,
   DEFAULT_PROFILE,
   type StoreProfile,
   type Eligibility,
@@ -96,6 +97,72 @@ export default function SubsidiesPage() {
   const eligible = results.filter(r => r.eligible);
   const ineligible = results.filter(r => !r.eligible);
   const potentialTotal = eligible.reduce((s, r) => s + r.subsidy.max_amount, 0);
+  const newCount = results.filter(r => isNewSubsidy(r.subsidy)).length;
+
+  // Phase 3-⑧ 申請サポート情報を JSON でクリップボードにコピー / 印刷
+  const buildSupportCard = () => {
+    const rows: string[] = [];
+    rows.push("# 補助金申請サポート情報カード");
+    rows.push(`発行日時: ${new Date().toLocaleString("ja-JP")}`);
+    rows.push("");
+    rows.push("## 店舗プロフィール");
+    rows.push(`- 業種: ${profile.industry}`);
+    rows.push(`- 従業員数: ${profile.employee_count}名`);
+    if (profile.capital) rows.push(`- 資本金: ${profile.capital}万円`);
+    if (profile.prefecture) rows.push(`- 都道府県: ${profile.prefecture}`);
+    if (typeof profile.annual_revenue === "number") {
+      rows.push(`- 年商(POS実データ): ¥${profile.annual_revenue.toLocaleString()}`);
+    }
+    rows.push("");
+    rows.push("## 申請対象候補（利用可能な補助金）");
+    for (const { subsidy } of eligible) {
+      rows.push(`### ${subsidy.name}（${subsidy.provider}）`);
+      rows.push(`- 最大: ¥${subsidy.max_amount.toLocaleString()}`);
+      if (subsidy.typical_amount) rows.push(`- 相場: ¥${subsidy.typical_amount.toLocaleString()}`);
+      if (subsidy.deadline_date) rows.push(`- 締切: ${subsidy.deadline_date}`);
+      rows.push(`- 概要: ${subsidy.description}`);
+      if (subsidy.application_url) rows.push(`- 申請ページ: ${subsidy.application_url}`);
+      rows.push("");
+    }
+    return rows.join("\n");
+  };
+
+  const handleCopyCard = async () => {
+    try {
+      await navigator.clipboard.writeText(buildSupportCard());
+      alert("申請サポート情報をクリップボードにコピーしました。向田さんに共有する時にペーストしてください。");
+    } catch {
+      alert("コピーに失敗しました。手動でコピーしてください。");
+    }
+  };
+
+  const handlePrintCard = () => {
+    const content = buildSupportCard();
+    const win = window.open("", "_blank", "width=800,height=900");
+    if (!win) { alert("ポップアップがブロックされました。"); return; }
+    win.document.write(`
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>補助金申請サポート情報</title>
+<style>
+body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;padding:20mm;line-height:1.7;color:#111;background:#fff}
+h1{font-size:22pt;border-bottom:2px solid #10b981;padding-bottom:6mm;margin-bottom:8mm}
+h2{font-size:14pt;color:#0f766e;margin-top:8mm;margin-bottom:3mm;border-left:4px solid #10b981;padding-left:8px}
+h3{font-size:12pt;margin-top:5mm;margin-bottom:2mm}
+ul{margin-left:20px}
+li{margin-bottom:2mm;font-size:10pt}
+.print-btn{position:fixed;top:20px;right:20px;padding:10px 20px;background:#0f766e;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold}
+@media print{.print-btn{display:none}}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ 印刷する</button>
+${content.split("\n").map(l => {
+  if (l.startsWith("# ")) return `<h1>${l.slice(2)}</h1>`;
+  if (l.startsWith("## ")) return `<h2>${l.slice(3)}</h2>`;
+  if (l.startsWith("### ")) return `<h3>${l.slice(4)}</h3>`;
+  if (l.startsWith("- ")) return `<li>${l.slice(2)}</li>`;
+  return l ? `<p>${l}</p>` : "<br>";
+}).join("")}
+</body></html>`);
+    win.document.close();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -114,6 +181,11 @@ export default function SubsidiesPage() {
             <p className="text-4xl font-black tabular-nums mt-2">最大 {fmtManYen(potentialTotal)}</p>
             <p className="text-sm opacity-90 mt-2">
               🎯 該当 <b>{eligible.length}</b> 件 / 全 {results.length} 件を判定
+              {newCount > 0 && (
+                <span className="ml-2 inline-block bg-yellow-400 text-slate-900 text-xs font-black px-2 py-0.5 rounded-full">
+                  🆕 新着 {newCount} 件
+                </span>
+              )}
             </p>
             <div className="mt-4 pt-4 border-t border-white/20 flex items-center gap-3">
               <p className="text-xs opacity-80 flex-1">
@@ -182,13 +254,30 @@ export default function SubsidiesPage() {
           <>
             {eligible.length > 0 && (
               <section>
-                <h2 className="text-sm font-bold text-slate-700 mb-2">✅ 利用可能な補助金 ({eligible.length}件)</h2>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-bold text-slate-700">✅ 利用可能な補助金 ({eligible.length}件)</h2>
+                  <div className="flex gap-2">
+                    <button onClick={handleCopyCard}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">
+                      📋 サポート情報をコピー
+                    </button>
+                    <button onClick={handlePrintCard}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg">
+                      🖨️ 印刷
+                    </button>
+                  </div>
+                </div>
                 <ul className="space-y-3">
                   {eligible.map(({ subsidy, reasons }) => (
                     <li key={subsidy.id} className="bg-white rounded-2xl border-2 border-emerald-300 shadow-sm p-4">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
+                            {isNewSubsidy(subsidy) && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-400 text-slate-900 animate-pulse">
+                                🆕 NEW
+                              </span>
+                            )}
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
                               {subsidy.provider}
                             </span>
