@@ -169,6 +169,10 @@ export default function AttendanceManagePage() {
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
         <Link href="/attendance" className="text-slate-600 text-sm">← 打刻</Link>
         <h1 className="text-lg font-bold text-slate-900">スタッフ管理・給与集計</h1>
+        <Link href="/attendance/shifts"
+          className="ml-auto px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">
+          📆 シフト表
+        </Link>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">

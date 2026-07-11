@@ -88,8 +88,12 @@ export default function AttendancePage() {
         <div className="flex items-center gap-3">
           <Link href="/" className="text-slate-600 text-sm">← HOME</Link>
           <h1 className="text-lg font-bold text-slate-900">⏰ 勤怠打刻</h1>
-          <Link href="/attendance/manage"
+          <Link href="/attendance/shifts"
             className="ml-auto px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">
+            📆 シフト表
+          </Link>
+          <Link href="/attendance/manage"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">
             管理・集計 →
           </Link>
         </div>
