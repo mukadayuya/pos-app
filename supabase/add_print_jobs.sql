@@ -60,6 +60,16 @@ CREATE INDEX IF NOT EXISTS idx_print_jobs_history
 -- 現時点は enable_rls_per_store.sql と同様、Auth導入後に一括ENABLEする方針。
 -- ここではポリシーだけ定義しておく（Auth導入時に ENABLE ROW LEVEL SECURITY で有効化）。
 
+-- JWT から店舗ID を取り出すヘルパー（enable_rls_per_store.sql と同定義）。
+-- 未実行環境でも本SQLが自立して流せるよう CREATE OR REPLACE で冪等に用意する。
+CREATE OR REPLACE FUNCTION current_store_id() RETURNS TEXT
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(
+    auth.jwt() -> 'app_metadata' ->> 'store_id',
+    ''
+  );
+$$;
+
 DROP POLICY IF EXISTS store_isolation ON printer_devices;
 CREATE POLICY store_isolation ON printer_devices
   FOR ALL TO authenticated
