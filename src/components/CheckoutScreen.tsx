@@ -6,6 +6,7 @@ import { riceTypeLabels, riceSizeLabels } from "@/data/menu";
 import { OrderOptions } from "@/types/pos";
 import { computeTaxTotals, computeDiscountAmount, computeItemDiscountAmount, computeItemDiscountDisplay } from "@/lib/utils";
 import ReceiptIssueModal from "./ReceiptIssueModal";
+import { enqueueReceipt, hasRegisteredPrinter } from "@/lib/printer/client";
 
 function optionLabel(opts: OrderOptions): string {
   if (opts.selections?.length > 0) return opts.selections.map(s => s.itemName).join(" / ");
@@ -34,15 +35,47 @@ const METHODS: { id: PaymentMethod; label: string; icon: string }[] = [
 
 const NUMPAD_KEYS = ["7","8","9","4","5","6","1","2","3","C","0","⌫"] as const;
 
+// 店舗表示情報の解決（レシートテンプレート用途で共通利用）
+function resolveStoreInfo() {
+  const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
+  const IS_ABC    = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
+  const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
+  const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+  const defaultStoreName = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ"
+    : IS_ABC ? "焼鳥居酒屋ABC"
+    : IS_WARAJI ? "炭火やきとり 笑路"
+    : IS_SHOTEN ? "居食屋 笑点"
+    : "Kitchen Kazu";
+  const ls = (k: string) => typeof window !== "undefined" ? (localStorage.getItem(k) || undefined) : undefined;
+  return {
+    storeName:    ls("store_name") || defaultStoreName,
+    storeAddress: ls("store_address"),
+    storeTel:     ls("store_tel"),
+    storeRegNo:   ls("store_reg_no"),
+  };
+}
+
+// レシートボタン: プリンター未登録なら従来のブラウザ印刷（プレビュー）、
+// 1台以上登録済みなら CloudPRNT で自動印刷
+async function printReceiptSmart(record: SalesRecord, tableLabel?: string): Promise<void> {
+  try {
+    if (await hasRegisteredPrinter()) {
+      const store = resolveStoreInfo();
+      const r = await enqueueReceipt(record, store, { tableLabel });
+      if (r.ok) return;
+      // 失敗時はブラウザ印刷にフォールバック
+      console.warn("[printReceipt] CloudPRNT失敗、ブラウザ印刷にフォールバック:", r.error);
+    }
+  } catch (e) {
+    console.warn("[printReceipt] CloudPRNT判定エラー、ブラウザ印刷にフォールバック:", e);
+  }
+  printReceipt(record);
+}
+
 function printReceipt(record: SalesRecord) {
   const dateStr = record.createdAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
   const logoDataUrl = typeof window !== "undefined" ? localStorage.getItem("receipt_logo") : null;
-  const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
-  const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
-  const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
-const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
-  const defaultStoreName = IS_BRONCO ? "メキシコダイニングレストラン ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : IS_SHOTEN ? "居食屋 笑点" : "Kitchen Kazu";
-  const storeName   = typeof window !== "undefined" ? (localStorage.getItem("store_name") || defaultStoreName) : defaultStoreName;
+  const { storeName } = resolveStoreInfo();
 
   const itemDiscountTotalForReceipt = record.itemDiscountTotal ?? 0;
 
@@ -235,7 +268,7 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         </div>
         <p className="text-slate-400 text-sm">ありがとうございました</p>
         <div className="flex gap-3 w-full max-w-sm">
-          <button onClick={() => printReceipt(completedRecord)}
+          <button onClick={() => { void printReceiptSmart(completedRecord); }}
             className="flex-1 py-4 bg-white ring-1 ring-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-sm">
             🖨️ レシート
           </button>
