@@ -360,6 +360,9 @@ export interface SaleDetailRow {
   tax10?: number;
   tax?: number;
   item_discount_total?: number;
+  is_refund?: boolean;
+  refund_of_sale_id?: string | null;
+  refund_reason?: string | null;
 }
 
 export interface SaleRecordUpdate {
@@ -416,6 +419,71 @@ export async function deleteSale(id: string): Promise<void> {
   if (!supabase) throw new Error("Supabase not configured");
   const { error } = await supabase.from("sales").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ─── 返品（Phase 1-⑦） ────────────────────────────────────────
+// 会計後の返品を「マイナス売上」として別レコードで記録する。
+// - 全額返品: refundAmount = 元売上の total_amount
+// - 部分返品: refundAmount < 元売上の total_amount（正の値で渡す）
+// staff/reason は必須推奨。返品後は集計に自動反映される。
+
+export interface RefundSaleInput {
+  originalSaleId: string;
+  refundAmount: number;      // 正の値で渡す（内部でマイナスにする）
+  reason: string;
+  staff?: string;
+  paymentMethod?: string;    // 返金手段（元と同じにするのが原則）
+  // 元売上の税・支払方法情報。集計整合性のため、返品行にも同じ比率で計上する
+  original: Pick<SaleDetailRow, "total_amount" | "tax" | "tax8" | "tax10" | "payment_method" | "items">;
+}
+
+export async function refundSale(input: RefundSaleInput): Promise<{ refundSaleId: string }> {
+  if (!supabase) throw new Error("Supabase not configured");
+  if (input.refundAmount <= 0) throw new Error("返金額は正の値で指定してください");
+  if (input.refundAmount > (input.original.total_amount ?? 0)) throw new Error("返金額が元の売上を超えています");
+
+  const ratio = input.refundAmount / (input.original.total_amount || 1);
+  const negTax   = -Math.round((input.original.tax   ?? 0) * ratio);
+  const negTax8  = -Math.round((input.original.tax8  ?? 0) * ratio);
+  const negTax10 = -Math.round((input.original.tax10 ?? 0) * ratio);
+
+  const refundId = crypto.randomUUID();
+  const nowIso = new Date().toISOString();
+
+  const payload = {
+    id: refundId,
+    store_id: STORE_ID,
+    // 返品は全体をマイナスの1エントリで表現。参考情報として元items名を保持
+    items: (input.original.items ?? []).map(i => ({
+      ...i,
+      quantity: -Math.abs(i.quantity),
+    })),
+    total_amount: -input.refundAmount,
+    tax: negTax,
+    tax8: negTax8,
+    tax10: negTax10,
+    payment_method: input.paymentMethod ?? input.original.payment_method ?? "cash",
+    staff_name: input.staff ?? null,
+    is_refund: true,
+    refund_of_sale_id: input.originalSaleId,
+    refund_reason: input.reason,
+    created_at: nowIso,
+  };
+
+  const { error } = await supabase.from("sales").insert(payload);
+  if (error) {
+    // 拡張カラムが未作成の環境向けフォールバック
+    if (error.code === "42703") {
+      const fallback: Record<string, unknown> = { ...payload };
+      delete fallback.is_refund;
+      delete fallback.refund_of_sale_id;
+      delete fallback.refund_reason;
+      const { error: e2 } = await supabase.from("sales").insert(fallback);
+      if (e2) throw e2;
+    } else throw error;
+  }
+
+  return { refundSaleId: refundId };
 }
 
 // ─── 年別月次サマリー（RPC — 件数制限なし） ────────────────────

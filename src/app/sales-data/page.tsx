@@ -19,6 +19,7 @@ import {
   fetchAllSalesForExport,
   updateSaleRecord,
   deleteSale,
+  refundSale,
   HourlySales,
   SaleDetailRow,
   SaleDetailItem,
@@ -400,11 +401,79 @@ function EditModal({ row, onSave, onClose }: {
   );
 }
 
+// ─── Refund Modal ─────────────────────────────────────────────
+function RefundModal({ row, onSubmit, onClose }: {
+  row: SaleDetailRow;
+  onSubmit: (amount: number, reason: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [amount, setAmount] = useState(String(row.total_amount ?? 0));
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+
+  const num = Number(amount);
+  const valid = num > 0 && num <= (row.total_amount ?? 0) && reason.trim().length > 0;
+
+  const handle = async () => {
+    setError(null);
+    if (!valid) { setError("金額と理由を確認してください"); return; }
+    setSubmitting(true);
+    try { await onSubmit(num, reason.trim()); onClose(); }
+    catch (e) { setError((e as Error).message); }
+    finally  { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">🔄 返品処理</h2>
+          <p className="text-xs text-slate-500 mt-1">元売上: ¥{(row.total_amount ?? 0).toLocaleString()}</p>
+        </div>
+        <label className="block">
+          <span className="text-xs text-slate-600 font-semibold">返金額（部分返品も可）</span>
+          <input
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            max={row.total_amount ?? 0}
+            min={1}
+            className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-300 text-base font-bold tabular-nums outline-none focus:border-slate-500"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs text-slate-600 font-semibold">返品理由（必須）</span>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={3}
+            placeholder="例: お客様都合／不良品／会計ミス"
+            className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-slate-500 resize-none"
+          />
+        </label>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold">キャンセル</button>
+          <button
+            onClick={handle}
+            disabled={!valid || submitting}
+            className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white rounded-lg text-sm font-bold"
+          >
+            {submitting ? "処理中…" : "返品を確定"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Order Row ────────────────────────────────────────────────
-function OrderRow({ row, onEdit, onDelete }: {
+function OrderRow({ row, onEdit, onDelete, onRefund }: {
   row: SaleDetailRow;
   onEdit: () => void;
   onDelete: () => Promise<void>;
+  onRefund: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -439,15 +508,20 @@ function OrderRow({ row, onEdit, onDelete }: {
     );
   }
 
+  const isRefund = !!row.is_refund;
+
   return (
-    <div className="grid grid-cols-[110px_1fr_80px_80px_90px_130px] gap-2 items-center px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+    <div className={`grid grid-cols-[110px_1fr_80px_80px_90px_180px] gap-2 items-center px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors ${isRefund ? "bg-rose-50/40" : ""}`}>
       <span className="text-xs font-mono text-slate-600 tabular-nums">{timeLabel}</span>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-800 truncate">
+          {isRefund && <span className="inline-block bg-rose-100 text-rose-700 rounded px-1.5 py-0.5 text-[10px] font-bold mr-1.5">🔄 返品</span>}
           {preview || "—"}
           {rawItems.length > 2 && <span className="text-slate-400 ml-1">他{rawItems.length - 2}品</span>}
         </p>
-        <p className="text-[11px] text-slate-400 mt-0.5">{itemCount}品</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">
+          {itemCount}品{row.refund_reason && <span className="ml-2 text-rose-600">理由: {row.refund_reason}</span>}
+        </p>
       </div>
       <span className="text-xs text-slate-500 text-center">{guestLabel}</span>
       <div className="text-center">
@@ -458,8 +532,11 @@ function OrderRow({ row, onEdit, onDelete }: {
           </span>
         ); })()}
       </div>
-      <span className="text-sm font-bold text-violet-700 text-right tabular-nums">{fmtYen(row.total_amount)}</span>
+      <span className={`text-sm font-bold text-right tabular-nums ${isRefund ? "text-rose-700" : "text-violet-700"}`}>{fmtYen(row.total_amount)}</span>
       <div className="flex gap-1.5 justify-end">
+        {!isRefund && (
+          <button onClick={onRefund} className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold transition-all active:scale-95" title="返品処理">🔄 返品</button>
+        )}
         <button onClick={onEdit} className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-violet-300 hover:bg-violet-50 text-slate-600 hover:text-violet-700 text-xs font-semibold transition-all active:scale-95">修正</button>
         <button onClick={() => setConfirm(true)} className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50 text-slate-500 hover:text-red-600 text-xs font-semibold transition-all active:scale-95">削除</button>
       </div>
@@ -636,6 +713,7 @@ export default function SalesDataPage() {
 
   // Modals
   const [editRow, setEditRow]           = useState<SaleDetailRow | null>(null);
+  const [refundRow, setRefundRow]       = useState<SaleDetailRow | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [csvExporting, setCsvExporting] = useState(false);
 
@@ -773,6 +851,18 @@ export default function SalesDataPage() {
     setMonthOrders(prev => prev.filter(r => r.id !== id));
     await loadSummaries();
   }, [loadSummaries]);
+
+  const handleRefund = useCallback(async (row: SaleDetailRow, amount: number, reason: string) => {
+    await refundSale({
+      originalSaleId: row.id,
+      refundAmount:   amount,
+      reason,
+      original: row,
+    });
+    // 履歴を再読込（返品行が反映される）
+    if (monthOrders.length > 0) await loadMonthOrders(selectedMonth);
+    await loadSummaries();
+  }, [monthOrders.length, loadMonthOrders, selectedMonth, loadSummaries]);
 
   // ── Analytics computed client-side from monthOrders ───────
   const todayJst = useMemo(
@@ -1345,7 +1435,7 @@ export default function SalesDataPage() {
                       ) : (
                         <>
                           {/* Sticky ヘッダー */}
-                          <div className="grid grid-cols-[110px_1fr_80px_80px_90px_130px] gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide sticky top-0 z-10">
+                          <div className="grid grid-cols-[110px_1fr_80px_80px_90px_180px] gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide sticky top-0 z-10">
                             <span>日時</span><span>商品</span>
                             <span className="text-center">客層</span><span className="text-center">担当</span>
                             <span className="text-right">金額</span><span className="text-right">操作</span>
@@ -1356,6 +1446,7 @@ export default function SalesDataPage() {
                               row={row}
                               onEdit={() => setEditRow(row)}
                               onDelete={() => handleDelete(row.id)}
+                              onRefund={() => setRefundRow(row)}
                             />
                           ))}
                           {/* もっと見る */}
@@ -2238,6 +2329,13 @@ export default function SalesDataPage() {
       )}
       {editRow && (
         <EditModal row={editRow} onSave={handleSave} onClose={() => setEditRow(null)} />
+      )}
+      {refundRow && (
+        <RefundModal
+          row={refundRow}
+          onSubmit={(amount, reason) => handleRefund(refundRow, amount, reason)}
+          onClose={() => setRefundRow(null)}
+        />
       )}
       {showReceiptModal && (
         <ReceiptIssueModal onClose={() => setShowReceiptModal(false)} />
