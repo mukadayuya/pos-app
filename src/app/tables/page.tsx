@@ -1,14 +1,14 @@
 "use client";
 
-// テーブル管理ダッシュボード（Phase 1-⑩）
+// テーブル管理ダッシュボード（Phase 1-⑩ + 同期化拡張）
 // レジ端末から店舗内の卓状況（使用中／会計待ち／空席／滞在時間）を一望する。
 //
-// 現在はハンディの localStorage(waraji_handy_orders) から読み取る簡易実装。
-// 同一デバイス内でハンディ運用している店舗（iPad兼用）で機能する。
-// Phase B: Supabase 同期による複数端末対応を予定。
+// データソース: Supabase の open_orders テーブル（複数端末同時利用可能）。
+// LocalStorage は使わない。ハンディからの upsert がミラーされる。
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { fetchActiveOpenOrders, type OpenOrderRow } from "@/lib/openOrders";
 
 type OrderRecord = {
   id: string;
@@ -21,18 +21,24 @@ type OrderRecord = {
   closed: boolean;
 };
 
-const LS_ORDERS_KEY = "waraji_handy_orders";
 const REFRESH_INTERVAL_MS = 3000;
 
-function loadOrders(): OrderRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LS_ORDERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as OrderRecord[];
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    return parsed.filter(o => o.sentAt > cutoff);
-  } catch { return []; }
+async function loadOrders(): Promise<OrderRecord[]> {
+  const rows = await fetchActiveOpenOrders();
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  return rows.map((r: OpenOrderRow): OrderRecord => ({
+    id: r.id,
+    tableNo: r.table_no,
+    staff: r.staff ?? "",
+    items: r.items.map(it => ({
+      name: it.name, emoji: it.emoji ?? "🍽️",
+      qty: it.qty, unitPrice: it.unitPrice,
+    })),
+    totalTaxIncl: r.total_tax_incl,
+    sentAt: new Date(r.sent_at).getTime(),
+    served: r.served,
+    closed: r.closed,
+  })).filter(o => o.sentAt > cutoff);
 }
 
 interface TableState {
@@ -89,13 +95,17 @@ export default function TablesDashboard() {
   const [detailTable, setDetailTable] = useState<TableState | null>(null);
 
   useEffect(() => {
-    setOrders(loadOrders());
-    setNow(Date.now());
-    const t = setInterval(() => {
-      setOrders(loadOrders());
-      setNow(Date.now());
-    }, REFRESH_INTERVAL_MS);
-    return () => clearInterval(t);
+    let mounted = true;
+    const refresh = async () => {
+      const list = await loadOrders();
+      if (mounted) {
+        setOrders(list);
+        setNow(Date.now());
+      }
+    };
+    void refresh();
+    const t = setInterval(refresh, REFRESH_INTERVAL_MS);
+    return () => { mounted = false; clearInterval(t); };
   }, []);
 
   // 使用中卓 + よく使う卓のスケルトン
@@ -178,8 +188,8 @@ export default function TablesDashboard() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-8">
-          ※ 同一端末上のハンディが受けた注文を表示（更新間隔: 3秒）。<br />
-          複数端末の同時運用は次の段階で Supabase 同期を予定。
+          ✓ 複数端末対応（Supabase 同期）・更新間隔 3秒。<br />
+          ハンディからの注文が全端末で自動反映されます。
         </p>
       </main>
 

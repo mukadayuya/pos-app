@@ -207,6 +207,14 @@ export default function HandyPage() {
       setShowCart(false);
       setFlash("✓ キッチンへ送信しました");
       setTimeout(() => setFlash(null), 1200);
+      // Phase 1-⑩ 拡張: Supabase同期（fire-and-forget）
+      import("@/lib/openOrders").then(({ upsertOpenOrder }) => {
+        void upsertOpenOrder({
+          id: record.id, tableNo: record.tableNo, staff: record.staff,
+          items: record.items, totalTaxIncl: record.totalTaxIncl,
+          sentAt: record.sentAt, served: record.served, closed: record.closed,
+        });
+      }).catch(() => {});
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -214,10 +222,30 @@ export default function HandyPage() {
   };
 
   // 確認はカード内の2度押しUI（OrderCard側）で行うため、ここでは即実行
-  const toggleServed = (id: string) => setOrders(prev => prev.map(o => o.id === id ? { ...o, served: !o.served } : o));
-  const closeOrder = (id: string) =>
+  const toggleServed = (id: string) => {
+    setOrders(prev => {
+      const next = prev.map(o => o.id === id ? { ...o, served: !o.served } : o);
+      const target = next.find(o => o.id === id);
+      if (target) {
+        import("@/lib/openOrders").then(({ updateOpenOrderStatus }) => {
+          void updateOpenOrderStatus(id, { served: target.served });
+        }).catch(() => {});
+      }
+      return next;
+    });
+  };
+  const closeOrder = (id: string) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, closed: true, served: true } : o));
-  const cancelOrder = (id: string) => setOrders(prev => prev.filter(o => o.id !== id));
+    import("@/lib/openOrders").then(({ updateOpenOrderStatus }) => {
+      void updateOpenOrderStatus(id, { closed: true, served: true });
+    }).catch(() => {});
+  };
+  const cancelOrder = (id: string) => {
+    setOrders(prev => prev.filter(o => o.id !== id));
+    import("@/lib/openOrders").then(({ updateOpenOrderStatus }) => {
+      void updateOpenOrderStatus(id, { closed: true });
+    }).catch(() => {});
+  };
 
   const filteredItems = menuItems
     .filter(m => m.category === activeCatId && m.isAvailable !== false)
