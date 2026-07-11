@@ -31,6 +31,8 @@ const allTiles: {
   { label: "点検 / 精算",             icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
   { label: "免税販売",                 icon: "🌏", href: "/tax-free",            style: "card",     iconBg: "bg-blue-50"   },
   { label: "💰 補助金チェッカー",       icon: "💰", href: "/subsidies",           style: "primary" },
+  { label: "料金プラン",               icon: "💳", href: "/pricing",             style: "card",     iconBg: "bg-emerald-50", hiddenInSimpleMode: true },
+  { label: "オンボーディング",         icon: "🎯", href: "/onboarding",          style: "card",     iconBg: "bg-teal-50",    hiddenInSimpleMode: true },
   { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50",  hiddenInSimpleMode: true },
   { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100", hiddenInSimpleMode: true },
   { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  hiddenInSimpleMode: true },
