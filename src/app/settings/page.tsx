@@ -742,6 +742,18 @@ export default function SettingsPage() {
               </div>
             </Link>
 
+            <Link href="/settings/terminal"
+              className="block bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-400 transition-colors active:scale-[0.99]">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-2xl flex-shrink-0">💳</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800">Stripe Terminal 決済リーダー</p>
+                  <p className="text-xs text-slate-500 mt-0.5">WisePOS E / iPhone Tap to Pay 接続テスト</p>
+                </div>
+                <span className="text-slate-400 text-lg">›</span>
+              </div>
+            </Link>
+
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
               <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">ハードウェア連携（旧・Bluetoothモック）</h2>
               <div className="flex items-center justify-between">

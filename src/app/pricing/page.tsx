@@ -1,12 +1,11 @@
 // FLOWS POS 料金プラン（Phase 5-⑰）
 // 見込み客向けランディング。3プラン比較＋補助金活用による実質価格訴求＋加藤さん事例。
 
-import Link from "next/link";
+"use client";
 
-export const metadata = {
-  title: "料金プラン | FLOWS POS",
-  description: "飲食店向けPOS「FLOWS」の料金プラン。IT導入補助金活用で実質半額。加藤さん(名古屋イタリアン)は233万→46万円で導入。",
-};
+import Link from "next/link";
+import { useState } from "react";
+import { STORE_ID } from "@/lib/db";
 
 type Plan = {
   id: string;
@@ -100,7 +99,40 @@ function subsidyReducedPrice(monthly: number): number {
   return Math.floor(monthly * 0.5);
 }
 
+function usePricingCheckout() {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [error, setError]             = useState<string | null>(null);
+
+  const startCheckout = async (planId: string) => {
+    setLoadingPlan(planId);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          storeId: STORE_ID,
+          storeName: typeof window !== "undefined" ? (localStorage.getItem("store_name") ?? undefined) : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `HTTP ${res.status}`);
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (e) {
+      setError((e as Error).message);
+      setLoadingPlan(null);
+    }
+  };
+
+  return { loadingPlan, error, startCheckout };
+}
+
 export default function PricingPage() {
+  const { loadingPlan, error: checkoutError, startCheckout } = usePricingCheckout();
   return (
     <div className="min-h-screen bg-slate-50">
       {/* ── Hero ────────────────────────────────────── */}
@@ -166,14 +198,20 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <a href="https://www.instagram.com/yuya_mukada/" target="_blank" rel="noopener noreferrer"
-                  className={`block w-full py-3 rounded-xl text-center font-black text-sm transition-all active:scale-95 ${
-                    p.featured
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-800"
-                  }`}>
-                  無料相談する →
-                </a>
+                <div className="space-y-2">
+                  <button onClick={() => startCheckout(p.id)} disabled={loadingPlan === p.id}
+                    className={`block w-full py-3 rounded-xl text-center font-black text-sm transition-all active:scale-95 ${
+                      p.featured
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                        : "bg-slate-900 hover:bg-slate-700 text-white"
+                    } disabled:opacity-60`}>
+                    {loadingPlan === p.id ? "遷移中…" : "今すぐ契約する →"}
+                  </button>
+                  <a href="https://www.instagram.com/yuya_mukada/" target="_blank" rel="noopener noreferrer"
+                    className="block w-full py-2.5 rounded-xl text-center font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700">
+                    まずは無料相談
+                  </a>
+                </div>
               </div>
             );
           })}
@@ -182,6 +220,9 @@ export default function PricingPage() {
         <p className="text-center text-xs text-slate-500 mt-6">
           ※ 表示価格は税抜。年払いは10%オフ。補助金活用による実質価格は上限率50%で概算表示。
         </p>
+        {checkoutError && (
+          <p className="text-center text-xs text-red-600 mt-2">{checkoutError}</p>
+        )}
       </section>
 
       {/* ── 実績・信頼性 ────────────────────────────── */}
