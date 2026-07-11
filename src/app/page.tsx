@@ -24,6 +24,7 @@ const allTiles: {
   { label: "ハンディ",                icon: "📱", href: "/handy",              style: "accent",     onlyWaraji: true },
   { label: "テーブル管理",             icon: "🍽️", href: "/tables",             style: "accent" },
   { label: "予約管理",                icon: "📅", href: "/reservations",       style: "accent" },
+  { label: "勤怠管理",                icon: "⏰", href: "/attendance",         style: "accent" },
   { label: "受給チャンス",             icon: "✨", href: "/employees",           style: "accent",                        hiddenInSimpleMode: true },
   { label: "売上データ",               icon: "📊", href: "/sales-data",          style: "card",     iconBg: "bg-violet-50" },
   { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
