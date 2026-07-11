@@ -29,6 +29,7 @@ const allTiles: {
   { label: "商品管理",                 icon: "🍽️", href: "/product-management", style: "card",     iconBg: "bg-teal-50"   },
   { label: "点検 / 精算",             icon: "🖨️", href: "/settings",           style: "card",     iconBg: "bg-slate-100" },
   { label: "免税販売",                 icon: "🌏", href: "/tax-free",            style: "card",     iconBg: "bg-blue-50"   },
+  { label: "💰 補助金チェッカー",       icon: "💰", href: "/subsidies",           style: "primary" },
   { label: "AIチャット（お客様用）",   icon: "💬", href: "/customer/chat",       style: "card",     iconBg: "bg-purple-50",  hiddenInSimpleMode: true },
   { label: "AI成果ダッシュボード",     icon: "📈", href: "/admin/ai-dashboard",  style: "card",     iconBg: "bg-violet-100", hiddenInSimpleMode: true },
   { label: "キッチン",                 icon: "🍳", href: "/kitchen",             style: "card",     iconBg: "bg-orange-50",  hiddenInSimpleMode: true },
