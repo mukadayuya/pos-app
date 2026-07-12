@@ -289,7 +289,7 @@ export default function ReceiptIssueModal({ total, onClose, tax8, tax10 }: Props
   const [manualAmount, setManualAmount]   = useState("");
   const [issuer, setIssuer]               = useState("");
 
-  const resolvedTotal = total ?? parseInt(manualAmount.replace(/,/g, ""), 10) || 0;
+  const resolvedTotal = total ?? (parseInt(manualAmount.replace(/,/g, ""), 10) || 0);
   const resolvedTadashi = isCustom ? tadashiFree : tadashiPreset;
 
   const totalTaxFromProps = (tax8 ?? 0) + (tax10 ?? 0);

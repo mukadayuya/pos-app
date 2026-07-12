@@ -10,7 +10,11 @@ export function getStripeClient(): Stripe {
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
-  cachedClient = new Stripe(key, { apiVersion: "2025-06-30.basil" });
+  // apiVersion は @stripe/terminal-js が nested 依存として持つ古い stripe SDK 型
+  // (2020-08-27) と TypeScript 上で衝突するため、後方互換保証されている "2020-08-27" に
+  // 固定する。実際の API 呼び出しはこのバージョンでレスポンスを返すが Checkout /
+  // Subscription / PaymentIntent は全て互換範囲内。
+  cachedClient = new Stripe(key, { apiVersion: "2020-08-27" });
   return cachedClient;
 }
 

@@ -238,7 +238,7 @@ ${content.split("\n").map(l => {
           <div className="bg-slate-50 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
             <span className="text-slate-600">POSデータから算出した年商（過去365日）</span>
             <span className="font-bold text-slate-900 tabular-nums">
-              {profile.annual_revenue === null ? "—" : fmtYen(profile.annual_revenue)}
+              {profile.annual_revenue == null ? "—" : fmtYen(profile.annual_revenue)}
             </span>
           </div>
           <button onClick={handleSave} disabled={savingProfile}
