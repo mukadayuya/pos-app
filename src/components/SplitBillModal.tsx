@@ -26,9 +26,11 @@ const MODE_LABELS: Record<RoundMode, { label: string; desc: string }> = {
 interface Props {
   total: number;
   onClose: () => void;
+  /** モーダルから会計画面へ「現金にセット」を伝える。呼ぶと現金支払で amount 円セット＋モーダル閉じる */
+  onApplyToCash?: (amount: number) => void;
 }
 
-export default function SplitBillModal({ total, onClose }: Props) {
+export default function SplitBillModal({ total, onClose, onApplyToCash }: Props) {
   const [people, setPeople] = useState(2);
   const [mode, setMode]     = useState<RoundMode>("ceil_organizer");
 
@@ -137,12 +139,23 @@ export default function SplitBillModal({ total, onClose }: Props) {
         </div>
 
         {/* フッター */}
-        <div className="px-6 pb-5">
+        <div className="px-6 pb-5 space-y-2">
+          {onApplyToCash && result && (
+            <button
+              onClick={() => {
+                onApplyToCash(result.each * people);
+                onClose();
+              }}
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black transition-colors active:scale-95"
+            >
+              💴 現金 ¥{(result.each * people).toLocaleString()}（{people}人分）を会計にセット
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="w-full py-3 bg-slate-900 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors active:scale-95"
+            className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors active:scale-95"
           >
-            閉じる
+            計算だけ閉じる
           </button>
         </div>
       </div>

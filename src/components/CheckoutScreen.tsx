@@ -515,7 +515,20 @@ export default function CheckoutScreen({ items, serviceTab, maleCount = 0, femal
         </div>
       </div>
       {showSplitModal && (
-        <SplitBillModal total={total} onClose={() => setShowSplitModal(false)} />
+        <SplitBillModal
+          total={total}
+          onClose={() => setShowSplitModal(false)}
+          onApplyToCash={(amount) => {
+            // 現金支払を選択済みにして、金額に amount をセット
+            setSelectedMethods(prev => {
+              const next = new Set(prev);
+              next.add("cash");
+              return next;
+            });
+            setAmounts(prev => ({ ...prev, cash: String(amount) }));
+            setActiveMethod("cash");
+          }}
+        />
       )}
     </div>
   );

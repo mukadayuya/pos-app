@@ -76,10 +76,36 @@ export default function SettingsPage() {
   const [btStatus, setBtStatus]         = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [btDevice, setBtDevice]         = useState("mPOP-xxxxxxx");
 
-  // Cash counter
+  // Cash counter — localStorage で日次永続化（ページリロード・タブ移動で消えない）
+  // キー: cash_counts_<STORE_ID>_<YYYY-MM-DD JST>
+  const cashCountKey = (() => {
+    const now = new Date();
+    const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    return `cash_counts_${process.env.NEXT_PUBLIC_STORE_ID ?? "default"}_${jst.toISOString().slice(0, 10)}`;
+  })();
   const [counts, setCounts]             = useState<Record<number, number>>(
     Object.fromEntries(BILLS.map(b => [b.value, 0]))
   );
+  // 初回マウント: localStorage から復元
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(cashCountKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      const normalized: Record<number, number> = Object.fromEntries(BILLS.map(b => [b.value, 0]));
+      for (const b of BILLS) {
+        if (typeof parsed[String(b.value)] === "number") normalized[b.value] = parsed[String(b.value)];
+      }
+      setCounts(normalized);
+    } catch { /* ignore corrupted data */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // counts が変わるたび localStorage へ書き込み
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(cashCountKey, JSON.stringify(counts)); } catch { /* quota */ }
+  }, [counts, cashCountKey]);
   const cashTotal = BILLS.reduce((s, b) => s + b.value * (counts[b.value] ?? 0), 0);
 
   // Inspection data
@@ -610,17 +636,34 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   ))}
-                  <div className="px-5 py-4 bg-violet-50 flex items-center justify-between">
-                    <p className="text-sm font-bold text-violet-800">レジ内現金 合計</p>
-                    <p className="text-2xl font-black text-violet-700 tabular-nums">{fmtYen(cashTotal)}</p>
+                  <div className="px-5 py-4 bg-slate-50 flex items-center justify-between border-t border-slate-200">
+                    <p className="text-sm font-bold text-slate-800">レジ内現金 合計</p>
+                    <p className="text-2xl font-black text-slate-800 tabular-nums">{fmtYen(cashTotal)}</p>
                   </div>
                 </div>
+                {/* 保存動作の説明 */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-900 space-y-1">
+                  <p className="font-bold">📝 この枚数は自動で保存されます</p>
+                  <p className="text-blue-800 leading-relaxed">
+                    ± を押した瞬間にブラウザに保存されるので、リロードや別画面移動しても消えません。
+                    <br />
+                    「Zレポート」タブに移動して <b>Zレポート実行＋印刷</b> を押すと、この合計金額が
+                    <b>「レジ金実測」</b>として記録され、履歴に保存されます。
+                  </p>
+                </div>
                 <button
-                  onClick={() => setCounts(Object.fromEntries(BILLS.map(b => [b.value, 0])))}
+                  onClick={() => {
+                    if (!confirm("枚数入力を全てゼロに戻しますか？")) return;
+                    setCounts(Object.fromEntries(BILLS.map(b => [b.value, 0])));
+                  }}
                   className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold transition-all"
                 >
-                  リセット
+                  枚数をリセット
                 </button>
+                <Link href="/cash-history"
+                  className="block w-full py-3 bg-white border border-slate-200 hover:border-slate-400 text-slate-700 rounded-xl text-sm font-semibold text-center transition-all">
+                  📅 過去の入出金履歴を見る →
+                </Link>
               </div>
             )}
 

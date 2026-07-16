@@ -45,6 +45,21 @@ export async function fetchTodayCashEvents(dateIso: string): Promise<CashEvent[]
   return (data ?? []) as CashEvent[];
 }
 
+/** 期間指定で入出金イベントを取得（履歴閲覧画面用） */
+export async function fetchCashEventsBetween(fromIso: string, toIso: string): Promise<CashEvent[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("cash_events")
+    .select("id, event_date, kind, amount, note, staff, created_at")
+    .eq("store_id", STORE_ID)
+    .gte("event_date", fromIso)
+    .lte("event_date", toIso)
+    .order("event_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []) as CashEvent[];
+}
+
 export async function createCashEvent(input: Omit<CashEvent, "id" | "created_at">): Promise<void> {
   if (!supabase) throw new Error("Supabase not configured");
   const { error } = await supabase.from("cash_events").insert({
