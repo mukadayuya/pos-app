@@ -76,6 +76,16 @@ function fmtTime(ms: number) {
 type Tab = "order" | "pending" | "history";
 
 export default function HandyPage() {
+  // ?noimg=1 or ?noimg=true で画像非表示（文字ベースメニュー版）
+  // 同じURLで画像あり/なしを切替可能。共有時は末尾に ?noimg=1 を付ける
+  const [noImg, setNoImg] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search);
+    const v = p.get("noimg");
+    setNoImg(v === "1" || v === "true");
+  }, []);
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [activeCatId, setActiveCatId] = useState<string>("");
@@ -425,7 +435,7 @@ export default function HandyPage() {
                   return (
                     <button key={item.id} onClick={() => addToCart(item)}
                       className="bg-white rounded-xl shadow-sm border border-slate-200 hover:border-slate-400 active:scale-95 transition-all text-left overflow-hidden min-w-0">
-                      {item.imageUrl && (
+                      {!noImg && item.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={item.imageUrl}
@@ -434,15 +444,15 @@ export default function HandyPage() {
                           loading="lazy"
                         />
                       )}
-                      <div className="p-2 min-w-0">
-                        <div className="flex items-start gap-1 min-w-0">
-                          <span className="text-lg leading-none flex-shrink-0">{item.emoji ?? "🍽️"}</span>
+                      <div className={noImg ? "p-3 min-w-0" : "p-2 min-w-0"}>
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <span className={`${noImg ? "text-2xl" : "text-lg"} leading-none flex-shrink-0`}>{item.emoji ?? "🍽️"}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800 leading-tight line-clamp-2 break-all">{displayName}</p>
+                            <p className={`${noImg ? "text-sm" : "text-xs"} font-bold text-slate-800 leading-tight line-clamp-2 break-all`}>{displayName}</p>
                             {showJa && <p className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">{item.name}</p>}
                           </div>
                         </div>
-                        <p className="text-sm font-black text-slate-900 mt-1">
+                        <p className={`${noImg ? "text-base" : "text-sm"} font-black text-slate-900 mt-1.5`}>
                           ¥{item.price.toLocaleString()}
                           <span className="text-[10px] font-normal text-slate-400 ml-1">(税込¥{taxIncl.toLocaleString()})</span>
                         </p>
