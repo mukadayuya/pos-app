@@ -499,6 +499,9 @@ export default function HandyPage() {
                 onServe={() => toggleServed(o.id)}
                 onClose={() => closeOrder(o.id)}
                 onCancel={() => cancelOrder(o.id)}
+                onTransferToRegister={() => {
+                  window.location.href = `/register?fromTable=${encodeURIComponent(o.tableNo)}`;
+                }}
               />
             ))}
           </main>
@@ -516,6 +519,9 @@ export default function HandyPage() {
                 onServe={() => toggleServed(o.id)}
                 onClose={() => closeOrder(o.id)}
                 onCancel={() => cancelOrder(o.id)}
+                onTransferToRegister={() => {
+                  window.location.href = `/register?fromTable=${encodeURIComponent(o.tableNo)}`;
+                }}
               />
             ))}
           </main>
@@ -619,13 +625,14 @@ export default function HandyPage() {
   );
 }
 
-function OrderCard({ order, labels, readonly, onServe, onClose, onCancel }: {
+function OrderCard({ order, labels, readonly, onServe, onClose, onCancel, onTransferToRegister }: {
   order: OrderRecord;
   labels: { tableLabel: string; served: string; serve: string; close: string; cancel: string; closed: string; pending: string; itemsLabel: string; confirmTap: string };
   readonly?: boolean;
   onServe: () => void;
   onClose: () => void;
   onCancel: () => void;
+  onTransferToRegister: () => void;
 }) {
   const totalQty = order.items.reduce((s, i) => s + i.qty, 0);
   // 会計・取消は「2度押しで確定」方式（OSダイアログ禁止・誤タップ防止）
@@ -687,13 +694,9 @@ function OrderCard({ order, labels, readonly, onServe, onClose, onCancel }: {
             className={`flex-1 py-2.5 text-xs font-bold transition-all ${order.served ? "text-slate-400 active:bg-slate-50" : "text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100"}`}>
             {order.served ? "↺ " + labels.served : "✓ " + labels.serve}
           </button>
-          <button onClick={handleClose}
-            className={`flex-1 py-2.5 text-xs font-bold border-l border-slate-100 transition-all ${
-              confirming === "close"
-                ? "bg-blue-600 text-white animate-pulse"
-                : "text-blue-600 hover:bg-blue-50 active:bg-blue-100"
-            }`}>
-            {confirming === "close" ? labels.confirmTap : `💴 ${labels.close}`}
+          <button onClick={onTransferToRegister}
+            className="flex-1 py-2.5 text-xs font-bold border-l border-slate-100 transition-all bg-blue-600 hover:bg-blue-700 text-white active:scale-95">
+            💴 レジで会計 →
           </button>
           <button onClick={handleCancel}
             className={`flex-1 py-2.5 text-xs font-bold border-l border-slate-100 transition-all ${

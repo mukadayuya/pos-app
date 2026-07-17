@@ -47,6 +47,32 @@ export async function upsertOpenOrder(order: OpenOrderPayload): Promise<void> {
   } catch { /* オフライン耐性 — LSが本命なので失敗しても続行 */ }
 }
 
+/** 指定卓の未会計注文（closed=false）を全て取得。レジ画面での会計引継ぎ用 */
+export async function fetchOpenOrdersForTable(tableNo: string): Promise<OpenOrderRow[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("open_orders")
+    .select("id, table_no, staff, items, total_tax_incl, sent_at, served, closed, updated_at")
+    .eq("store_id", STORE_ID)
+    .eq("closed", false)
+    .eq("table_no", tableNo)
+    .order("sent_at", { ascending: true });
+  if (error) return [];
+  return (data ?? []) as OpenOrderRow[];
+}
+
+/** 卓の全 open_orders を一括クローズ（レジ会計完了時に呼ぶ） */
+export async function closeOpenOrdersForTable(tableNo: string): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.from("open_orders").update({
+      closed: true,
+      served: true,
+      updated_at: new Date().toISOString(),
+    }).eq("store_id", STORE_ID).eq("table_no", tableNo).eq("closed", false);
+  } catch { /* fire-and-forget */ }
+}
+
 /** テーブル管理ダッシュボードから呼ぶ。未クローズのみ */
 export async function fetchActiveOpenOrders(): Promise<OpenOrderRow[]> {
   if (!supabase) return [];

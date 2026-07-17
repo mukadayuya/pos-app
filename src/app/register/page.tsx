@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { saveSaleRecord, fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
 import { enqueueUnsentSale, flushUnsentSales } from "@/lib/unsentSalesQueue";
 import { buildDraft, persistDraftOrder, fetchDraftOrder, clearDraftOrder } from "@/lib/draftOrderSync";
+import { fetchOpenOrdersForTable, closeOpenOrdersForTable, fetchActiveOpenOrders, type OpenOrderRow } from "@/lib/openOrders";
 import { toTakeoutMenuItem } from "@/lib/menuTransform";
 import { fetchIsTakeoutEnabled } from "@/lib/storeSettings";
 import CategoryBar from "@/components/CategoryBar";
@@ -234,6 +235,13 @@ function RegisterPageInner() {
   // mobile role: which panel is active in the bottom tab bar
   const [mobileTab, setMobileTab]               = useState<"menu" | "order">("menu");
 
+  // ハンディからの引き継ぎ元卓（会計完了時にこの卓の open_orders を close する）
+  const [sourceTableNo, setSourceTableNo] = useState<string | null>(null);
+  const [showTablePicker, setShowTablePicker] = useState(false);
+  const [pickerTables, setPickerTables] = useState<{ tableNo: string; orders: OpenOrderRow[]; total: number }[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [transferFlash, setTransferFlash] = useState<string | null>(null);
+
   // activeTab をカテゴリー名と isTakeout フラグから導出
   const selectedCategory = categories.find(c => c.id === activeCategoryId);
   const activeTab: ServiceTab = isTakeout ? "takeout"
@@ -452,7 +460,92 @@ function RegisterPageInner() {
         setSaveError({ record, attempt: 1 });
       });
     }
+    // ハンディから引き継いだ卓なら、その卓の open_orders を全てクローズ（重複防止）
+    if (sourceTableNo) {
+      void closeOpenOrdersForTable(sourceTableNo);
+      setSourceTableNo(null);
+    }
+  }, [sourceTableNo]);
+
+  // OpenOrder の items 配列を OrderItem[] に変換（menuItems を name で検索）
+  const convertOpenOrdersToItems = useCallback((rows: OpenOrderRow[]): OrderItem[] => {
+    const result: OrderItem[] = [];
+    for (const row of rows) {
+      for (const it of row.items) {
+        const menuItem = menuItems.find(m => m.name === it.name);
+        // 見つからない場合はダミーの MenuItem を合成（レア・メニュー変更後の履歴用）
+        const resolved: MenuItem = menuItem ?? {
+          id: `transferred-${it.name}`,
+          name: it.name,
+          emoji: it.emoji ?? "🍽️",
+          price: Math.round(it.unitPrice / 1.10),   // 税込→税抜逆算
+          category: (categories[0]?.name as unknown as MenuItem["category"]) ?? "料理",
+          taxRate: 0.10 as TaxRate,
+        };
+        // qty のマイナス値（キャンセル済み）はスキップ
+        const qty = Math.abs(it.qty);
+        if (qty === 0) continue;
+        result.push({
+          itemKey: `${resolved.id}::transferred-${row.id}-${it.name}`,
+          menuItem: resolved,
+          quantity: qty,
+          options: { riceType: "white", riceSize: "regular", selections: [] },
+          unitPrice: menuItem ? menuItem.price : Math.round(it.unitPrice / 1.10),
+          taxRate: (menuItem?.taxRate ?? 0.10) as TaxRate,
+        });
+      }
+    }
+    return result;
+  }, [menuItems, categories]);
+
+  // 卓からカートへ引き継ぎ
+  const loadOrdersFromTable = useCallback(async (tableNo: string): Promise<{ ok: boolean; count: number }> => {
+    const rows = await fetchOpenOrdersForTable(tableNo);
+    if (rows.length === 0) return { ok: false, count: 0 };
+    const items = convertOpenOrdersToItems(rows);
+    if (items.length === 0) return { ok: false, count: 0 };
+    setOrderItems(prev => [...prev, ...items]);
+    setSourceTableNo(tableNo);
+    setTransferFlash(`✓ 卓 ${tableNo} の注文 ${items.length}品を引き継ぎました`);
+    setTimeout(() => setTransferFlash(null), 3500);
+    return { ok: true, count: items.length };
+  }, [convertOpenOrdersToItems]);
+
+  // 卓ピッカーを開く時に候補ロード
+  const openTablePicker = useCallback(async () => {
+    setShowTablePicker(true);
+    setPickerLoading(true);
+    const rows = await fetchActiveOpenOrders();
+    // 卓ごとにグループ化
+    const map = new Map<string, OpenOrderRow[]>();
+    for (const r of rows) {
+      if (!map.has(r.table_no)) map.set(r.table_no, []);
+      map.get(r.table_no)!.push(r);
+    }
+    const list = Array.from(map.entries()).map(([tableNo, orders]) => ({
+      tableNo, orders,
+      total: orders.reduce((s, o) => s + o.total_tax_incl, 0),
+    })).sort((a, b) => a.tableNo.localeCompare(b.tableNo));
+    setPickerTables(list);
+    setPickerLoading(false);
   }, []);
+
+  // URL クエリ ?fromTable=X で自動引き継ぎ（menuItems が揃ってから）
+  const autoLoadDoneRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadDoneRef.current) return;
+    if (typeof window === "undefined") return;
+    if (menuItems.length === 0) return; // menuItems の準備待ち
+    const params = new URLSearchParams(window.location.search);
+    const fromTable = params.get("fromTable");
+    if (!fromTable) return;
+    autoLoadDoneRef.current = true;
+    void loadOrdersFromTable(fromTable);
+    // URLクエリを掃除（リロードで再引き継ぎしないように）
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("fromTable");
+    window.history.replaceState({}, "", clean.toString());
+  }, [menuItems, loadOrdersFromTable]);
 
   const handleRetrySave = useCallback(() => {
     if (!saveError) return;
@@ -654,6 +747,76 @@ function RegisterPageInner() {
           onCancel={() => setShowCheckout(false)}
           onDone={handleCheckoutDone}
         />
+      )}
+
+      {/* 卓から引き継ぎフラッシュメッセージ */}
+      {transferFlash && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-bold animate-slideup">
+          {transferFlash}
+        </div>
+      )}
+
+      {/* ハンディから会計引き継ぎフローティングボタン */}
+      {!showCheckout && orderItems.length === 0 && (
+        <button
+          onClick={openTablePicker}
+          className="fixed bottom-24 md:bottom-8 right-4 z-[55] px-4 py-3 bg-slate-900 hover:bg-slate-700 text-white rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 active:scale-95"
+          title="ハンディから注文中の卓を選んで会計へ引き継ぐ"
+        >
+          📋 卓から会計を引き継ぐ
+        </button>
+      )}
+      {/* 引き継ぎ中の卓表示 */}
+      {sourceTableNo && orderItems.length > 0 && !showCheckout && (
+        <div className="fixed bottom-24 md:bottom-8 right-4 z-[55] px-3 py-2 bg-emerald-600 text-white rounded-full shadow-lg text-xs font-bold flex items-center gap-2">
+          🔗 卓 {sourceTableNo} から引き継ぎ中
+        </div>
+      )}
+
+      {/* 卓ピッカーモーダル */}
+      {showTablePicker && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={() => setShowTablePicker(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">📋 会計を引き継ぐ卓を選択</h2>
+              <button onClick={() => setShowTablePicker(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {pickerLoading ? (
+                <p className="text-center text-slate-400 py-8 text-sm">読み込み中…</p>
+              ) : pickerTables.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-4xl mb-2">📭</p>
+                  <p className="text-sm text-slate-500">未会計の卓はありません</p>
+                  <p className="text-xs text-slate-400 mt-2">ハンディからの注文が入るとここに表示されます</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {pickerTables.map(({ tableNo, orders, total }) => {
+                    const itemCount = orders.reduce((s, o) => s + o.items.reduce((n, i) => n + Math.abs(i.qty), 0), 0);
+                    return (
+                      <li key={tableNo}>
+                        <button
+                          onClick={async () => {
+                            setShowTablePicker(false);
+                            await loadOrdersFromTable(tableNo);
+                          }}
+                          className="w-full text-left px-4 py-3 rounded-xl border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-base font-black text-slate-900">卓 {tableNo}</span>
+                            <span className="text-base font-black text-emerald-700 tabular-nums">¥{total.toLocaleString()}</span>
+                          </div>
+                          <p className="text-xs text-slate-500">{orders.length}件の注文 / {itemCount}品</p>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
