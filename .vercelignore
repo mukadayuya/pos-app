@@ -1,1 +1,7 @@
 subsidy-hp
+
+# iCloud同期回避用の実体フォルダ（node_modules/.next はここへのシンボリックリンク）
+# 別名のためVercel標準の除外が効かず、放置すると数百MBがアップロードされデプロイがハングする
+*.nosync
+*.broken
+.git.broken-*

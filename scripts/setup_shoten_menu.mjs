@@ -70,12 +70,12 @@ const IMG = {
   liver:       "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Yakitori_018.jpg/960px-Yakitori_018.jpg",
   tsukune:     "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Kushiyaki-_tsukune%2C_scallion_and_pork_belly.jpg/960px-Kushiyaki-_tsukune%2C_scallion_and_pork_belly.jpg",
   tebasaki:    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tebasaki_karaage_by_kawanet_in_Kanayama%2C_Nagoya.jpg/960px-Tebasaki_karaage_by_kawanet_in_Kanayama%2C_Nagoya.jpg",
-  karaage:     "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Classic_Chicken_Karaage_-_Sunoso_2023-11-28.jpg/960px-Classic_Chicken_Karaage_-_Sunoso_2023-11-28.jpg",
+  karaage:     FP("Chicken_karaage_20080129.jpg"),
   fries:       "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/French_fries_at_Chez_Jolie.jpg/960px-French_fries_at_Chez_Jolie.jpg",
   edamame:     "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Edamame_bowl_by_habitatgirl.jpg/960px-Edamame_bowl_by_habitatgirl.jpg",
   hiyayakko:   "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Hiyayakko_with_bonito_flakes_and_welsh_onion_2.jpg/960px-Hiyayakko_with_bonito_flakes_and_welsh_onion_2.jpg",
   tomato:      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Sliced_Tomatoes_on_a_plate.jpg/960px-Sliced_Tomatoes_on_a_plate.jpg",
-  greensalad:  "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Small_Salad%2C_at_Ikinari%21_Steak_%282019-04-13%29.jpg/960px-Small_Salad%2C_at_Ikinari%21_Steak_%282019-04-13%29.jpg",
+  greensalad:  FP("Mixed_green_salad.jpg"),
   caesar:      "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Caesar_Salad_-_Purezza_2023-11-22.jpg/960px-Caesar_Salad_-_Purezza_2023-11-22.jpg",
   chicksalad:  "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Fresh_garden_salad_with_grilled_chicken%2C_lettuce%2C_radishes%2C_and_a_creamy_dressing_undefined.jpg/960px-Fresh_garden_salad_with_grilled_chicken%2C_lettuce%2C_radishes%2C_and_a_creamy_dressing_undefined.jpg",
   yakionigiri: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Yaki-Onigiri_001.jpg/960px-Yaki-Onigiri_001.jpg",
@@ -102,14 +102,28 @@ const IMG = {
   kombu:       FP("Tsukudaniphoto.jpg"),             // わさび昆布（佃煮）
   ikasashimi:  FP("Ika%20sashimi.JPG"),              // ボイルイカ生わかめ
   // ドリンク用画像（全URL 200確認済み 2026-07-10）
-  beer:        FP("Sapporo%20Ginjikomi%20Special%20Clean%20Malt%20Draft%20Beer%20%28224291451%29.jpg"), // 生ビール
-  highball:    FP("Amber%20Moon%20Ingredients.jpg"), // ハイボール
-  lemonsour:   FP("Niku%20Tokidoki%20Lemon%20Sour%20MeiekiIMG%2020220807%20184905%20HDR%2004.jpg"),     // レモンサワー
+  beer:        FP("Pilsner%20Urquell%20mug.jpg"), // 生ビール（ジョッキ・泡あり）
+  highball:    FP("%E3%83%8F%E3%82%A4%E3%83%9C%E3%83%BC%E3%83%AB%20KIRIN%20%2840863751953%29.jpg"), // ハイボール（ジョッキ）
+  lemonsour:   FP("NGO%20Kita%20s20260303%20192954%20%E7%84%A1%E7%B3%96%E3%83%AC%E3%83%A2%E3%83%B3%E3%82%B5%E3%83%AF%E3%83%BC.jpg"),     // レモンサワー
   mojito:      FP("Fresh%20Mojito%20Premium.jpg"),   // モヒート
   cassisorange:FP("Cassis%20and%20Orange%208757100129%20173bcfcb9d%20o.jpg"),                          // カシスオレンジ
   shochu:      FP("Shochu%20001.jpg"),               // 芋・麦・米焼酎（3種共用）
   oolong:      FP("Oolong%20Tea.jpg"),               // 烏龍茶
   greentea:    FP("White%20cup%20with%20green%20tea%20in%20it.jpg"),                                    // 緑茶
+  // 2026-08-01 画像不一致修正で追加（全URL 200確認済み）
+  umesuisho:   FP("Ume%20suisho%20Japanese%20appetizer.jpg"),  // 梅水晶（軟骨と梅肉の小鉢）
+  shishamo:    FP("Shishamo%20smelt%20%2818356022450%29.jpg"), // ししゃも（焼きししゃも3尾）
+  eihire:      FP("Eihire%20-%20stingray%20meat%20-%20Japanese%20pub%20food%20-%20September%202014.jpg"), // エイヒレ
+  sabamiso:    FP("Miso%20Saba.jpg"),                          // さばみそ
+  yakinasu:    FP("%E7%84%BC%E3%81%8D%E3%81%AA%E3%81%99.jpg"), // 焼きなす
+  nitsuke:     FP("Saba%20no%20nitsuke%2020101113.jpg"),       // 魚の煮付け
+  rice:        FP("Steamed_rice_in_bowl_01.jpg"),              // 白飯（茶碗）
+  // 2026-08-01 誤画像の差し替え（目視確認済み・全URL 200確認済み）
+  butamaki:    FP("Schinkenroellchen%20mit%20Spargel.jpg"),    // 豚巻きアスパラ（ハムでアスパラを巻いた料理）
+  akaweiner:   FP("%E9%85%92%E5%A0%B4%E3%83%AD%E3%83%9E%E3%83%B3%E3%82%B9%E3%81%AE%E8%B5%A4%E3%82%A6%E3%82%A4%E3%83%B3%E3%83%8A%E3%83%BC_01.jpg"), // 赤ウインナー（居酒屋の皿盛り）
+  frank:       FP("Frankfurter%20Rindswurst.jpg"),             // ポークフランクソーセージ（網焼き）
+  creamcheese: FP("Smoked%20cheese%20in%20the%20Netherlands%20%28close%20up%29.jpg"), // クリームチーズの特製醤油漬け（外側が濃く中が白いチーズのスライス＝醤油漬けに近い見た目）
+  ikaboshi:    FP("Ban-geonjo-ojingeo-gui.jpg"),               // いか一夜干し（丸ごと炙りイカ）
 };
 
 // 全91品（kana = 読み仮名検索用、img = 画像キー）
@@ -120,19 +134,19 @@ const rawMenus = [
   { cat: "osusume", name: "ローストビーフ",                   kana: "ろーすとびーふ",             price: 1280, emoji: "🥩", img: "roastbeef" },
   { cat: "osusume", name: "黒毛和牛センマイ刺",               kana: "くろげわぎゅうせんまいさし", price: 780,  emoji: "🥩", img: "senmai" },
   { cat: "osusume", name: "あん肝",                           kana: "あんきも",                   price: 880,  emoji: "🐟", img: "sashimi" },
-  { cat: "osusume", name: "バイ貝煮付け",                     kana: "ばいがいにつけ",             price: 680,  emoji: "🐚", img: "nimono" },
+  { cat: "osusume", name: "バイ貝煮付け",                     kana: "ばいがいにつけ",             price: 680,  emoji: "🐚", img: "nitsuke" },
   { cat: "osusume", name: "生ガキ",                           kana: "なまがき",                   price: 580,  emoji: "🦪", img: "oyster" },
   { cat: "osusume", name: "カンパチかま塩焼",                 kana: "かんぱちかましおやき",       price: 780,  emoji: "🐟", img: "hokke" },
-  { cat: "osusume", name: "豚巻きアスパラ",                   kana: "ぶたまきあすぱら",           price: 780,  emoji: "🥓", img: "tsukune" },
+  { cat: "osusume", name: "豚巻きアスパラ",                   kana: "ぶたまきあすぱら",           price: 780,  emoji: "🥓", img: "butamaki" },
   { cat: "osusume", name: "ボイルイカ生わかめ",               kana: "ぼいるいかなまわかめ",       price: 580,  emoji: "🦑", img: "ikasashimi" },
-  { cat: "osusume", name: "穴子の煮付け",                     kana: "あなごのにつけ",             price: 780,  emoji: "🐟", img: "nimono" },
+  { cat: "osusume", name: "穴子の煮付け",                     kana: "あなごのにつけ",             price: 780,  emoji: "🐟", img: "nitsuke" },
   { cat: "osusume", name: "もろこし丸",                       kana: "もろこしまる",               price: 780,  emoji: "🌽", img: "karaage" },
   { cat: "osusume", name: "シーフードグラタン",               kana: "しーふーどぐらたん",         price: 780,  emoji: "🧀", img: "gratin" },
   { cat: "osusume", name: "海ぶどう",                         kana: "うみぶどう",                 price: 780,  emoji: "🌿", img: "umibudou" },
   { cat: "osusume", name: "里芋の唐あげ",                     kana: "さといものからあげ",         price: 380,  emoji: "🥔", img: "karaage" },
   { cat: "osusume", name: "トーフステーキ",                   kana: "とーふすてーき",             price: 480,  emoji: "🧊", img: "hiyayakko" },
-  { cat: "osusume", name: "クリームチーズの特製醤油漬け",     kana: "くりーむちーずのとくせいしょうゆづけ", price: 450, emoji: "🧀", img: "hiyayakko" },
-  { cat: "osusume", name: "赤ウインナー",                     kana: "あかういんなー",             price: 450,  emoji: "🌭", img: "tsukune" },
+  { cat: "osusume", name: "クリームチーズの特製醤油漬け",     kana: "くりーむちーずのとくせいしょうゆづけ", price: 450, emoji: "🧀", img: "creamcheese" },
+  { cat: "osusume", name: "赤ウインナー",                     kana: "あかういんなー",             price: 450,  emoji: "🌭", img: "akaweiner" },
   { cat: "osusume", name: "手羽唐",                           kana: "てばから",                   price: 480,  emoji: "🍗", img: "tebasaki" },
   { cat: "osusume", name: "焼春巻",                           kana: "やきはるまき",               price: 650,  emoji: "🌯", img: "gyoza" },
   { cat: "osusume", name: "えびマヨ",                         kana: "えびまよ",                   price: 650,  emoji: "🍤", img: "ebichili" },
@@ -154,12 +168,12 @@ const rawMenus = [
   { cat: "oyupocha", name: "角煮",                            kana: "かくに",                     price: 680,  emoji: "🥩", img: "kakuni" },
   { cat: "oyupocha", name: "だし巻き玉子",                    kana: "だしまきたまご",             price: 600,  emoji: "🥚", img: "dashimaki" },
   { cat: "oyupocha", name: "ピリ辛手羽煮",                    kana: "ぴりからてばに",             price: 500,  emoji: "🍗", img: "tebasaki" },
-  { cat: "oyupocha", name: "さばみそ",                        kana: "さばみそ",                   price: 750,  emoji: "🐟", img: "hokke" },
+  { cat: "oyupocha", name: "さばみそ",                        kana: "さばみそ",                   price: 750,  emoji: "🐟", img: "sabamiso" },
   { cat: "oyupocha", name: "どて煮",                          kana: "どてに",                     price: 500,  emoji: "🥘", img: "kakuni" },
   { cat: "oyupocha", name: "スタミナサラダ",                  kana: "すたみなさらだ",             price: 780,  emoji: "🥗", img: "chicksalad" },
   { cat: "oyupocha", name: "台湾どーふ",                      kana: "たいわんどーふ",             price: 500,  emoji: "🌶️", img: "hiyayakko" },
   { cat: "oyupocha", name: "じゃがバター",                    kana: "じゃがばたー",               price: 550,  emoji: "🥔", img: "fries" },
-  { cat: "oyupocha", name: "焼き小なす",                      kana: "やきこなす",                 price: 480,  emoji: "🍆", img: "nimono" },
+  { cat: "oyupocha", name: "焼き小なす",                      kana: "やきこなす",                 price: 480,  emoji: "🍆", img: "yakinasu" },
   { cat: "oyupocha", name: "塩ソーキ大根煮",                  kana: "しおそーきだいこんに",       price: 680,  emoji: "🥘", img: "kakuni" },
 
   // ── SPEED・珍味（5品）───────────────────────
@@ -167,7 +181,7 @@ const rawMenus = [
   { cat: "chinmi", name: "いか塩辛",                          kana: "いかしおから",               price: 480,  emoji: "🦑", img: "sashimi" },
   { cat: "chinmi", name: "わさび昆布",                        kana: "わさびこんぶ",               price: 480,  emoji: "🌿", img: "kombu" },
   { cat: "chinmi", name: "コブクロ",                          kana: "こぶくろ",                   price: 580,  emoji: "🥩", img: "liver" },
-  { cat: "chinmi", name: "梅水晶",                            kana: "うめすいしょう",             price: 680,  emoji: "🐟" },
+  { cat: "chinmi", name: "梅水晶",                            kana: "うめすいしょう",             price: 680,  emoji: "🐟", img: "umesuisho" },
 
   // ── 野菜（13品）──────────────────────────────
   { cat: "yasai", name: "茶豆",                               kana: "ちゃまめ",                   price: 300,  emoji: "🫛", img: "edamame" },
@@ -179,7 +193,7 @@ const rawMenus = [
   { cat: "yasai", name: "きゅうりの1本漬け",                  kana: "きゅうりのいっぽんづけ",     price: 480,  emoji: "🥒", img: "greensalad" },
   { cat: "yasai", name: "トマトスライス",                     kana: "とまとすらいす",             price: 380,  emoji: "🍅", img: "tomato" },
   { cat: "yasai", name: "おかんのQちゃん",                    kana: "おかんのきゅーちゃん",       price: 380,  emoji: "🥒", img: "greensalad" },
-  { cat: "yasai", name: "なす揚げびたし",                     kana: "なすあげびたし",             price: 380,  emoji: "🍆", img: "nimono" },
+  { cat: "yasai", name: "なす揚げびたし",                     kana: "なすあげびたし",             price: 380,  emoji: "🍆", img: "yakinasu" },
   { cat: "yasai", name: "新玉オンスラ",                       kana: "しんたまおんすら",           price: 380,  emoji: "🧅", img: "greensalad" },
   { cat: "yasai", name: "冷やっこ",                           kana: "ひややっこ",                 price: 380,  emoji: "🧊", img: "hiyayakko" },
   { cat: "yasai", name: "おかんのらっきょ",                   kana: "おかんのらっきょ",           price: 380,  emoji: "🧄", img: "greensalad" },
@@ -198,11 +212,11 @@ const rawMenus = [
   // ── 焼物（8品）───────────────────────────────
   { cat: "yakimono", name: "ねぎま",                          kana: "ねぎま",                     price: 300,  emoji: "🍢", img: "yakitori2" },
   { cat: "yakimono", name: "つくね",                          kana: "つくね",                     price: 250,  emoji: "🍢", img: "tsukune" },
-  { cat: "yakimono", name: "ポークフランクソーセージ",        kana: "ぽーくふらんくそーせーじ",   price: 450,  emoji: "🌭", img: "tsukune" },
+  { cat: "yakimono", name: "ポークフランクソーセージ",        kana: "ぽーくふらんくそーせーじ",   price: 450,  emoji: "🌭", img: "frank" },
   { cat: "yakimono", name: "砂肝串",                          kana: "すなぎもくし",               price: 250,  emoji: "🍢", img: "liver" },
-  { cat: "yakimono", name: "ししゃも",                        kana: "ししゃも",                   price: 580,  emoji: "🐟", img: "hokke" },
-  { cat: "yakimono", name: "いか一夜干し",                    kana: "いかいちやぼし",             price: 780,  emoji: "🦑", img: "hokke" },
-  { cat: "yakimono", name: "エイヒレ",                        kana: "えいひれ",                   price: 780,  emoji: "🐟", img: "hokke" },
+  { cat: "yakimono", name: "ししゃも",                        kana: "ししゃも",                   price: 580,  emoji: "🐟", img: "shishamo" },
+  { cat: "yakimono", name: "いか一夜干し",                    kana: "いかいちやぼし",             price: 780,  emoji: "🦑", img: "ikaboshi" },
+  { cat: "yakimono", name: "エイヒレ",                        kana: "えいひれ",                   price: 780,  emoji: "🐟", img: "eihire" },
   { cat: "yakimono", name: "ほっけ焼",                        kana: "ほっけやき",                 price: 780,  emoji: "🐟", img: "hokke" },
 
   // ── 〆・ご飯もの（10品）──────────────────────
@@ -214,7 +228,7 @@ const rawMenus = [
   { cat: "shime", name: "温玉しらす丼",                       kana: "おんたましらすどん",         price: 780,  emoji: "🍚", img: "chahan" },
   { cat: "shime", name: "温玉肉丼",                           kana: "おんたまにくどん",           price: 780,  emoji: "🍚", img: "chahan" },
   { cat: "shime", name: "台湾ラーメン",                       kana: "たいわんらーめん",           price: 780,  emoji: "🍜", img: "taiwanramen" },
-  { cat: "shime", name: "ライス",                             kana: "らいす",                     price: 200,  emoji: "🍚", img: "yakionigiri" },
+  { cat: "shime", name: "ライス",                             kana: "らいす",                     price: 200,  emoji: "🍚", img: "rice" },
   { cat: "shime", name: "ギョーザ",                           kana: "ぎょーざ",                   price: 580,  emoji: "🥟", img: "gyoza" },
 
   // ── 日本酒（4品・飲みきり300mlボトル）────────
