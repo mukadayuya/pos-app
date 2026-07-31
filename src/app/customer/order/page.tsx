@@ -17,6 +17,9 @@ import { recordOrder } from "@/lib/toppingAnalytics";
 // ─── 店舗設定 ──────────────────────────────────────────────────
 const IS_REGISTER_CHECKOUT = process.env.NEXT_PUBLIC_STORE_ID === "kitchen-wa";
 const IS_TOKYO_GYOZA = process.env.NEXT_PUBLIC_STORE_ID === "tokyo-gyoza-ro";
+const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+// 笑点は客用の言語切替を非表示（要件外）。他店舗は従来通り表示する
+const HIDE_LANG_SWITCHER = IS_SHOTEN;
 
 // ─── 型定義 ────────────────────────────────────────────────────
 
@@ -381,21 +384,25 @@ function CustomerOrderInner() {
           </div>
         </div>
 
-        <div className="flex gap-0.5">
-          {LANGUAGES.map((l) => (
-            <button
-              key={l.code}
-              onClick={() => setLang(l.code)}
-              className={[
-                "w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all",
-                lang === l.code ? "bg-gray-100 shadow-sm scale-110" : "hover:bg-gray-50",
-              ].join(" ")}
-              title={l.label}
-            >
-              {l.flag}
-            </button>
-          ))}
-        </div>
+        {/* 言語切替。笑点は非表示（客用の多言語は要件外。多言語対応はハンディ側＝スタッフ向け）
+            後日求められたら HIDE_LANG_SWITCHER を false にすれば戻せる */}
+        {!HIDE_LANG_SWITCHER && (
+          <div className="flex gap-0.5">
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLang(l.code)}
+                className={[
+                  "w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all",
+                  lang === l.code ? "bg-gray-100 shadow-sm scale-110" : "hover:bg-gray-50",
+                ].join(" ")}
+                title={l.label}
+              >
+                {l.flag}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* ── メインコンテンツ ── */}
