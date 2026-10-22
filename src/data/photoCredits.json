@@ -1,0 +1,859 @@
+{
+  "generatedAt": "2026-10-21T03:46:04.566Z",
+  "files": {
+    "4454Arosep_Caulerpa_lentillifera_15.jpg": {
+      "author": "Judgefloro",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:4454Arosep_Caulerpa_lentillifera_15.jpg",
+      "attributionRequired": false
+    },
+    "A_Glass_of_Whiskey_on_the_Rocks.jpg": {
+      "author": "Benjamin Thompson",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:A_Glass_of_Whiskey_on_the_Rocks.jpg",
+      "attributionRequired": true
+    },
+    "Ban-geonjo-ojingeo-gui.jpg": {
+      "author": "lazy fri13th",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ban-geonjo-ojingeo-gui.jpg",
+      "attributionRequired": true
+    },
+    "Beef_tripe.jpg": {
+      "author": "Harald the Bard",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Beef_tripe.jpg",
+      "attributionRequired": true
+    },
+    "Caesar_Salad_-_Purezza_2023-11-22.jpg": {
+      "author": "Andy Li",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Caesar_Salad_-_Purezza_2023-11-22.jpg",
+      "attributionRequired": false
+    },
+    "Cassis_and_Orange_8757100129_173bcfcb9d_o.jpg": {
+      "author": "uka0310",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Cassis_and_Orange_8757100129_173bcfcb9d_o.jpg",
+      "attributionRequired": true
+    },
+    "Chanhmuoiglass.jpg": {
+      "author": "Flickr user: Front Studio ( https://www.flickr.com/photos/frontstudio/ )",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chanhmuoiglass.jpg",
+      "attributionRequired": true
+    },
+    "Chicken_karaage_003.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chicken_karaage_003.jpg",
+      "attributionRequired": false
+    },
+    "Chicken_karaage_20080129.jpg": {
+      "author": "Japanese Wikipedia user Hiratake",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chicken_karaage_20080129.jpg",
+      "attributionRequired": true
+    },
+    "Classic_Chicken_Karaage_-_Sunoso_2023-11-28.jpg": {
+      "author": "Andy Li",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Classic_Chicken_Karaage_-_Sunoso_2023-11-28.jpg",
+      "attributionRequired": false
+    },
+    "CodazziTaiwanRamen.jpg": {
+      "author": "小太刀",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:CodazziTaiwanRamen.jpg",
+      "attributionRequired": true
+    },
+    "Dashimaki_tamago_by_june29.jpg": {
+      "author": "june29",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dashimaki_tamago_by_june29.jpg",
+      "attributionRequired": true
+    },
+    "Deluxe_sashimi_platter_01.jpg": {
+      "author": "T.Tseng",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Deluxe_sashimi_platter_01.jpg",
+      "attributionRequired": true
+    },
+    "Ebi_Chili_Mayo_(3469826035).jpg": {
+      "author": "Geoff Peters from Vancouver, BC, Canada",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ebi_Chili_Mayo_(3469826035).jpg",
+      "attributionRequired": true
+    },
+    "Edamame_bowl_by_habitatgirl.jpg": {
+      "author": "habitatgirl",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Edamame_bowl_by_habitatgirl.jpg",
+      "attributionRequired": true
+    },
+    "Edamame_on_a_bamboo_bowl_by_yomi955.jpg": {
+      "author": "yomi955",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Edamame_on_a_bamboo_bowl_by_yomi955.jpg",
+      "attributionRequired": true
+    },
+    "Eihire_-_stingray_meat_-_Japanese_pub_food_-_September_2014.jpg": {
+      "author": "nesnad",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Eihire_-_stingray_meat_-_Japanese_pub_food_-_September_2014.jpg",
+      "attributionRequired": true
+    },
+    "Elegant_cocktail_garnished_with_citrus_twist_presented_in_a_stylish_glass_on_a_wooden_bar.jpg": {
+      "author": "Shixart1985",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Elegant_cocktail_garnished_with_citrus_twist_presented_in_a_stylish_glass_on_a_wooden_bar.jpg",
+      "attributionRequired": true
+    },
+    "Frankfurter_Rindswurst.jpg": {
+      "author": "Thogru",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Frankfurter_Rindswurst.jpg",
+      "attributionRequired": true
+    },
+    "Frankfurter_wuerstchen.jpg": {
+      "author": "WordRidden / Jessica Spengler",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Frankfurter_wuerstchen.jpg",
+      "attributionRequired": true
+    },
+    "French_fries_at_Chez_Jolie.jpg": {
+      "author": "JIP",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:French_fries_at_Chez_Jolie.jpg",
+      "attributionRequired": true
+    },
+    "Fresh_Mojito_Premium.jpg": {
+      "author": "Rjcastillo",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Fresh_Mojito_Premium.jpg",
+      "attributionRequired": true
+    },
+    "Fresh_garden_salad_with_grilled_chicken,_lettuce,_radishes,_and_a_creamy_dressing_undefined.jpg": {
+      "author": "Shixart1985",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Fresh_garden_salad_with_grilled_chicken,_lettuce,_radishes,_and_a_creamy_dressing_undefined.jpg",
+      "attributionRequired": true
+    },
+    "Fried_calamari.jpg": {
+      "author": "Chensiyuan",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Fried_calamari.jpg",
+      "attributionRequired": true
+    },
+    "Gambas_al_ajillo.jpg": {
+      "author": "Javier Lastras from España/Spain",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Gambas_al_ajillo.jpg",
+      "attributionRequired": true
+    },
+    "Ginger_ale.jpg": {
+      "author": "Hisakazu Watanabe",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ginger_ale.jpg",
+      "attributionRequired": true
+    },
+    "Glass_cola.jpg": {
+      "author": "pic_p_ter",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Glass_cola.jpg",
+      "attributionRequired": false
+    },
+    "Glass_of_Scotch_and_soda.jpg": {
+      "author": "User:DoubleGrazing",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Glass_of_Scotch_and_soda.jpg",
+      "attributionRequired": true
+    },
+    "Goya_Champuru_1.jpg": {
+      "author": "Ippei Suzuki",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Goya_Champuru_1.jpg",
+      "attributionRequired": true
+    },
+    "Gratin_dauphinois.jpg": {
+      "author": "Ludovic Péron",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Gratin_dauphinois.jpg",
+      "attributionRequired": true
+    },
+    "Green_Bell_Pepper.jpg": {
+      "author": "Gaurav Dhwaj Khadka",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Green_Bell_Pepper.jpg",
+      "attributionRequired": true
+    },
+    "Grilled_Okhotsk_Atka_Mackerel.jpg": {
+      "author": "Fred Cherrygarden",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Grilled_Okhotsk_Atka_Mackerel.jpg",
+      "attributionRequired": true
+    },
+    "Grilled_mushrooms_and_scallion_at_Torihei-chan,_Kamata_East_Exit_(20230806200519).jpg": {
+      "author": "N509FZ",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Grilled_mushrooms_and_scallion_at_Torihei-chan,_Kamata_East_Exit_(20230806200519).jpg",
+      "attributionRequired": true
+    },
+    "Gyoza_dumplings_(53726549642).jpg": {
+      "author": "pelican",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Gyoza_dumplings_(53726549642).jpg",
+      "attributionRequired": true
+    },
+    "Hiyayakko_with_bonito_flakes_and_welsh_onion_2.jpg": {
+      "author": "Dllu",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hiyayakko_with_bonito_flakes_and_welsh_onion_2.jpg",
+      "attributionRequired": true
+    },
+    "Hoisting_a_Mug_of_St._George's_Draft_Beer_-_Adigrat_-_Ethiopia_(8706601227).jpg": {
+      "author": "Adam Jones from Kelowna, BC, Canada",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hoisting_a_Mug_of_St._George%27s_Draft_Beer_-_Adigrat_-_Ethiopia_(8706601227).jpg",
+      "attributionRequired": true
+    },
+    "Ika_no_shiokara_with_chopsticks.jpg": {
+      "author": "Okona",
+      "license": "CC BY-SA 2.5",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ika_no_shiokara_with_chopsticks.jpg",
+      "attributionRequired": true
+    },
+    "Ika_sashimi.JPG": {
+      "author": "Brücke-Osteuropa",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ika_sashimi.JPG",
+      "attributionRequired": false
+    },
+    "Instant_chazuke_by_shibainu.jpg": {
+      "author": "shibainu",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Instant_chazuke_by_shibainu.jpg",
+      "attributionRequired": true
+    },
+    "Japanese_Caramel_Custard_Pudding,_Purin,_Flan.jpg": {
+      "author": "Clairenguyen23",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Japanese_Caramel_Custard_Pudding,_Purin,_Flan.jpg",
+      "attributionRequired": true
+    },
+    "Japanese_takowasa_2014.jpg": {
+      "author": "Kentin",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Japanese_takowasa_2014.jpg",
+      "attributionRequired": true
+    },
+    "Kakuni_by_Kanko.jpg": {
+      "author": "Kanko*",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kakuni_by_Kanko.jpg",
+      "attributionRequired": true
+    },
+    "Kinoko_Zosui,_at_Restaurant_Gusto_(2012.02.26).jpg": {
+      "author": "Lombroso",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kinoko_Zosui,_at_Restaurant_Gusto_(2012.02.26).jpg",
+      "attributionRequired": true
+    },
+    "Korean_Kimchi.jpg": {
+      "author": "AhmadElq",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Korean_Kimchi.jpg",
+      "attributionRequired": true
+    },
+    "Korean_stew-Kimchi_jjigae-01.jpg": {
+      "author": "by miyagawa",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Korean_stew-Kimchi_jjigae-01.jpg",
+      "attributionRequired": true
+    },
+    "Kushiyaki-_tsukune,_scallion_and_pork_belly.jpg": {
+      "author": "Schellack at English Wikipedia",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kushiyaki-_tsukune,_scallion_and_pork_belly.jpg",
+      "attributionRequired": true
+    },
+    "Makgeolli_2.jpg": {
+      "author": "국립국어원",
+      "license": "CC BY-SA 2.0 kr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/kr/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Makgeolli_2.jpg",
+      "attributionRequired": true
+    },
+    "Matcha_ice_cream_001.jpg": {
+      "author": "City Foodsters",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Matcha_ice_cream_001.jpg",
+      "attributionRequired": true
+    },
+    "Miso_Saba.jpg": {
+      "author": "권재원",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Miso_Saba.jpg",
+      "attributionRequired": true
+    },
+    "Miso_Soup_001.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Miso_Soup_001.jpg",
+      "attributionRequired": false
+    },
+    "Mixed_green_salad.jpg": {
+      "author": "FranHogan",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mixed_green_salad.jpg",
+      "attributionRequired": true
+    },
+    "Mixed_nuts_bowl.jpg": {
+      "author": "User:Melchoir",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mixed_nuts_bowl.jpg",
+      "attributionRequired": true
+    },
+    "Mozzarella_cheese_and_tomato_salad.jpg": {
+      "author": "Geoffreyrabbit",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mozzarella_cheese_and_tomato_salad.jpg",
+      "attributionRequired": true
+    },
+    "Mugi-shōchū_Gunkanjima.jpg": {
+      "author": "妖精書士",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mugi-sh%C5%8Dch%C5%AB_Gunkanjima.jpg",
+      "attributionRequired": false
+    },
+    "NGO_Kita_s20260303_192954_無糖レモンサワー.jpg": {
+      "author": "円周率３パーセント",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:NGO_Kita_s20260303_192954_%E7%84%A1%E7%B3%96%E3%83%AC%E3%83%A2%E3%83%B3%E3%82%B5%E3%83%AF%E3%83%BC.jpg",
+      "attributionRequired": true
+    },
+    "Nachos_with_Melted_Cheese,_Jalapenos,_and_Tasty_Toppings.jpg": {
+      "author": "روتانا",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nachos_with_Melted_Cheese,_Jalapenos,_and_Tasty_Toppings.jpg",
+      "attributionRequired": true
+    },
+    "Niku_udon.jpg": {
+      "author": "Oleg Yunakov",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Niku_udon.jpg",
+      "attributionRequired": true
+    },
+    "Nimono_of_japanese_pumpkin_2014.jpg": {
+      "author": "Kentin",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nimono_of_japanese_pumpkin_2014.jpg",
+      "attributionRequired": true
+    },
+    "Ninjin_Shirishiri.JPG": {
+      "author": "Nissy-KITAQ",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ninjin_Shirishiri.JPG",
+      "attributionRequired": true
+    },
+    "Okra_natto_by_kamikura.jpg": {
+      "author": "kamikura from Tokyo",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Okra_natto_by_kamikura.jpg",
+      "attributionRequired": true
+    },
+    "Omurice_1.jpg": {
+      "author": "Michael Sean Gallagher",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Omurice_1.jpg",
+      "attributionRequired": true
+    },
+    "Oolong_Tea.jpg": {
+      "author": "J.beel",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Oolong_Tea.jpg",
+      "attributionRequired": true
+    },
+    "Orange_juice_1_edit1.jpg": {
+      "author": "Agency of the United States Department of Agriculture Edited Version by: Arad",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Orange_juice_1_edit1.jpg",
+      "attributionRequired": false
+    },
+    "Orion_beer.jpg": {
+      "author": "Banzai Hiroaki",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Orion_beer.jpg",
+      "attributionRequired": true
+    },
+    "Oyakodon_003.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Oyakodon_003.jpg",
+      "attributionRequired": false
+    },
+    "Piece_of_chocolate_cake_on_a_white_plate_decorated_with_chocolate_sauce.jpg": {
+      "author": "Daria Yakovleva Minor edits made by Subsidiary account",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Piece_of_chocolate_cake_on_a_white_plate_decorated_with_chocolate_sauce.jpg",
+      "attributionRequired": false
+    },
+    "Pilsner_Urquell_mug.jpg": {
+      "author": "https://www.flickr.com/photos/martavasco",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pilsner_Urquell_mug.jpg",
+      "attributionRequired": true
+    },
+    "Pork-cutlet.jpg": {
+      "author": "些細な日常",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pork-cutlet.jpg",
+      "attributionRequired": true
+    },
+    "Pork_Belly_Skewers.jpg": {
+      "author": "舌先現象になります",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pork_Belly_Skewers.jpg",
+      "attributionRequired": true
+    },
+    "Potato_salad_001.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Potato_salad_001.jpg",
+      "attributionRequired": false
+    },
+    "Ramen_and_Chahan_002.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ramen_and_Chahan_002.jpg",
+      "attributionRequired": false
+    },
+    "Raw_Oysters_(6639229789).jpg": {
+      "author": "Naotake Murayama from San Francisco, CA, USA",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Raw_Oysters_(6639229789).jpg",
+      "attributionRequired": true
+    },
+    "Red_Wine_Glass.jpg": {
+      "author": "André Karwath aka Aka",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Red_Wine_Glass.jpg",
+      "attributionRequired": true
+    },
+    "Roast_topside_of_beef.jpg": {
+      "author": "Acabashi",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Roast_topside_of_beef.jpg",
+      "attributionRequired": true
+    },
+    "Saba_no_nitsuke_20101113.jpg": {
+      "author": "Batholith (talk)",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Saba_no_nitsuke_20101113.jpg",
+      "attributionRequired": false
+    },
+    "Schinkenroellchen_mit_Spargel.jpg": {
+      "author": "Schwäbin (Wikimedia) License: CreativeCommons by-sa-3.0-de (deed)",
+      "license": "CC BY-SA 3.0 de",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Schinkenroellchen_mit_Spargel.jpg",
+      "attributionRequired": true
+    },
+    "Senju_Negi_Robatayaki.jpg": {
+      "author": "Masao",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Senju_Negi_Robatayaki.jpg",
+      "attributionRequired": true
+    },
+    "Shirayaki_Unagi_(Unagi_cooked_directly_over_fire_without_adding_seasonings,_served_with_salt).jpg": {
+      "author": "Zheng Zhou",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shirayaki_Unagi_(Unagi_cooked_directly_over_fire_without_adding_seasonings,_served_with_salt).jpg",
+      "attributionRequired": true
+    },
+    "Shishamo_smelt_(18356022450).jpg": {
+      "author": "pelican from Tokyo, Japan",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shishamo_smelt_(18356022450).jpg",
+      "attributionRequired": true
+    },
+    "Shishito_peppers.jpg": {
+      "author": "Eric Polk",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shishito_peppers.jpg",
+      "attributionRequired": true
+    },
+    "Shochu_001.jpg": {
+      "author": "https://publicdomainq.net/shochu-japanese-liquor-0014762/",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shochu_001.jpg",
+      "attributionRequired": false
+    },
+    "Sliced_Tomatoes_on_a_plate.jpg": {
+      "author": "Olgatladi2020",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sliced_Tomatoes_on_a_plate.jpg",
+      "attributionRequired": true
+    },
+    "Small_Salad,_at_Ikinari!_Steak_(2019-04-13).jpg": {
+      "author": "Lombroso",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Small_Salad,_at_Ikinari!_Steak_(2019-04-13).jpg",
+      "attributionRequired": true
+    },
+    "Smirnoff_Ice_Original_bought_in_Japan.jpg": {
+      "author": "Motokoka",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Smirnoff_Ice_Original_bought_in_Japan.jpg",
+      "attributionRequired": true
+    },
+    "Smoked_cheese_in_the_Netherlands_(close_up).jpg": {
+      "author": "FakirNL",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Smoked_cheese_in_the_Netherlands_(close_up).jpg",
+      "attributionRequired": true
+    },
+    "Somen_chanpuru_(Okinawan_fried_somen).jpg": {
+      "author": "jetalone",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Somen_chanpuru_(Okinawan_fried_somen).jpg",
+      "attributionRequired": true
+    },
+    "Steamed_rice_in_bowl_01.jpg": {
+      "author": "Anna Frodesiak",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Steamed_rice_in_bowl_01.jpg",
+      "attributionRequired": false
+    },
+    "Stir-fry_spinach_with_tofu_-_Golden_white_jade_and_Green_Parrot_(菠菜炒豆腐_-_金鑲白玉板，紅嘴綠鸚哥)(1).jpg": {
+      "author": "NeoBatfreak",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Stir-fry_spinach_with_tofu_-_Golden_white_jade_and_Green_Parrot_(%E8%8F%A0%E8%8F%9C%E7%82%92%E8%B1%86%E8%85%90_-_%E9%87%91%E9%91%B2%E7%99%BD%E7%8E%89%E6%9D%BF%EF%BC%8C%E7%B4%85%E5%98%B4%E7%B6%A0%E9%B8%9A%E5%93%A5)(1).jpg",
+      "attributionRequired": true
+    },
+    "Taco_Rice.jpg": {
+      "author": "Nelo Hotsuma",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Taco_Rice.jpg",
+      "attributionRequired": true
+    },
+    "Tebasaki_karaage_by_kawanet_in_Kanayama,_Nagoya.jpg": {
+      "author": "kawanet",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tebasaki_karaage_by_kawanet_in_Kanayama,_Nagoya.jpg",
+      "attributionRequired": true
+    },
+    "Tequila_shots.jpg": {
+      "author": "Prayitno / Thank you for (8 millions +) views from Los Angeles, USA",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tequila_shots.jpg",
+      "attributionRequired": true
+    },
+    "Tokkuri_and_Choko_(sake_cup)_in_Osaka_-_Apr_18,_2019.jpg": {
+      "author": "shankar s.",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tokkuri_and_Choko_(sake_cup)_in_Osaka_-_Apr_18,_2019.jpg",
+      "attributionRequired": true
+    },
+    "Tori_no_Karaage_-_Japanese_style_Fried_chicken.jpg": {
+      "author": "tab2_dawa",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tori_no_Karaage_-_Japanese_style_Fried_chicken.jpg",
+      "attributionRequired": true
+    },
+    "Truffle_oil_french_fries_(33024792848).jpg": {
+      "author": "Tony Webster from Minneapolis, Minnesota, United States",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Truffle_oil_french_fries_(33024792848).jpg",
+      "attributionRequired": true
+    },
+    "Tsukudaniphoto.jpg": {
+      "author": "Jun OHWADA",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tsukudaniphoto.jpg",
+      "attributionRequired": true
+    },
+    "Tumbler_of_cola_with_ice.jpg": {
+      "author": "Simon Cousins from High Wycombe, England",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tumbler_of_cola_with_ice.jpg",
+      "attributionRequired": true
+    },
+    "Ume_suisho_Japanese_appetizer.jpg": {
+      "author": "Hanabishi",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ume_suisho_Japanese_appetizer.jpg",
+      "attributionRequired": false
+    },
+    "Umeshu_on_the_rocks.jpg": {
+      "author": "Chris 73 / Wikimedia Commons",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Umeshu_on_the_rocks.jpg",
+      "attributionRequired": true
+    },
+    "Unagi_kabayaki_by_Kossy@FINEDAYS_in_Akabane.jpg": {
+      "author": "Kossy@FINEDAYS from Akabane, Tokyo",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Unagi_kabayaki_by_Kossy@FINEDAYS_in_Akabane.jpg",
+      "attributionRequired": true
+    },
+    "Unagi_kimoyaki_by_Kossy@FINEDAYS_in_Akabane.jpg": {
+      "author": "Kossy@FINEDAYS from Akabane, Tokyo",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Unagi_kimoyaki_by_Kossy@FINEDAYS_in_Akabane.jpg",
+      "attributionRequired": true
+    },
+    "Unaju_by_Kawatoyo_Honten.jpg": {
+      "author": "Miyuki Meinaka",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Unaju_by_Kawatoyo_Honten.jpg",
+      "attributionRequired": true
+    },
+    "Vanilla_bean_ice_cream_(3086700978).jpg": {
+      "author": "a.pasquier from bellingham, washington",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Vanilla_bean_ice_cream_(3086700978).jpg",
+      "attributionRequired": true
+    },
+    "Variety_meat_skewers_at_a_stand_in_Omoide_Yokocho.jpg": {
+      "author": "Grendelkhan",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Variety_meat_skewers_at_a_stand_in_Omoide_Yokocho.jpg",
+      "attributionRequired": true
+    },
+    "Various_Awamori_bottles_by_jetalone_in_Ginza,_Tokyo.jpg": {
+      "author": "jetalone from Ginza, Tokyo",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Various_Awamori_bottles_by_jetalone_in_Ginza,_Tokyo.jpg",
+      "attributionRequired": true
+    },
+    "White_Wine_Glas.jpg": {
+      "author": "André Karwath aka Aka",
+      "license": "CC BY-SA 2.5",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:White_Wine_Glas.jpg",
+      "attributionRequired": true
+    },
+    "White_cup_with_green_tea_in_it.jpg": {
+      "author": "Douglas P Perkins",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:White_cup_with_green_tea_in_it.jpg",
+      "attributionRequired": true
+    },
+    "Yaki-Onigiri_001.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yaki-Onigiri_001.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori1.jpg": {
+      "author": "Hykw-a4",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori1.jpg",
+      "attributionRequired": true
+    },
+    "Yakitori_-_Tora.jpg": {
+      "author": "Francesc Fort",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_-_Tora.jpg",
+      "attributionRequired": true
+    },
+    "Yakitori_001.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_001.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_002.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_002.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_003.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_003.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_005.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_005.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_007.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_007.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_011.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_011.jpg",
+      "attributionRequired": false
+    },
+    "Yakitori_018.jpg": {
+      "author": "Ocdp",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yakitori_018.jpg",
+      "attributionRequired": false
+    },
+    "ハイボール_KIRIN_(40863751953).jpg": {
+      "author": "nakashi from Chofu, Tokyo, JAPAN",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E3%83%8F%E3%82%A4%E3%83%9C%E3%83%BC%E3%83%AB_KIRIN_(40863751953).jpg",
+      "attributionRequired": true
+    },
+    "ポーク玉子.jpg": {
+      "author": "Tgokinawa",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E3%83%9D%E3%83%BC%E3%82%AF%E7%8E%89%E5%AD%90.jpg",
+      "attributionRequired": true
+    },
+    "博多とりかわ塩（博多とりかわ大臣駅前串房・博多）20201121-P1130913.jpg": {
+      "author": "くろふね",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E5%8D%9A%E5%A4%9A%E3%81%A8%E3%82%8A%E3%81%8B%E3%82%8F%E5%A1%A9%EF%BC%88%E5%8D%9A%E5%A4%9A%E3%81%A8%E3%82%8A%E3%81%8B%E3%82%8F%E5%A4%A7%E8%87%A3%E9%A7%85%E5%89%8D%E4%B8%B2%E6%88%BF%E3%83%BB%E5%8D%9A%E5%A4%9A%EF%BC%8920201121-P1130913.jpg",
+      "attributionRequired": true
+    },
+    "焼きとん_(91799279).jpg": {
+      "author": "ayustety from Tokyo, Japan",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E7%84%BC%E3%81%8D%E3%81%A8%E3%82%93_(91799279).jpg",
+      "attributionRequired": true
+    },
+    "焼きなす.jpg": {
+      "author": "Gomurafuji",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E7%84%BC%E3%81%8D%E3%81%AA%E3%81%99.jpg",
+      "attributionRequired": true
+    },
+    "酒場ロマンスの赤ウインナー_01.jpg": {
+      "author": "経済特区",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E9%85%92%E5%A0%B4%E3%83%AD%E3%83%9E%E3%83%B3%E3%82%B9%E3%81%AE%E8%B5%A4%E3%82%A6%E3%82%A4%E3%83%B3%E3%83%8A%E3%83%BC_01.jpg",
+      "attributionRequired": true
+    }
+  }
+}

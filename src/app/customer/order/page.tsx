@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { MenuItem, OptionSelection } from "@/types/pos";
 import { fetchMenuItems, fetchCategories, CategoryRecord } from "@/lib/db";
@@ -13,6 +14,7 @@ import VideoBackground from "@/components/VideoBackground";
 import MenuSearchBox from "@/components/MenuSearchBox";
 import { addKdsOrder } from "@/lib/kdsStore";
 import { recordOrder } from "@/lib/toppingAnalytics";
+import { buildCredits } from "@/lib/photoCredits";
 
 // ─── 店舗設定 ──────────────────────────────────────────────────
 const IS_REGISTER_CHECKOUT = process.env.NEXT_PUBLIC_STORE_ID === "kitchen-wa";
@@ -550,6 +552,15 @@ function MenuTab({
       ? categories
       : Array.from(new Set(menuItems.map((m) => m.category))).map((c) => ({ id: c, name: c }));
 
+  // 写真クレジットが必要な写真がこの店にあるときだけ、メニュー末尾にリンクを出す（role / table は引き継ぐ）
+  const searchParams = useSearchParams();
+  const hasPhotoCredits = useMemo(() => buildCredits(menuItems).length > 0, [menuItems]);
+  const creditsQuery = new URLSearchParams({ from: "order" });
+  const creditsRole  = searchParams.get("role");
+  const creditsTable = searchParams.get("table");
+  if (creditsRole)  creditsQuery.set("role", creditsRole);
+  if (creditsTable) creditsQuery.set("table", creditsTable);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* 検索への入り口（タップで「さがす」タブへ） */}
@@ -600,6 +611,11 @@ function MenuTab({
             </div>
           )}
         </div>
+        {hasPhotoCredits && (
+          <p className="text-center pt-6 pb-4">
+            <Link href={`/credits?${creditsQuery.toString()}`} className="text-[11px] text-gray-400 underline underline-offset-2">写真クレジット</Link>
+          </p>
+        )}
         {cartCount > 0 && <div className="h-16" />}
       </div>
 

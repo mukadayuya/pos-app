@@ -1,0 +1,730 @@
+[
+ {
+  "store": "abc",
+  "item": "ウーロンハイ",
+  "grade": "○",
+  "file": "Iced_tea.jpg",
+  "license": "Public domain",
+  "slug": "bcda16f6303f"
+ },
+ {
+  "store": "abc",
+  "item": "ウーロン茶",
+  "grade": "○",
+  "file": "Iced_tea.jpg",
+  "license": "Public domain",
+  "slug": "bcda16f6303f"
+ },
+ {
+  "store": "abc",
+  "item": "グリーンサラダ",
+  "grade": "◎",
+  "file": "Salad_of_Yamamoto_no_Hamburg.jpg",
+  "license": "CC0",
+  "slug": "5a791aa81d7a"
+ },
+ {
+  "store": "abc",
+  "item": "だし巻き玉子",
+  "grade": "◎",
+  "file": "居酒屋十番20250621_02.jpg",
+  "license": "CC0",
+  "slug": "8d2273924310"
+ },
+ {
+  "store": "abc",
+  "item": "ハイボール",
+  "grade": "◎",
+  "file": "鳥もと_2号店IMG_20230223_180321_02.jpg",
+  "license": "CC0",
+  "slug": "51ae6b9d49e3"
+ },
+ {
+  "store": "abc",
+  "item": "バニラアイス",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "abc",
+  "item": "ポテトフライ",
+  "grade": "◎",
+  "file": "やきとり○金_八重洲本店IMG_20230728_195144_07.jpg",
+  "license": "CC0",
+  "slug": "b70bbef4ea36"
+ },
+ {
+  "store": "abc",
+  "item": "もも（タレ・塩）",
+  "grade": "◎",
+  "file": "鳥もと_2号店IMG_20230223_180321_04.jpg",
+  "license": "CC0",
+  "slug": "62a53e441d0b"
+ },
+ {
+  "store": "abc",
+  "item": "レモンサワー",
+  "grade": "◎",
+  "file": "大衆食堂_安べゑ_市ヶ谷駅前店20241223_05.jpg",
+  "license": "CC0",
+  "slug": "64d7cc171b36"
+ },
+ {
+  "store": "abc",
+  "item": "鶏雑炊",
+  "grade": "○",
+  "file": "Kinokozousui_(Gusto_Restaurant).jpg",
+  "license": "Public domain",
+  "slug": "0012d1c65440"
+ },
+ {
+  "store": "abc",
+  "item": "鶏茶漬け",
+  "grade": "○",
+  "file": "鯛茶漬け.jpg",
+  "license": "Public domain",
+  "slug": "a0c598d8fd61"
+ },
+ {
+  "store": "abc",
+  "item": "枝豆",
+  "grade": "◎",
+  "file": "Edamame_-_Massachusetts.jpg",
+  "license": "CC0",
+  "slug": "a13f314037c1"
+ },
+ {
+  "store": "abc",
+  "item": "自家製プリン",
+  "grade": "◎",
+  "file": "Putchin_Pudding_001.jpg",
+  "license": "CC0",
+  "slug": "020cdeba1c42"
+ },
+ {
+  "store": "abc",
+  "item": "若鶏の唐揚げ",
+  "grade": "◎",
+  "file": "鎌倉酒店_中野北店20250419_01.jpg",
+  "license": "CC0",
+  "slug": "fad9f53dccb3"
+ },
+ {
+  "store": "abc",
+  "item": "手羽先唐揚げ（甘辛）",
+  "grade": "◎",
+  "file": "おもてなしとりよし_吉祥寺店20250606_16.jpg",
+  "license": "CC0",
+  "slug": "fa4bfb6010b8"
+ },
+ {
+  "store": "abc",
+  "item": "焼鳥盛り合わせ（5本）",
+  "grade": "◎",
+  "file": "Torisei_Yakitori.jpg",
+  "license": "CC0",
+  "slug": "0ecf604604dd"
+ },
+ {
+  "store": "abc",
+  "item": "蒸し鶏のサラダ",
+  "grade": "○",
+  "file": "Salad_with_chicken,_Holzheim.jpg",
+  "license": "CC0",
+  "slug": "27a4b74c2493"
+ },
+ {
+  "store": "abc",
+  "item": "生ビール（中）",
+  "grade": "◎",
+  "file": "Beer_mug_in_Japan_-_nov_6_2017.jpg",
+  "license": "CC0",
+  "slug": "bb00c3c4aa29"
+ },
+ {
+  "store": "abc",
+  "item": "豚バラ串",
+  "grade": "○",
+  "file": "鎌倉酒店_中野北店20250419_02.jpg",
+  "license": "CC0",
+  "slug": "5201697eab08"
+ },
+ {
+  "store": "abc",
+  "item": "日本酒（一合）",
+  "grade": "○",
+  "file": "Bouteille_(tokkuri),_M.C._3035.jpg",
+  "license": "CC0",
+  "slug": "7dd09ca471ec"
+ },
+ {
+  "store": "abc",
+  "item": "皮（塩）",
+  "grade": "◎",
+  "file": "やきとり○金_八重洲本店IMG_20230728_195144_08.jpg",
+  "license": "CC0",
+  "slug": "5ac1113b4052"
+ },
+ {
+  "store": "abc",
+  "item": "抹茶アイス",
+  "grade": "○",
+  "file": "Handmade_Matcha_ice_cream_-_Rawlab.jpg",
+  "license": "CC0",
+  "slug": "416d1792e7ee"
+ },
+ {
+  "store": "abc",
+  "item": "冷やしトマト",
+  "grade": "◎",
+  "file": "Yakitori_015.jpg",
+  "license": "CC0",
+  "slug": "0882454eba53"
+ },
+ {
+  "store": "abc",
+  "item": "冷奴",
+  "grade": "◎",
+  "file": "Hiya-yakko_003.jpg",
+  "license": "CC0",
+  "slug": "eb64a8d7833f"
+ },
+ {
+  "store": "waraji",
+  "item": "いかだ",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "えだ豆",
+  "grade": "◎",
+  "file": "Edamame_-_Massachusetts.jpg",
+  "license": "CC0",
+  "slug": "a13f314037c1"
+ },
+ {
+  "store": "waraji",
+  "item": "えのきとチーズの肉巻き串",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "えびマヨ",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "おくらスライス",
+  "grade": "◎",
+  "file": "JP_日本_Japan_京都_Kyoto_四條_Shijo_side_Sukiya_Restaurant_food_秋葵_n_温泉蛋_Okra_with_Soft-boiled_Onsen_Egg_June_2026_N13P_06.jpg",
+  "license": "CC0",
+  "slug": "1bd8478acb5b"
+ },
+ {
+  "store": "waraji",
+  "item": "オニオンスライス",
+  "grade": "◎",
+  "file": "鳥貴族_西武新宿駅前店IMG_20230305_180450_03.jpg",
+  "license": "CC0",
+  "slug": "181ac6eb5860"
+ },
+ {
+  "store": "waraji",
+  "item": "カシスオレンジ",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "かつおの酒盗",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "きゅうりの1本漬け",
+  "grade": "◎",
+  "file": "Cucumbers_on_skewers_-_Enoshima,_Japan_-_DSC07614.jpg",
+  "license": "CC0",
+  "slug": "47b94e610667"
+ },
+ {
+  "store": "waraji",
+  "item": "クリームチーズの特製醤油づけ",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "ササミ3兄弟",
+  "grade": "◎",
+  "file": "やきとり○金_八重洲本店IMG_20230728_195144_06.jpg",
+  "license": "CC0",
+  "slug": "0fd00841f28a"
+ },
+ {
+  "store": "waraji",
+  "item": "ササミおろしポン酢",
+  "grade": "○",
+  "file": "Yakitori_005.jpg",
+  "license": "CC0",
+  "slug": "aaec5230a603"
+ },
+ {
+  "store": "waraji",
+  "item": "ササミわさび",
+  "grade": "◎",
+  "file": "Yakitori_005.jpg",
+  "license": "CC0",
+  "slug": "aaec5230a603"
+ },
+ {
+  "store": "waraji",
+  "item": "ササミ串",
+  "grade": "◎",
+  "file": "Yakitori_005.jpg",
+  "license": "CC0",
+  "slug": "aaec5230a603"
+ },
+ {
+  "store": "waraji",
+  "item": "さつまスティック",
+  "grade": "◎",
+  "file": "Imo-kenpi_001.jpg",
+  "license": "CC0",
+  "slug": "d3d5586d6b19"
+ },
+ {
+  "store": "waraji",
+  "item": "しいたけ",
+  "grade": "○",
+  "file": "おもてなしとりよし_吉祥寺店20250606_18.jpg",
+  "license": "CC0",
+  "slug": "e44f35a4f9ce"
+ },
+ {
+  "store": "waraji",
+  "item": "ししとう",
+  "grade": "○",
+  "file": "Kkwari-gochu.jpg",
+  "license": "CC0",
+  "slug": "16b8d74bc25a"
+ },
+ {
+  "store": "waraji",
+  "item": "じゃこおくら",
+  "grade": "○",
+  "file": "JP_日本_Japan_京都_Kyoto_四條_Shijo_side_Sukiya_Restaurant_food_秋葵_n_温泉蛋_Okra_with_Soft-boiled_Onsen_Egg_June_2026_N13P_06.jpg",
+  "license": "CC0",
+  "slug": "1bd8478acb5b"
+ },
+ {
+  "store": "waraji",
+  "item": "じゃこおろし",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "たこ唐",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "チーズフライ",
+  "grade": "◎",
+  "file": "Mozzarella_394.jpg",
+  "license": "Public domain",
+  "slug": "649de3b5cddb"
+ },
+ {
+  "store": "waraji",
+  "item": "チョレギサラダ",
+  "grade": "○",
+  "file": "Salad_of_Yamamoto_no_Hamburg.jpg",
+  "license": "CC0",
+  "slug": "5a791aa81d7a"
+ },
+ {
+  "store": "waraji",
+  "item": "つくね",
+  "grade": "◎",
+  "file": "Yakitori_003.jpg",
+  "license": "CC0",
+  "slug": "fa67b88bd4d1"
+ },
+ {
+  "store": "waraji",
+  "item": "づけうずら焼き",
+  "grade": "◎",
+  "file": "Quaile-eggs.jpg",
+  "license": "Public domain",
+  "slug": "a156ca76d300"
+ },
+ {
+  "store": "waraji",
+  "item": "とりしゅうまい",
+  "grade": "◎",
+  "file": "いせや総本店20250113_02.jpg",
+  "license": "CC0",
+  "slug": "f903bf820a1f"
+ },
+ {
+  "store": "waraji",
+  "item": "とりだし茶づけ",
+  "grade": "○",
+  "file": "鯛茶漬け.jpg",
+  "license": "Public domain",
+  "slug": "a0c598d8fd61"
+ },
+ {
+  "store": "waraji",
+  "item": "とりの唐揚",
+  "grade": "◎",
+  "file": "鎌倉酒店_中野北店20250419_01.jpg",
+  "license": "CC0",
+  "slug": "fad9f53dccb3"
+ },
+ {
+  "store": "waraji",
+  "item": "とりポン",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "とり皮チップス",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "なめたけおろし",
+  "grade": "○",
+  "file": "Shoyu-zuke_of_Allium_victorialis_on_Daikon-oroshi_20200617_29706.jpg",
+  "license": "Public domain",
+  "slug": "d13510aa7e3c"
+ },
+ {
+  "store": "waraji",
+  "item": "なんこつ",
+  "grade": "◎",
+  "file": "Yakitori_009.jpg",
+  "license": "CC0",
+  "slug": "388d531c72e4"
+ },
+ {
+  "store": "waraji",
+  "item": "なん唐",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "ねぎま",
+  "grade": "◎",
+  "file": "Yakitori_001.jpg",
+  "license": "CC0",
+  "slug": "196f52324dc7"
+ },
+ {
+  "store": "waraji",
+  "item": "ねばねばMIX",
+  "grade": "◎",
+  "file": "Mix_of_sticky_slimy_food_at_udon_restauran_in_Tokyo.jpg",
+  "license": "CC0",
+  "slug": "09236739a2ab"
+ },
+ {
+  "store": "waraji",
+  "item": "ハート",
+  "grade": "◎",
+  "file": "Yakitori_007.jpg",
+  "license": "CC0",
+  "slug": "a74967a95d28"
+ },
+ {
+  "store": "waraji",
+  "item": "ハイボール",
+  "grade": "◎",
+  "file": "鳥もと_2号店IMG_20230223_180321_02.jpg",
+  "license": "CC0",
+  "slug": "51ae6b9d49e3"
+ },
+ {
+  "store": "waraji",
+  "item": "ポークフランク串",
+  "grade": "○",
+  "file": "焼鳥日高_神田西口店20250628_01.jpg",
+  "license": "CC0",
+  "slug": "7b2a1201c657"
+ },
+ {
+  "store": "waraji",
+  "item": "ポテト",
+  "grade": "◎",
+  "file": "やきとり○金_八重洲本店IMG_20230728_195144_07.jpg",
+  "license": "CC0",
+  "slug": "b70bbef4ea36"
+ },
+ {
+  "store": "waraji",
+  "item": "ボンジリ串",
+  "grade": "◎",
+  "file": "Yakitori_010.jpg",
+  "license": "CC0",
+  "slug": "e3cb396f9e67"
+ },
+ {
+  "store": "waraji",
+  "item": "みょうがスライス",
+  "grade": "◎",
+  "file": "炭火_焼きとん_焼鳥_出陣_東高円寺店20250313_06.jpg",
+  "license": "CC0",
+  "slug": "c3eb9683d80b"
+ },
+ {
+  "store": "waraji",
+  "item": "モヒート",
+  "grade": "◎",
+  "file": "Cocktail_Mojito.jpg",
+  "license": "CC0",
+  "slug": "c48803a198ff"
+ },
+ {
+  "store": "waraji",
+  "item": "やっこ",
+  "grade": "◎",
+  "file": "Hiya-yakko_003.jpg",
+  "license": "CC0",
+  "slug": "eb64a8d7833f"
+ },
+ {
+  "store": "waraji",
+  "item": "レモンサワー",
+  "grade": "◎",
+  "file": "大衆食堂_安べゑ_市ヶ谷駅前店20241223_05.jpg",
+  "license": "CC0",
+  "slug": "64d7cc171b36"
+ },
+ {
+  "store": "waraji",
+  "item": "芋焼酎（グラス）",
+  "grade": "○",
+  "file": "Shochu_001.jpg",
+  "license": "CC0",
+  "slug": "50b04092a3b6"
+ },
+ {
+  "store": "waraji",
+  "item": "烏龍茶",
+  "grade": "○",
+  "file": "Iced_tea.jpg",
+  "license": "Public domain",
+  "slug": "bcda16f6303f"
+ },
+ {
+  "store": "waraji",
+  "item": "温玉キムチ",
+  "grade": "○",
+  "file": "Kimchi_-_Massachusetts.jpg",
+  "license": "CC0",
+  "slug": "5277b24458eb"
+ },
+ {
+  "store": "waraji",
+  "item": "温玉しらす丼",
+  "grade": "◎",
+  "file": "Shirasu-don_002.jpg",
+  "license": "CC0",
+  "slug": "370a651c206a"
+ },
+ {
+  "store": "waraji",
+  "item": "温玉台湾丼",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "温泉玉子",
+  "grade": "◎",
+  "file": "Soft-boiled_egg_of_Yoshinoya.jpg",
+  "license": "CC0",
+  "slug": "d8f7e8bf9858"
+ },
+ {
+  "store": "waraji",
+  "item": "血液サラサラダ",
+  "grade": "○",
+  "file": "大衆酒蔵_幸楽IMG_20230121_142052_05.jpg",
+  "license": "CC0",
+  "slug": "3ac12fd1dc00"
+ },
+ {
+  "store": "waraji",
+  "item": "砂肝",
+  "grade": "◎",
+  "file": "Yakitori_011.jpg",
+  "license": "CC0",
+  "slug": "fa909ac0a1e4"
+ },
+ {
+  "store": "waraji",
+  "item": "手羽先焼き",
+  "grade": "◎",
+  "file": "もつ焼きカミヤ230721_05.jpg",
+  "license": "CC0",
+  "slug": "00dea98bd35b"
+ },
+ {
+  "store": "waraji",
+  "item": "宗家キムチ",
+  "grade": "◎",
+  "file": "Kimchi_-_Massachusetts.jpg",
+  "license": "CC0",
+  "slug": "5277b24458eb"
+ },
+ {
+  "store": "waraji",
+  "item": "焼きおにぎり茶づけ",
+  "grade": "○",
+  "file": "鯛茶漬け.jpg",
+  "license": "Public domain",
+  "slug": "a0c598d8fd61"
+ },
+ {
+  "store": "waraji",
+  "item": "上セセリ",
+  "grade": "◎",
+  "file": "Yakitori_006.jpg",
+  "license": "CC0",
+  "slug": "e2b6974c76b9"
+ },
+ {
+  "store": "waraji",
+  "item": "生ビール（中）",
+  "grade": "◎",
+  "file": "Beer_mug_in_Japan_-_nov_6_2017.jpg",
+  "license": "CC0",
+  "slug": "bb00c3c4aa29"
+ },
+ {
+  "store": "waraji",
+  "item": "赤ウインナー",
+  "grade": "◎",
+  "file": "串カツ田中_1号店_世田谷店20250321_09.jpg",
+  "license": "CC0",
+  "slug": "fa12652a594e"
+ },
+ {
+  "store": "waraji",
+  "item": "台湾まぜそば",
+  "grade": "◎",
+  "file": "Mazesoba_Minami20241120.jpg",
+  "license": "CC0",
+  "slug": "29f3e4dac1bc"
+ },
+ {
+  "store": "waraji",
+  "item": "台湾やっこ",
+  "grade": "◎",
+  "file": "立呑み_焼きとん_大黒_高円寺マシタ店20241129_04.jpg",
+  "license": "CC0",
+  "slug": "d0ea5560a684"
+ },
+ {
+  "store": "waraji",
+  "item": "竹の子土佐焼き",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "長芋短冊",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "肉巻き3種串",
+  "grade": "○",
+  "file": "串焼き_満天_四条烏丸店20250102_02.jpg",
+  "license": "CC0",
+  "slug": "93d46786cede"
+ },
+ {
+  "store": "waraji",
+  "item": "肉巻きうずら",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "肉巻きプチトマト",
+  "grade": "絵",
+  "file": null,
+  "license": null,
+  "slug": null
+ },
+ {
+  "store": "waraji",
+  "item": "梅しそササミ串",
+  "grade": "◎",
+  "file": "やきとり○金_八重洲本店IMG_20230728_195144_06.jpg",
+  "license": "CC0",
+  "slug": "0fd00841f28a"
+ },
+ {
+  "store": "waraji",
+  "item": "米焼酎（グラス）",
+  "grade": "○",
+  "file": "Shochu_001.jpg",
+  "license": "CC0",
+  "slug": "50b04092a3b6"
+ },
+ {
+  "store": "waraji",
+  "item": "緑茶",
+  "grade": "◎",
+  "file": "Steeped-gyokuro.jpg",
+  "license": "CC0",
+  "slug": "f88273b1fd1d"
+ }
+]

@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { fetchMenuItems, fetchCategories } from "@/lib/db";
 import { MenuItem } from "@/types/pos";
 import type { CategoryRecord } from "@/lib/db";
 import MenuSearchBox from "@/components/MenuSearchBox";
 import { t, type Lang } from "@/lib/i18n";
 import { warajiItemName, warajiCatName, warajiMenuTranslations } from "@/data/warajiTranslations";
+import { buildCredits } from "@/lib/photoCredits";
 
 // 翻訳名（ネパール語・英語・中国語・韓国語）も検索対象にする
 function translationTargets(item: MenuItem): string[] {
@@ -277,6 +279,8 @@ export default function HandyPage() {
     [openOrders, effectiveFilter],
   );
   const historyOrders = useMemo(() => [...orders].sort((a, b) => b.sentAt - a.sentAt), [orders]);
+  // 写真クレジットが必要な写真がこの店にあるときだけ、メニュー末尾にリンクを出す
+  const hasPhotoCredits = useMemo(() => buildCredits(menuItems).length > 0, [menuItems]);
 
   const L = {
     tableLabel:  lang === "ja" ? "卓" : lang === "en" ? "Table" : lang === "ne" ? "टेबल" : lang === "zh" ? "桌" : lang === "ko" ? "테이블" : "Table",
@@ -463,6 +467,11 @@ export default function HandyPage() {
               </div>
               {filteredItems.length === 0 && (
                 <p className="text-center text-slate-400 text-sm py-12">{L.noItemsInCat}</p>
+              )}
+              {hasPhotoCredits && (
+                <p className="text-center pt-4 pb-2">
+                  <Link href="/credits?from=handy" className="text-[11px] text-slate-400 underline underline-offset-2">写真クレジット</Link>
+                </p>
               )}
             </main>
           </>
