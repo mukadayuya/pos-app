@@ -17,6 +17,8 @@ import {
   fetchYearlySummary,
   fetchMonthOrdersForAnalysis,
   fetchAllSalesForExport,
+  fetchCategories,
+  fetchMenuItems,
   updateSaleRecord,
   deleteSale,
   refundSale,
@@ -31,6 +33,8 @@ const IS_BRONCO = process.env.NEXT_PUBLIC_STORE_ID === "bronco";
 const IS_ABC = process.env.NEXT_PUBLIC_STORE_ID === "yakitori-abc";
 const IS_WARAJI = process.env.NEXT_PUBLIC_STORE_ID === "waraji";
 const IS_SHOTEN = process.env.NEXT_PUBLIC_STORE_ID === "shoten";
+// カテゴリー名がこれに当たる商品は、商品別ランキングの数量を「杯」で数える（それ以外は「食」）
+const DRINK_CATEGORY_RE = /ドリンク|飲み物|飲物|日本酒|お酒|ビール|ワイン|サワー|焼酎|カクテル|drink/i;
 const STORE_DISPLAY_NAME = IS_BRONCO ? "ブロンコ" : IS_ABC ? "焼鳥居酒屋ABC" : IS_WARAJI ? "炭火やきとり 笑路" : IS_SHOTEN ? "居食屋 笑点" : "Kitchen Kazu";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -251,8 +255,9 @@ function HourlyChart({
                 return (
                   <div
                     key={d.hour}
-                    className={`flex flex-col flex-shrink-0 ${clickable ? "cursor-pointer" : ""}`}
-                    style={{ minWidth: "calc((100% - 8px) / 24)" }}
+                    // 24本をすき間(2px×23)込みでカード幅に等分して収める。狭すぎる画面だけ10pxを下限に横スクロール
+                    className={`flex flex-col flex-1 ${clickable ? "cursor-pointer" : ""}`}
+                    style={{ minWidth: "10px" }}
                     onClick={() => handleTap(d)}
                     onMouseEnter={() => { if (!pinned) setHovered(d); }}
                     onMouseLeave={() => setHovered(null)}
@@ -736,6 +741,22 @@ export default function SalesDataPage() {
 
   useEffect(() => {
     fetchAnalysisMode().then(setAnalysisMode).catch(() => {});
+  }, []);
+
+  // 商品別ランキングの単位用: ドリンクのカテゴリーに入っている商品名（売上の商品名はメニュー名そのまま）
+  const [drinkItemNames, setDrinkItemNames] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    Promise.all([fetchCategories(), fetchMenuItems()])
+      .then(([cats, items]) => {
+        const drinkCatIds = new Set(
+          cats.filter(c => DRINK_CATEGORY_RE.test(c.name) || DRINK_CATEGORY_RE.test(c.name_en ?? "")).map(c => c.id)
+        );
+        setDrinkItemNames(new Set(
+          items.filter(i => i.category === "drink" || drinkCatIds.has(i.category)).map(i => i.name)
+        ));
+      })
+      .catch(() => {}); // 読めなければ全商品「食」のまま
   }, []);
 
   // ── Loaders ───────────────────────────────────────────────
@@ -1652,7 +1673,7 @@ export default function SalesDataPage() {
                             }`}>{idx + 1}</span>
                             <span className="text-xl">{item.emoji}</span>
                             <p className="text-sm font-semibold text-slate-800 truncate">{item.name}</p>
-                            <p className="text-sm font-bold text-violet-700 text-right tabular-nums">{isFinite(item.qty) ? item.qty : 0}食</p>
+                            <p className="text-sm font-bold text-violet-700 text-right tabular-nums">{isFinite(item.qty) ? item.qty : 0}{drinkItemNames.has(item.name) ? "杯" : "食"}</p>
                             <p className="text-sm font-bold text-slate-700 text-right tabular-nums">{fmtYen(item.revenue)}</p>
                           </div>
                         ))}
